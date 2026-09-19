@@ -157,24 +157,35 @@ function collectSourcePaths(arch) {
   return [...set];
 }
 
+/** Resolves a repository ref (default branch when omitted) to a commit SHA with a single API request. */
+export async function resolveCommit(target, { token, signal, fetchImpl = globalThis.fetch } = {}) {
+  const { owner, repo, ref } = target;
+  const res = await apiGet(`/repos/${owner}/${repo}/commits/${encodeURIComponent(ref || 'HEAD')}`, { token, signal, fetchImpl, accept: 'application/vnd.github.sha' });
+  const sha = (await res.text()).trim();
+  if (!/^[0-9a-f]{40}$/i.test(sha)) throw new GitHubError('not_found', ref ? `Could not find "${ref}" in ${owner}/${repo}.` : 'Repository has no commits to analyse.');
+  return { sha, rate: rateInfo(res) };
+}
+
 /**
  * Full pipeline. Returns { arch, view, validation, meta }.
  * opts: { token, signal, onProgress(evt), fetchImpl, maxFiles, preferCurated }
  * progress events: { stage: 'resolve'|'tree'|'download'|'analyse', done?, total? }
  */
 export async function analyzeRepo(input, opts = {}) {
-  const { token, signal, onProgress = () => {}, fetchImpl = globalThis.fetch, maxFiles = 300, preferCurated = true } = opts;
+  const { token, signal, onProgress = () => {}, fetchImpl = globalThis.fetch, maxFiles = 300, preferCurated = true } = opts; // opts.sha: a commit already resolved with resolveCommit()
   const target = typeof input === 'string' ? parseRepoInput(input) : input;
   if (!target) throw new GitHubError('bad_input', 'That does not look like a GitHub repository. Try owner/repo or a github.com link.');
   const { owner, repo, ref } = target;
   const o = { token, signal, fetchImpl };
   let rate = { remaining: null, reset: null };
 
-  onProgress({ stage: 'resolve' });
-  const shaRes = await apiGet(`/repos/${owner}/${repo}/commits/${encodeURIComponent(ref || 'HEAD')}`, { ...o, accept: 'application/vnd.github.sha' });
-  rate = rateInfo(shaRes);
-  const sha = (await shaRes.text()).trim();
-  if (!/^[0-9a-f]{40}$/i.test(sha)) throw new GitHubError('not_found', ref ? `Could not find "${ref}" in ${owner}/${repo}.` : 'Repository has no commits to analyse.');
+  let sha = opts.sha;
+  if (!sha) {
+    onProgress({ stage: 'resolve' });
+    const r = await resolveCommit({ owner, repo, ref }, { token, signal, fetchImpl });
+    sha = r.sha;
+    rate = r.rate;
+  } else if (opts.rate) rate = opts.rate;
 
   onProgress({ stage: 'tree' });
   const treeRes = await apiGet(`/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`, { ...o, accept: 'application/vnd.github+json' });

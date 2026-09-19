@@ -70,6 +70,7 @@
           <label class="sr" for="token">GitHub personal access token</label>
           <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_... (read-only access to contents)">
           <label class="check"><input type="checkbox" id="remember"> Remember on this device</label>
+          <label class="check"><input type="checkbox" id="cache-private"> Also cache private repositories on this device</label>
           <p class="muted">The token is only ever sent to <code>api.github.com</code> from your browser. Nothing is uploaded to any other server. Use a
             <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained token</a>
             with read-only <em>Contents</em> access.</p>
@@ -128,7 +129,7 @@ node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skil
   <footer>
     <p>gitvisualise is open source under the <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a>. Contributions welcome:
       <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">how to contribute</a>.</p>
-    <p class="muted">Public repos are read anonymously through GitHub&rsquo;s API from your browser (60 requests per hour per network; a token lifts that). We store nothing.</p>
+    <p class="muted">Public repos are read anonymously through GitHub&rsquo;s API from your browser (60 requests per hour per network; a token lifts that). Analysed tours are cached in your own browser only (IndexedDB), never on a server. <button id="cache-clear" class="linkbtn" type="button" hidden>Clear cached tours</button></p>
   </footer>
 </div>
 

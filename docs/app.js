@@ -1,6 +1,8 @@
 // gitvisualise website: paste a GitHub link (or pick a repo) -> analysed in your browser -> played in the viewer.
 // No backend. Repo content is untrusted, so everything below writes with textContent, never innerHTML.
-import { analyzeRepo, parseRepoInput, listRepos, GitHubError } from './lib/web/github-loader.mjs';
+import { analyzeRepo, resolveCommit, parseRepoInput, listRepos, GitHubError } from './lib/web/github-loader.mjs';
+import { createCache, cacheKey } from './lib/web/cache.mjs';
+import { idbStore } from './lib/web/idb-store.mjs';
 import { buildSnippets, renderPage } from './lib/core/build-core.mjs';
 import { keyOf, hashOf, parseHash, stateSuffix } from './lib/web/route.mjs';
 
@@ -28,6 +30,7 @@ let current = null; // key of the repo being shown/analysed
 const cache = new Map(); // key -> { res, html }
 let assets = null;
 let lastEntry = null;
+const diskCache = createCache(idbStore()); // persistent, per commit; a no-op when IndexedDB is unavailable
 
 
 // (Link parsing lives in lib/web/route.mjs so it can be unit tested.)
@@ -184,10 +187,25 @@ async function run(input, { push = true } = {}) {
   onProgress({ stage: 'resolve' });
 
   try {
-    let entry = cache.get(key.toLowerCase());
+    let entry = cache.get(key.toLowerCase()); // in-memory, this tab only
     if (!entry) {
-      const [res, a] = await Promise.all([analyzeRepo(target, { token: token || undefined, signal, onProgress }), loadAssets()]);
-      const html = renderPage({ arch: res.arch, snippets: buildSnippets(res.arch, res.view), template: a.template, inline: { css: a.css, js: a.js } });
+      const a = await loadAssets();
+      // One cheap request pins the commit. If we already analysed exactly that commit, skip everything else.
+      const { sha, rate } = await resolveCommit(target, { token: token || undefined, signal });
+      // Results fetched with a token might come from a private repository: only persist them if the user opted in.
+      const persist = !token || $('cache-private').checked;
+      const ck = cacheKey(target.owner, target.repo, sha);
+      const stored = persist ? await diskCache.get(ck) : null;
+      let res, snippets;
+      if (stored) {
+        res = { arch: stored.arch, validation: stored.validation, meta: { ...stored.meta, fromCache: true, cachedAt: stored.ts, rate }, view: null };
+        snippets = stored.snippets;
+      } else {
+        res = await analyzeRepo(target, { token: token || undefined, signal, onProgress, sha, rate });
+        snippets = buildSnippets(res.arch, res.view);
+        if (persist) diskCache.set(ck, { arch: res.arch, validation: res.validation, meta: res.meta, snippets, ts: Date.now() }).then(refreshCacheUi);
+      }
+      const html = renderPage({ arch: res.arch, snippets, template: a.template, inline: { css: a.css, js: a.js } });
       entry = { res, html };
       cache.set(key.toLowerCase(), entry);
     }
@@ -226,6 +244,10 @@ function showResult(entry, target) {
   if (!m.curated) {
     for (const n of res.arch.project.notes || []) if (/^Analysed|truncated/.test(n)) parts.push(n);
     parts.push('This is an automatic picture from imports. Repos can publish a richer, narrated tour with the Claude Code skill.');
+  }
+  if (m.fromCache) {
+    const mins = Math.max(0, Math.round((Date.now() - m.cachedAt) / 60000));
+    parts.push(`Loaded from this browser's cache (analysed ${mins < 1 ? 'just now' : mins < 90 ? mins + ' min ago' : Math.round(mins / 60) + ' h ago'}); no download was needed.`);
   }
   if (m.rate && m.rate.remaining != null && m.rate.remaining < 10) parts.push(`GitHub requests left this hour: ${m.rate.remaining}.`);
   notice.textContent = parts.join(' ');
@@ -366,6 +388,18 @@ function syncToken() {
 tokenInput.addEventListener('input', syncToken);
 $('remember').addEventListener('change', syncToken);
 if (token) { tokenInput.value = token; $('remember').checked = true; $('mine').hidden = false; }
+
+// ---------- cache controls ----------
+async function refreshCacheUi() {
+  const n = await diskCache.count();
+  const b = $('cache-clear');
+  b.hidden = !n;
+  b.textContent = `Clear cached tours (${n})`;
+}
+$('cache-clear').addEventListener('click', async () => { await diskCache.clear(); cache.clear(); await refreshCacheUi(); toast('Cache cleared'); });
+$('cache-private').checked = store.get('cache-private') === '1';
+$('cache-private').addEventListener('change', (e) => store.set('cache-private', e.target.checked ? '1' : null));
+refreshCacheUi();
 
 window.addEventListener('popstate', route);
 window.addEventListener('hashchange', route);

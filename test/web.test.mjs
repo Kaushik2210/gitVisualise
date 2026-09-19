@@ -239,3 +239,61 @@ test('listRepos: follows pagination, streams pages, and reports capped or partia
   // a failure on the first page is still an error
   await assert.rejects(listRepos({ user: 'many', fetchImpl: fakeGithub(fixture(), { missing: true }).impl }), (e) => e.kind === 'not_found');
 });
+
+test('cache: per-commit keys, LRU eviction, versioning and tolerance of broken storage', async () => {
+  const { createCache, cacheKey, memoryStore } = await import('../skills/repo-architecture/scripts/lib/web/cache.mjs');
+  assert.equal(cacheKey('Tj', 'Commander.js', 'ABC'), 'tj/commander.js@abc', 'keys are case-insensitive and per commit');
+
+  const store = memoryStore();
+  const cache = createCache(store, { max: 3 });
+  assert.equal(cache.enabled, true);
+  for (const k of ['a', 'b', 'c']) { await cache.set(k, { v: k }); await new Promise((r) => setTimeout(r, 2)); }
+  assert.deepEqual(await cache.get('a'), { v: 'a' }); // touching "a" makes "b" the least recently used
+  await new Promise((r) => setTimeout(r, 2));
+  await cache.set('d', { v: 'd' }); // exceeds max: evicts b
+  assert.equal(await cache.get('b'), null);
+  assert.deepEqual(await cache.get('a'), { v: 'a' });
+  assert.deepEqual(await cache.get('d'), { v: 'd' });
+  assert.equal(await cache.count(), 3);
+  assert.ok(!(await store.keys()).includes('v1:b'), 'evicted entries are really deleted from the store');
+
+  // a new data-format version ignores entries written by the old one
+  const v2 = createCache(store, { max: 3, version: 'v2' });
+  assert.equal(await v2.get('a'), null);
+
+  // oversized values are skipped rather than stored
+  const small = createCache(memoryStore(), { maxBytes: 20 });
+  await small.set('big', { text: 'x'.repeat(100) });
+  assert.equal(await small.get('big'), null);
+
+  // clear removes everything
+  await cache.clear();
+  assert.equal(await cache.count(), 0);
+  assert.equal(await cache.get('a'), null);
+
+  // storage that throws, or no storage at all, behaves as an empty cache and never throws
+  const broken = createCache({ get: async () => { throw new Error('boom'); }, set: async () => { throw new Error('boom'); }, delete: async () => { throw new Error('boom'); }, keys: async () => { throw new Error('boom'); } });
+  await broken.set('k', { v: 1 });
+  assert.equal(await broken.get('k'), null);
+  assert.equal(await broken.count(), 0);
+  await broken.clear();
+  const none = createCache(null);
+  assert.equal(none.enabled, false);
+  await none.set('k', 1);
+  assert.equal(await none.get('k'), null);
+});
+
+test('analyzeRepo: a pre-resolved commit skips the resolve request (cache hits stay cheap)', async () => {
+  const { resolveCommit } = await import('../skills/repo-architecture/scripts/lib/web/github-loader.mjs');
+  const root = fixture();
+  const gh = fakeGithub(root);
+  const { sha, rate } = await resolveCommit({ owner: 'o', repo: 'r', ref: null }, { fetchImpl: gh.impl });
+  assert.equal(sha, SHA);
+  const apiBefore = gh.calls.filter((c) => c.url.startsWith('https://api.github.com')).length;
+  assert.equal(apiBefore, 1);
+  const res = await analyzeRepo('o/r', { fetchImpl: gh.impl, sha, rate });
+  assert.equal(res.meta.sha, SHA);
+  const apiAfter = gh.calls.filter((c) => c.url.startsWith('https://api.github.com')).length;
+  assert.equal(apiAfter - apiBefore, 1, 'only the tree request remains');
+  await assert.rejects(resolveCommit({ owner: 'o', repo: 'r', ref: null }, { fetchImpl: fakeGithub(root, { missing: true }).impl }), (e) => e.kind === 'not_found');
+});
