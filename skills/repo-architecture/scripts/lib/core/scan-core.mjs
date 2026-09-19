@@ -71,7 +71,24 @@ export function filterPaths(paths, ignorer, ignoreExtra = new Set()) {
   });
 }
 
-export const extOf = (p) => (p.includes('.') ? p.split('.').pop().toLowerCase() : '');
+/** Parses JSON with comments and trailing commas (tsconfig.json allows both). Returns null when it cannot be parsed. */
+export function parseJsonc(text) {
+  let out = '', i = 0, inStr = false, esc = false;
+  while (i < text.length) {
+    const c = text[i], n = text[i + 1];
+    if (inStr) {
+      out += c;
+      if (esc) esc = false; else if (c === '\\') esc = true; else if (c === '"') inStr = false;
+      i++;
+    } else if (c === '"') { inStr = true; out += c; i++; }
+    else if (c === '/' && n === '/') { while (i < text.length && text[i] !== '\n') i++; }
+    else if (c === '/' && n === '*') { i += 2; while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i++; i += 2; }
+    else { out += c; i++; }
+  }
+  try { return JSON.parse(out.replace(/,(\s*[}\]])/g, '$1')); } catch { return null; }
+}
+
+export const extOf =(p) => (p.includes('.') ? p.split('.').pop().toLowerCase() : '');
 
 // A leading comment only describes the *file* when it is not the doc comment of the first declaration.
 const DECL_RE = /^\s*(export\s+)?(default\s+)?(async\s+)?(abstract\s+)?(class|function|interface|type|enum|const|let|var|def)\b|^\s*@\w/;
@@ -293,16 +310,91 @@ export function scanCore({ paths, read, repo, root = '' }) {
   const fileSet = new Set(files.map((f) => f.path));
 
   // ---- import resolution ----
-  const resolveJs = (from, spec) => {
-    let base;
-    if (spec.startsWith('.')) base = posix.normalize(posix.join(posix.dirname(from), spec));
-    else if (spec.startsWith('/')) base = spec.slice(1);
-    else if ((spec.startsWith('@/') || spec.startsWith('~/')) && allSet.has('src') === false && files.some((f) => f.path.startsWith('src/'))) base = 'src/' + spec.slice(2);
-    else return null;
+  // ---- JS/TS path aliases: tsconfig/jsconfig "paths" + "baseUrl" (with "extends"), and simple Vite/webpack aliases ----
+  const nearestFile = (from, names) => {
+    for (let dir = posix.dirname(from); ; dir = posix.dirname(dir)) {
+      for (const n of names) {
+        const p = dir === '.' ? n : `${dir}/${n}`;
+        if (allSet.has(p)) return p;
+      }
+      if (dir === '.' || dir === '/') return null;
+    }
+  };
+  const tsCache = new Map();
+  const loadTsConfig = (file, seen = new Set()) => {
+    if (tsCache.has(file)) return tsCache.get(file);
+    if (seen.has(file)) return null;
+    seen.add(file);
+    const j = parseJsonc(read(file) || '');
+    let cfg = null;
+    if (j && typeof j === 'object') {
+      const dir = posix.dirname(file);
+      cfg = { baseUrl: null, paths: null, pathsDir: null };
+      if (typeof j.extends === 'string' && j.extends.startsWith('.')) {
+        const parent = loadTsConfig(posix.normalize(posix.join(dir, /\.json$/.test(j.extends) ? j.extends : j.extends + '.json')), seen);
+        if (parent) cfg = { ...parent };
+      }
+      const co = j.compilerOptions || {};
+      if (typeof co.baseUrl === 'string') cfg.baseUrl = posix.normalize(posix.join(dir, co.baseUrl));
+      if (co.paths && typeof co.paths === 'object') { cfg.paths = co.paths; cfg.pathsDir = cfg.baseUrl || dir; } // paths are relative to baseUrl, else to the config
+    }
+    tsCache.set(file, cfg);
+    return cfg;
+  };
+  const bundlerCache = new Map();
+  const loadBundlerAliases = (file) => {
+    if (bundlerCache.has(file)) return bundlerCache.get(file);
+    const txt = read(file) || '';
+    const dir = posix.dirname(file);
+    const rules = [];
+    const target = (raw) => {
+      const m = /path\.(?:resolve|join)\(\s*(?:__dirname|process\.cwd\(\))\s*,\s*['"]([^'"]+)['"]\s*\)/.exec(raw) || /new URL\(\s*['"]([^'"]+)['"]\s*,\s*import\.meta\.url/.exec(raw) || /^\s*['"]([^'"]+)['"]\s*$/.exec(raw);
+      return m ? posix.normalize(posix.join(dir, m[1].replace(/^\//, ''))) : null;
+    };
+    const obj = /alias\s*:\s*\{([\s\S]*?)\n?\s*\}/.exec(txt);
+    if (obj) {
+      for (const m of obj[1].matchAll(/['"]?([@~\w$/.-]+)['"]?\s*:\s*(path\.(?:resolve|join)\([^)]*\)|fileURLToPath\(\s*new URL\([^)]*\)\s*\)|['"][^'"]+['"])/g)) {
+        const t = target(m[2]);
+        if (t) rules.push({ key: m[1], dir: t });
+      }
+    }
+    for (const m of txt.matchAll(/find\s*:\s*['"]([^'"]+)['"]\s*,\s*replacement\s*:\s*([^}]+)/g)) { const t = target(m[2].trim().replace(/,\s*$/, '')); if (t) rules.push({ key: m[1], dir: t }); }
+    bundlerCache.set(file, rules);
+    return rules;
+  };
+  /** Candidate base paths (no extension yet) for a non-relative import specifier. */
+  const aliasBases = (from, spec) => {
+    const out = [];
+    const tsFile = nearestFile(from, ['tsconfig.json', 'jsconfig.json']);
+    const cfg = tsFile && loadTsConfig(tsFile);
+    if (cfg && cfg.paths) {
+      let best = null;
+      for (const [pattern, targets] of Object.entries(cfg.paths)) {
+        const star = pattern.indexOf('*');
+        if (star < 0 ? pattern === spec : spec.startsWith(pattern.slice(0, star)) && spec.endsWith(pattern.slice(star + 1)) && spec.length >= pattern.length - 1) {
+          const len = star < 0 ? Infinity : star; // TypeScript prefers the longest matching prefix
+          if (!best || len > best.len) best = { len, targets, mid: star < 0 ? '' : spec.slice(star, spec.length - (pattern.length - star - 1)) };
+        }
+      }
+      if (best) for (const t of [].concat(best.targets)) out.push(posix.normalize(posix.join(cfg.pathsDir, String(t).replace('*', best.mid))));
+    }
+    if (cfg && cfg.baseUrl) out.push(posix.normalize(posix.join(cfg.baseUrl, spec)));
+    const bundler = nearestFile(from, ['vite.config.js', 'vite.config.ts', 'vite.config.mjs', 'vite.config.mts', 'webpack.config.js', 'webpack.config.cjs', 'webpack.config.mjs', 'webpack.config.ts']);
+    if (bundler) for (const r of loadBundlerAliases(bundler)) if (spec === r.key || spec.startsWith(r.key + '/')) out.push(posix.normalize(posix.join(r.dir, spec.slice(r.key.length))));
+    return out;
+  };
+  const tryBase = (base) => {
     const cands = [base, ...JS_EXT.map((e) => base + e), ...JS_EXT.map((e) => `${base}/index${e}`)];
     const swap = base.replace(/\.(m?js|cjs)$/, '');
     if (swap !== base) cands.push(...['.ts', '.tsx', '.jsx'].map((e) => swap + e));
     return cands.find((c) => fileSet.has(c)) || null;
+  };
+  const resolveJs = (from, spec) => {
+    if (spec.startsWith('.')) return tryBase(posix.normalize(posix.join(posix.dirname(from), spec)));
+    if (spec.startsWith('/')) return tryBase(spec.slice(1));
+    for (const b of aliasBases(from, spec)) { const hit = tryBase(b); if (hit) return hit; }
+    if ((spec.startsWith('@/') || spec.startsWith('~/')) && files.some((f) => f.path.startsWith('src/'))) return tryBase('src/' + spec.slice(2)); // common convention when no config was found
+    return null;
   };
   const pyModuleFile = (cands) => cands.find((c) => fileSet.has(c)) || null;
   const resolvePy = (from, imp) => {

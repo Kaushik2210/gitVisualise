@@ -97,3 +97,57 @@ test('python: the generated architecture validates and never contains a guessed 
   assert.ok(!arch.nodes.some((n) => /not.installed/i.test(n.label)), 'undeclared packages are not invented');
   assert.ok(arch.nodes.some((n) => n.external && n.label === 'flask'));
 });
+
+test('js aliases: tsconfig paths and baseUrl, with comments, trailing commas and an extends chain', () => {
+  const root = repo({
+    'tsconfig.base.json': '{\n  // shared settings\n  "compilerOptions": {\n    "baseUrl": ".",\n    "paths": {\n      "@app/*": ["src/app/*"],\n      "@utils": ["src/utils/index.ts"], /* trailing comma below */\n    },\n  },\n}\n',
+    'tsconfig.json': '{ "extends": "./tsconfig.base.json" }\n',
+    'package.json': '{ "name": "x", "dependencies": { "lodash": "^4" } }',
+    'src/main.ts': "import { a } from '@app/a';\nimport u from '@utils';\nimport c from 'components/c';\nimport _ from 'lodash';\nimport nope from '@nope/thing';\n",
+    'src/app/a.ts': 'export const a = 1;\n',
+    'src/utils/index.ts': 'export default 1;\n',
+    'components/c.ts': 'export default 2;\n',
+  });
+  const scan = scanRepo(root);
+  const m = imports(scan, 'src/main.ts');
+  assert.equal(m['@app/a'], 'src/app/a.ts', 'wildcard path through an extended config');
+  assert.equal(m['@utils'], 'src/utils/index.ts', 'exact path mapping');
+  assert.equal(m['components/c'], 'components/c.ts', 'baseUrl-relative import');
+  assert.equal(m['@nope/thing'], null, 'an alias that maps to nothing is dropped, not guessed');
+  assert.equal(m.lodash, null);
+  assert.deepEqual(externals(scan), ['lodash']);
+});
+
+test('js aliases: the nearest config wins (monorepo packages can reuse the same alias differently)', () => {
+  const root = repo({
+    'packages/web/tsconfig.json': '{ "compilerOptions": { "paths": { "@/*": ["src/*"] } } }',
+    'packages/web/src/index.ts': "import { x } from '@/lib/x';\n",
+    'packages/web/src/lib/x.ts': 'export const x = 1;\n',
+    'packages/admin/tsconfig.json': '{ "compilerOptions": { "paths": { "@/*": ["app/*"] } } }',
+    'packages/admin/app/main.ts': "import { x } from '@/lib/x';\n",
+    'packages/admin/app/lib/x.ts': 'export const x = 2;\n',
+  });
+  const scan = scanRepo(root);
+  assert.equal(imports(scan, 'packages/web/src/index.ts')['@/lib/x'], 'packages/web/src/lib/x.ts');
+  assert.equal(imports(scan, 'packages/admin/app/main.ts')['@/lib/x'], 'packages/admin/app/lib/x.ts');
+});
+
+test('js aliases: simple Vite and webpack alias objects', () => {
+  const root = repo({
+    'vite.config.js': "import path from 'node:path';\nexport default { resolve: { alias: { '@': path.resolve(__dirname, 'src'), utils: '/src/utils' } } };\n",
+    'src/main.js': "import a from '@/a';\nimport h from 'utils/helper';\nimport z from '@/zzz';\n",
+    'src/a.js': 'export default 1;\n',
+    'src/utils/helper.js': 'export default 2;\n',
+  });
+  const m = imports(scanRepo(root), 'src/main.js');
+  assert.equal(m['@/a'], 'src/a.js');
+  assert.equal(m['utils/helper'], 'src/utils/helper.js');
+  assert.equal(m['@/zzz'], null);
+});
+
+test('parseJsonc: comments, trailing commas, strings that look like comments', async () => {
+  const { parseJsonc } = await import('../skills/repo-architecture/scripts/lib/core/scan-core.mjs');
+  assert.deepEqual(parseJsonc('{ // c\n "a": "http://x.y/*z*/", /* b */ "b": [1, 2,], }'), { a: 'http://x.y/*z*/', b: [1, 2] });
+  assert.equal(parseJsonc('{ nope'), null);
+  assert.equal(parseJsonc(''), null);
+});

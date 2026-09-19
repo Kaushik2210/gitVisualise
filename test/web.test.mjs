@@ -297,3 +297,17 @@ test('analyzeRepo: a pre-resolved commit skips the resolve request (cache hits s
   assert.equal(apiAfter - apiBefore, 1, 'only the tree request remains');
   await assert.rejects(resolveCommit({ owner: 'o', repo: 'r', ref: null }, { fetchImpl: fakeGithub(root, { missing: true }).impl }), (e) => e.kind === 'not_found');
 });
+
+test('analyzeRepo: downloads tsconfig and resolves path aliases in the browser too', async () => {
+  const root = fixture({
+    'tsconfig.json': '{ "compilerOptions": { "baseUrl": ".", "paths": { "@lib/*": ["src/lib/*"] } } }',
+    'src/lib/clock.ts': 'export const now = () => 0;\n',
+    'src/app.ts': "import { now } from '@lib/clock';\nexport const t = now();\n",
+  });
+  const gh = fakeGithub(root);
+  const res = await analyzeRepo('o/r', { fetchImpl: gh.impl });
+  assert.ok(gh.calls.some((c) => c.url.endsWith('/tsconfig.json')), 'the config that defines aliases is fetched');
+  const edge = res.arch.edges.find((e) => /app/.test(e.from) && /clock/.test(e.to));
+  assert.ok(edge, 'src/app.ts -> src/lib/clock.ts via the @lib alias');
+  assert.deepEqual(res.validation.errors, []);
+});

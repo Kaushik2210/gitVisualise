@@ -129,7 +129,9 @@ export function makeView(paths, contents) {
   };
 }
 
-const MANIFEST_RE = /(^|\/)(package\.json|requirements[^/]*\.txt|pyproject\.toml|go\.mod|Cargo\.toml)$/;
+// Small files the scanner reads besides source: dependency manifests, workspace definitions, and the configs that
+// define import aliases (tsconfig/jsconfig paths, Vite and webpack aliases).
+const MANIFEST_RE = /(^|\/)(package\.json|requirements[^/]*\.txt|pyproject\.toml|go\.mod|go\.work|Cargo\.toml|pom\.xml|build\.gradle(\.kts)?|pnpm-workspace\.yaml|(tsconfig|jsconfig)[^/]*\.json|(vite|webpack)\.config\.[cm]?[jt]s)$/;
 const ENTRY_HINT = /(^|\/)(main|index|app|server|cli|__main__|manage|__init__)\.[a-z]+$/i;
 
 /** Decides which source files to download: skip tests/examples/tooling, prefer shallow + entry-like files. */
