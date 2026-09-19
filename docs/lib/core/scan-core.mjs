@@ -310,7 +310,10 @@ export function scanCore({ paths, read, repo, root = '' }) {
     const spec = imp.spec;
     const dots = (spec.match(/^\.+/) || [''])[0].length;
     const rest = spec.slice(dots).split('.').filter(Boolean);
-    const roots = dots ? [posix.join(dir, ...Array(dots - 1).fill('..'))] : ['', 'src', dir];
+    // Python 3: absolute imports resolve from the project root (or src/). A script's own directory is also on sys.path,
+    // but inside a package (a folder with __init__.py) a bare "import b" never means the sibling pkg/b.py.
+    const inPackage = allSet.has(posix.join(dir, '__init__.py'));
+    const roots = dots ? [posix.join(dir, ...Array(dots - 1).fill('..'))] : ['', 'src', ...(inPackage ? [] : [dir])];
     for (const r of roots) {
       const b = posix.join(r, ...rest);
       const sub = imp.names.map((n) => [`${b}/${n}.py`, `${b}/${n}/__init__.py`]).flat();
