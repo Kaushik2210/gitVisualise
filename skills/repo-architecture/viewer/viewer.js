@@ -498,6 +498,7 @@
     else if (e.key === 'ArrowRight') { pausePlayback(); goto(S.step + 1); }
     else if (e.key === 'ArrowLeft') { pausePlayback(); goto(S.step - 1); }
     else if (e.key === 'r' || e.key === 'R') restart();
+    else if (e.key === '/') { e.preventDefault(); $('search').focus(); $('search').select(); }
     else if (e.key === 'Escape') clearSelection();
   });
 
@@ -545,6 +546,32 @@
   fs.addEventListener('change', function () { setFlow(Number(fs.value)); });
   if (flows.length < 2) fs.closest('.field').hidden = true;
   if (!flows.length) { ['btn-play', 'btn-next', 'btn-prev', 'btn-restart'].forEach(function (id) { $(id).disabled = true; }); }
+
+  // ---------- search ----------
+  var hay = {}, searchIdx = -1;
+  nodes.forEach(function (n) { hay[n.id] = [n.label, n.summary, n.kind, (n.tech || []).join(' '), (n.sources || []).map(function (s) { return s.path; }).join(' ')].join(' ').toLowerCase(); });
+  function runSearch() {
+    var q = $('search').value.trim().toLowerCase(), matches = [], set = {};
+    Object.keys(nodeEls).forEach(function (id) {
+      var hit = !q || hay[id].indexOf(q) >= 0;
+      if (q && hit) { matches.push(id); set[id] = 1; }
+      nodeEls[id].classList.toggle('s-hit', !!q && hit);
+      nodeEls[id].classList.toggle('s-miss', !!q && !hit);
+    });
+    Object.keys(edgeEls).forEach(function (id) { var e = edgeById[id]; edgeEls[id].classList.toggle('s-miss', !!q && !(set[e.from] && set[e.to])); });
+    $('search-count').textContent = q ? matches.length + (matches.length === 1 ? ' match' : ' matches') : '';
+    return matches;
+  }
+  $('search').addEventListener('input', function () { searchIdx = -1; runSearch(); });
+  $('search').addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); $('search').value = ''; searchIdx = -1; runSearch(); $('search').blur(); }
+    else if (e.key === 'Enter') {
+      e.preventDefault();
+      var m = runSearch(); if (!m.length) return;
+      searchIdx = (searchIdx + 1) % m.length; // Enter again jumps to the next match
+      selectNode(m[searchIdx], true);
+    }
+  });
 
   // ---------- export (SVG / PNG) ----------
   // The diagram is styled with CSS classes and variables that do not exist outside this page, so the export inlines
