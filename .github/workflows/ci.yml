@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+
+  # The website in docs/ is assembled from site/ and the shared core. It must be rebuilt and committed
+  # whenever those change (run `npm run site`), otherwise the live site would lag behind the code.
+  site-in-sync:
+    name: Website (docs/) is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run site
+      - name: Fail if docs/ changed
+        run: |
+          git diff --exit-code -- docs || { echo "::error::docs/ is out of date. Run 'npm run site' and commit the result."; exit 1; }
+          test -z "$(git status --porcelain -- docs)" || { echo "::error::docs/ has untracked generated files. Run 'npm run site' and commit."; git status --short -- docs; exit 1; }
+
+  # The GitHub Action must work when consumed from another repo: run it against this one.
+  action:
+    name: GitHub Action smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        id: gv
+        with:
+          out: ${{ runner.temp }}/gv-tour
+          ignore: docs,test
+          force: 'true'
+      - run: |
+          test -f "${{ runner.temp }}/gv-tour/index.html"
+          test -f "${{ runner.temp }}/gv-tour/architecture.json"
+          echo "action produced a site"
+
+  # Informational: does this repo's own tour still match its code? Non-blocking, because line numbers drift.
+  docs-fresh:
+    name: Self-tour references are valid
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node skills/repo-architecture/scripts/gitvisualise.mjs validate .
