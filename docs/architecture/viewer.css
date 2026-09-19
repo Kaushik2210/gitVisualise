@@ -42,6 +42,9 @@ html.js .static { display: none; }
 .canvas { position: relative; flex: 1; min-height: 240px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
 #diagram { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 #diagram.panning { cursor: grabbing; }
+.search { position: absolute; left: 10px; top: 10px; display: flex; align-items: center; gap: 8px; z-index: 1; }
+.search input { font: inherit; font-size: 13px; width: 220px; max-width: 46vw; padding: 6px 10px; color: var(--ink); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; }
+.search input:focus { outline: 2px solid var(--focus); border-color: transparent; }
 .zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
 .legend { position: absolute; left: 10px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--panel) 88%, transparent); padding: 6px 10px; border-radius: 8px; max-width: calc(100% - 70px); }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--kc); }
@@ -69,6 +72,7 @@ html.js .static { display: none; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; min-width: 92px; justify-content: center; }
 .btn.icon { padding: 6px 10px; min-width: 36px; justify-content: center; }
+.zoom .btn.small { font-size: 11px; padding: 6px 4px; letter-spacing: .02em; }
 .btn.small { padding: 3px 10px; font-size: 13px; }
 .btn.ghost { background: transparent; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
@@ -97,11 +101,15 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
 .edge.visited path.line { stroke: color-mix(in srgb, var(--accent) 55%, var(--edge)); }
 .edge.selected path.line { stroke: var(--accent); }
 .edge.active path.line { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 8 6; animation: flow 0.9s linear infinite; }
+.edge.k-http:not(.active):not(.selected) path.line { stroke: color-mix(in srgb, var(--accent) 70%, var(--edge)); stroke-dasharray: 2 5; stroke-linecap: round; }
+.legend .http-key { display: inline-block; width: 18px; height: 0; border-top: 2px dotted var(--accent); background: none; border-radius: 0; vertical-align: middle; }
 .edge.dim { opacity: .28; }
 @keyframes flow { to { stroke-dashoffset: -14; } }
 .arrow-head { fill: var(--edge); }
 .arrow-head.a { fill: var(--accent); }
 .arrow-head.v { fill: color-mix(in srgb, var(--accent) 55%, var(--edge)); }
+.lane { fill: color-mix(in srgb, var(--kc) 7%, transparent); stroke: color-mix(in srgb, var(--kc) 35%, transparent); stroke-dasharray: 5 5; }
+.lane-label { font-size: 11.5px; font-weight: 700; letter-spacing: .07em; fill: var(--muted); }
 .node { cursor: pointer; transition: opacity .25s; }
 .node rect.box { fill: var(--node-bg); stroke: var(--kc); stroke-width: 1.5; transition: stroke-width .2s, filter .2s; }
 .node rect.bar { fill: var(--kc); }
@@ -114,6 +122,9 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
 .node.selected rect.box { stroke-width: 3.5; stroke-dasharray: 0; }
 .node.selected::after { content: ""; }
 .node.dim { opacity: .35; }
+.node.s-miss { opacity: .15 !important; }
+.edge.s-miss { opacity: .08 !important; }
+.node.s-hit rect.box { stroke-width: 3.5; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--kc) 55%, transparent)); }
 .node:focus { outline: none; }
 .node:focus-visible rect.box { stroke: var(--focus); }
 
@@ -139,3 +150,22 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
   .controls { justify-content: space-between; }
   .step-count { flex-basis: 100%; order: 9; }
 }
+
+/* architecture diff: components and relationships marked added / removed / changed */
+:root { --d-added: #2ea043; --d-removed: #f85149; --d-changed: #d29922; }
+.node.d-added rect.box { stroke: var(--d-added); stroke-width: 3; }
+.node.d-changed rect.box { stroke: var(--d-changed); stroke-width: 3; }
+.node.d-removed rect.box { stroke: var(--d-removed); stroke-width: 2.5; stroke-dasharray: 6 4; }
+.node.d-removed .lbl { text-decoration: line-through; }
+.node.d-removed rect.bar { fill: var(--d-removed); }
+.edge.d-added:not(.active):not(.selected) path.line { stroke: var(--d-added); stroke-width: 2.5; stroke-dasharray: none; }
+.edge.d-changed:not(.active):not(.selected) path.line { stroke: var(--d-changed); stroke-width: 2.5; stroke-dasharray: none; }
+.edge.d-removed:not(.active):not(.selected) path.line { stroke: var(--d-removed); stroke-dasharray: 6 4; }
+.legend .diff-key { background: none; border: 2px solid var(--kc); width: 10px; height: 10px; box-sizing: border-box; }
+.legend .diff-key.d-added { --kc: var(--d-added); }
+.legend .diff-key.d-removed { --kc: var(--d-removed); border-style: dashed; }
+.legend .diff-key.d-changed { --kc: var(--d-changed); }
+.diff-note b { color: var(--kc); }
+.diff-note.d-added { --kc: var(--d-added); }
+.diff-note.d-removed { --kc: var(--d-removed); }
+.diff-note.d-changed { --kc: var(--d-changed); }
