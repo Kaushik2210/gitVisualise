@@ -44,7 +44,7 @@ function mountFrame(html) {
   f.id = 'frame';
   f.title = 'Architecture tour';
   // Scripts run, but with an opaque origin: nothing in a repository can reach this page or a stored token.
-  f.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
+  f.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads');
   old.replaceWith(f);
   if (html) {
     void f.offsetHeight; // flush layout so the frame has a size before its document loads

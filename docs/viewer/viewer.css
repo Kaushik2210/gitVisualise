@@ -69,6 +69,7 @@ html.js .static { display: none; }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; min-width: 92px; justify-content: center; }
 .btn.icon { padding: 6px 10px; min-width: 36px; justify-content: center; }
+.zoom .btn.small { font-size: 11px; padding: 6px 4px; letter-spacing: .02em; }
 .btn.small { padding: 3px 10px; font-size: 13px; }
 .btn.ghost { background: transparent; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }

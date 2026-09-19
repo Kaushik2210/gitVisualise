@@ -546,6 +546,55 @@
   if (flows.length < 2) fs.closest('.field').hidden = true;
   if (!flows.length) { ['btn-play', 'btn-next', 'btn-prev', 'btn-restart'].forEach(function (id) { $(id).disabled = true; }); }
 
+  // ---------- export (SVG / PNG) ----------
+  // The diagram is styled with CSS classes and variables that do not exist outside this page, so the export inlines
+  // the resolved colours and fonts into a copy of the SVG, and covers the whole graph rather than the visible area.
+  var EXPORT_PROPS = ['fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'opacity', 'font-size', 'font-weight', 'font-family', 'text-anchor', 'paint-order', 'stroke-linejoin'];
+  function buildExportSvg() {
+    var bb = bbox(Object.keys(boxes)); if (!bb) return null;
+    var m = 32, x = Math.floor(bb.x - m), y = Math.floor(bb.y - m), w = Math.ceil(bb.w + 2 * m), hgt = Math.ceil(bb.h + 2 * m);
+    var clone = svg.cloneNode(true);
+    var src = svg.querySelectorAll('*'), dst = clone.querySelectorAll('*');
+    for (var i = 0; i < src.length; i++) {
+      var cs = getComputedStyle(src[i]), st = '';
+      EXPORT_PROPS.forEach(function (p) { var v = cs.getPropertyValue(p); if (v) st += p + ':' + v + ';'; });
+      dst[i].setAttribute('style', st);
+      if (dst[i].hasAttribute('tabindex')) dst[i].removeAttribute('tabindex');
+    }
+    ['id', 'class', 'tabindex', 'style'].forEach(function (a) { clone.removeAttribute(a); });
+    clone.setAttribute('xmlns', NS);
+    clone.setAttribute('viewBox', [x, y, w, hgt].join(' '));
+    clone.setAttribute('width', w); clone.setAttribute('height', hgt);
+    var bgc = getComputedStyle(canvas).backgroundColor;
+    var bg = document.createElementNS(NS, 'rect');
+    bg.setAttribute('x', x); bg.setAttribute('y', y); bg.setAttribute('width', w); bg.setAttribute('height', hgt); bg.setAttribute('fill', bgc);
+    clone.insertBefore(bg, clone.firstChild);
+    return { text: new XMLSerializer().serializeToString(clone), w: w, h: hgt };
+  }
+  function fileBase() { return String(arch.project.name || 'architecture').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-architecture'; }
+  function saveBlob(name, blob) {
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+  }
+  function exportSvg() { var r = buildExportSvg(); if (r) saveBlob(fileBase() + '.svg', new Blob([r.text], { type: 'image/svg+xml;charset=utf-8' })); }
+  function exportPng() {
+    var r = buildExportSvg(); if (!r) return;
+    var url = URL.createObjectURL(new Blob([r.text], { type: 'image/svg+xml;charset=utf-8' })), img = new Image();
+    img.onload = function () {
+      var scale = Math.min(2, 8000 / Math.max(r.w, r.h)), cv = document.createElement('canvas');
+      cv.width = Math.round(r.w * scale); cv.height = Math.round(r.h * scale);
+      var ctx = cv.getContext('2d'); ctx.scale(scale, scale); ctx.drawImage(img, 0, 0, r.w, r.h);
+      URL.revokeObjectURL(url);
+      cv.toBlob(function (b) { if (b) saveBlob(fileBase() + '.png', b); }, 'image/png');
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+  $('export-svg').addEventListener('click', exportSvg);
+  $('export-png').addEventListener('click', exportPng);
+  window.__gvExportSvg = buildExportSvg; // used by the automated browser checks
+
   // ---------- theme & host bridge ----------
   // The tour usually runs in a sandboxed frame (no storage, opaque origin), so the hosting page and the tour keep
   // each other in sync with postMessage. Standalone, the choice is remembered in localStorage.

@@ -183,6 +183,6 @@ test('website: the tour frame is always mounted fresh, never navigated in place'
   assert.ok(!/\$\('frame'\)\.srcdoc/.test(app), 'no direct srcdoc assignment on the shared frame');
   const assignments = app.match(/\.srcdoc\s*=/g) || [];
   assert.equal(assignments.length, 1, 'srcdoc is assigned in exactly one place (mountFrame)');
-  assert.match(app, /sandbox['"], 'allow-scripts allow-popups allow-popups-to-escape-sandbox'/, 'every mounted frame stays sandboxed');
+  assert.match(app, /sandbox['"], 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads'/, 'every mounted frame stays sandboxed (downloads only)');
   assert.ok(!/allow-same-origin/.test(app), 'the frame must never get same-origin access');
 });
