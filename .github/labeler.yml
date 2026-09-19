@@ -1,0 +1,25 @@
+# Path -> label rules used by workflows/labeler.yml
+website:
+  - changed-files:
+      - any-glob-to-any-file: ['site/**', 'docs/*.html', 'docs/*.js', 'docs/*.css', 'server/**']
+viewer:
+  - changed-files:
+      - any-glob-to-any-file: ['skills/repo-architecture/viewer/**']
+scanner:
+  - changed-files:
+      - any-glob-to-any-file: ['skills/repo-architecture/scripts/lib/core/scan-core.mjs', 'skills/repo-architecture/scripts/lib/scan.mjs', 'skills/repo-architecture/scripts/lib/core/http-core.mjs', 'skills/repo-architecture/scripts/lib/generate.mjs']
+language-support:
+  - changed-files:
+      - any-glob-to-any-file: ['skills/repo-architecture/scripts/lib/core/lang-*.mjs']
+tests:
+  - changed-files:
+      - any-glob-to-any-file: ['test/**']
+documentation:
+  - changed-files:
+      - any-glob-to-any-file: ['**/*.md', 'skills/repo-architecture/reference/**']
+github_actions:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/workflows/**', 'action.yml']
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file: ['.github/dependabot.yml', 'package.json']

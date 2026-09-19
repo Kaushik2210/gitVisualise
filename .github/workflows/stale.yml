@@ -1,0 +1,33 @@
+# Nudges and closes issues and pull requests that have gone quiet. Work that is meant to wait
+# (open invitations to contribute, security reports, pinned items) is never touched.
+name: Stale
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+permissions:
+  issues: write
+  pull-requests: write
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          days-before-issue-stale: 90
+          days-before-issue-close: 21
+          days-before-pr-stale: 30
+          days-before-pr-close: 14
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-issue-labels: 'good first issue,help wanted,ambitious,security,bug,pinned'
+          exempt-pr-labels: 'security,pinned,dependencies'
+          exempt-all-milestones: true
+          stale-issue-message: >
+            This issue has been quiet for a while. It will be closed in 3 weeks unless there is new activity.
+            If you are still interested, a comment is enough to keep it open.
+          stale-pr-message: >
+            This pull request has had no activity for 30 days. It will be closed in 2 weeks unless it is updated.
+            If you need more time or a review, say so here and a maintainer will help.
+          close-issue-message: Closing because of no activity. Feel free to reopen it if this still matters.
+          close-pr-message: Closing because of no activity. You are welcome to reopen it or start a new pull request.

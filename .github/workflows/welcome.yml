@@ -1,0 +1,26 @@
+# Greets first-time contributors. It only posts a comment: it never checks out or runs code from a pull request,
+# which is what makes pull_request_target safe here.
+name: Welcome
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+permissions:
+  issues: write
+  pull-requests: write
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/first-interaction@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          issue-message: |
+            Thanks for opening your first issue, and welcome! A maintainer will take a look soon.
+            While you wait: a screenshot, the repository link you tried, and what you expected to see all make an issue much quicker to act on.
+            Want to fix it yourself? Say so here, and see [CONTRIBUTING.md](https://github.com/Kaushik2210/gitVisualise/blob/main/CONTRIBUTING.md).
+          pr-message: |
+            Thanks for your first pull request, and welcome! A maintainer will review it soon.
+            Checks from a first-time contributor need a maintainer to approve them before they run, so CI may show "waiting" for a bit.
+            In the meantime, `npm test` and `npm run site` locally will catch most problems (see [CONTRIBUTING.md](https://github.com/Kaushik2210/gitVisualise/blob/main/CONTRIBUTING.md)).

@@ -78,6 +78,13 @@ keyboard, dark mode, and `prefers-reduced-motion`. Mention what you checked in t
   numbers, update them, or ask us.
 - Fill in the PR template. Draft PRs are welcome for early feedback.
 
+## Automation you will see
+
+Bots keep the project tidy so maintainers can spend time on review: a welcome comment on your first issue or pull request,
+automatic labels based on the files you changed, Dependabot updates for GitHub Actions, CodeQL security scanning, and a stale
+check that only touches quiet issues and pull requests (anything labelled `good first issue`, `help wanted`, `ambitious`,
+`security` or `bug` is exempt). `main` is protected: changes arrive through pull requests with passing checks and one review.
+
 ## Reporting bugs and ideas
 
 Use the issue templates. The most helpful bug report includes the repo you ran it on (a link is perfect), the
