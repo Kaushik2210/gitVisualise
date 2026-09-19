@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-09-19T10:25:51.791Z",
+    "generatedAt": "2026-09-19T16:30:23.644Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 20 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 21 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -624,7 +624,7 @@
       "label": "lang-java.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "JavaScript file, 113 lines. Defines javaImports, javaPackage, javaSymbols, buildJavaIndex and 4 more.",
+      "summary": "JavaScript file, 116 lines. Defines javaImports, javaPackage, javaSymbols, buildJavaIndex and 4 more.",
       "tech": [
         "JavaScript"
       ],
@@ -728,6 +728,25 @@
           "path": "skills/repo-architecture/scripts/lib/web/route.mjs",
           "lines": [
             9,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-kotlin-mjs",
+      "label": "lang-kotlin.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "JavaScript file, 36 lines. Defines kotlinImports, kotlinPackage, kotlinSymbols, hasKotlinMain.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-kotlin.mjs",
+          "lines": [
+            5,
             25
           ]
         }
@@ -1569,6 +1588,24 @@
           ]
         }
       ]
+    },
+    {
+      "id": "e-scan-core-mjs--lang-kotlin-mjs",
+      "from": "scan-core-mjs",
+      "to": "lang-kotlin-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "kotlinImports, kotlinPackage, kotlinSymbols and 1 more",
+      "summary": "1 import (kotlinImports, kotlinPackage, kotlinSymbols, hasKotlinMain).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
+          "lines": [
+            9,
+            9
+          ]
+        }
+      ]
     }
   ],
   "flows": [
@@ -2148,7 +2185,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, gitvisualise.mjs, build.mjs, build-core.mjs and 22 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, gitvisualise.mjs, build.mjs, build-core.mjs and 23 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
@@ -2201,13 +2238,14 @@
         },
         {
           "id": "t3",
-          "title": "Service (21)",
+          "title": "Service (22)",
           "nodes": [
             "build-mjs",
             "build-core-mjs",
             "diff-core-mjs",
             "http-core-mjs",
             "lang-java-mjs",
+            "lang-kotlin-mjs",
             "lang-rust-mjs",
             "posix-mjs",
             "scan-core-mjs",
@@ -2227,7 +2265,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "21 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; diff-core.mjs — JavaScript file, 105 lines; http-core.mjs — JavaScript file, 90 lines; and more.",
+          "narration": "22 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; diff-core.mjs — JavaScript file, 105 lines; http-core.mjs — JavaScript file, 90 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",

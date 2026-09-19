@@ -241,6 +241,38 @@ test('java: a package named "samples" or "demo" inside a JVM source root is not 
   assert.ok(arch.edges.length >= 1, 'the package edge exists');
 });
 
+test('kotlin: resolves regular, wildcard and aliased imports across Kotlin and Java files', () => {
+  const root = repo({
+    'src/main/kotlin/com/acme/App.kt': [
+      'package com.acme',
+      'import com.acme.model.User as Person',
+      'import com.acme.model.*',
+      'import com.acme.legacy.LegacyClient',
+      'import com.acme.missing.NotThere',
+      'class App',
+      'fun main() {}',
+      '',
+    ].join('\n'),
+    'src/main/kotlin/com/acme/model/User.kt': 'package com.acme.model\ndata class User(val name: String)\n',
+    'src/main/kotlin/com/acme/model/Order.kt': 'package com.acme.model\nclass Order\n',
+    'src/main/java/com/acme/legacy/LegacyClient.java': 'package com.acme.legacy;\npublic class LegacyClient {}\n',
+  });
+  const scan = scanRepo(root);
+  const app = scan.files.find((f) => f.path === 'src/main/kotlin/com/acme/App.kt');
+  const resolved = (spec) => app.imports.filter((i) => i.spec === spec).map((i) => i.resolved);
+  assert.equal(app.package, 'com.acme');
+  assert.deepEqual(resolved('com.acme.model.User'), ['src/main/kotlin/com/acme/model/User.kt']);
+  assert.deepEqual(resolved('com.acme.model.*').sort(), [
+    'src/main/kotlin/com/acme/model/Order.kt',
+    'src/main/kotlin/com/acme/model/User.kt',
+  ]);
+  assert.deepEqual(resolved('com.acme.legacy.LegacyClient'), ['src/main/java/com/acme/legacy/LegacyClient.java']);
+  assert.deepEqual(resolved('com.acme.missing.NotThere'), [null], 'imports absent from the repository are dropped');
+  assert.ok(scan.entryPoints.some((e) => e.path === 'src/main/kotlin/com/acme/App.kt' && /Kotlin main/.test(e.reason)));
+  const arch = generate(scan);
+  assert.deepEqual(validate(arch, root).errors, []);
+});
+
 test('rust: mod declarations and use paths resolve through the module tree (crate, self, super, braces, aliases)', () => {
   const root = repo({
     'Cargo.toml': '[package]\nname = "demo"\nversion = "0.1.0"\n\n[dependencies]\nserde = { version = "1", features = ["derive"] }\nanyhow = "1.0"\n\n[dev-dependencies]\ncriterion = "0.5"\n',

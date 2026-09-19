@@ -41,10 +41,13 @@ export function buildJavaIndex(files) {
   const byClass = new Map();
   const byPackage = new Map();
   for (const f of files) {
-    if (!f.path.endsWith('.java')) continue;
-    const cls = f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.java$/, '');
-    const fqcn = f.package ? `${f.package}.${cls}` : cls;
-    if (!byClass.has(fqcn)) byClass.set(fqcn, f.path);
+    if (!/\.(java|kt)$/.test(f.path)) continue;
+    const cls = f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.(java|kt)$/, '');
+    const names = new Set([...(f.path.endsWith('.java') ? [cls] : []), ...(f.symbols || []).map((s) => s.name)]);
+    for (const name of names) {
+      const fqcn = f.package ? `${f.package}.${name}` : name;
+      if (!byClass.has(fqcn)) byClass.set(fqcn, f.path);
+    }
     if (!byPackage.has(f.package || '')) byPackage.set(f.package || '', []);
     byPackage.get(f.package || '').push(f.path);
   }

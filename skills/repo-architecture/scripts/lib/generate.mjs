@@ -70,9 +70,9 @@ export function generate(scan, opts = {}) {
     prefix = common.join('/');
     if (files.some((f) => dirOf(f.path) === '' )) prefix = '';
   }
-  // In Go and Java the unit of architecture is the package (a directory): files in one package reference each
+  // In Go, Java and Kotlin the unit of architecture is the package (a directory): files in one package reference each
   // other without imports, so per-file nodes would look disconnected.
-  const isPackageLang = (p) => p.endsWith('.go') || p.endsWith('.java');
+  const isPackageLang = (p) => p.endsWith('.go') || /\.(java|kt)$/.test(p);
   // In a monorepo each workspace package is one unit, so imports between packages become edges between them.
   const wsDirs = (scan.workspaces || []).slice().sort((a, b) => b.dir.length - a.dir.length);
   const wsOf = (p) => wsDirs.find((w) => p.startsWith(w.dir + '/'));
