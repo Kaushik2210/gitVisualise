@@ -1,0 +1,6 @@
+node_modules/
+.gitvisualise/
+gitvisualise-out/
+scan.json
+*.log
+gv-demo/

@@ -1,0 +1,45 @@
+{
+  "name": "gitvisualise",
+  "version": "1.0.0",
+  "description": "Turn any GitHub repository into an interactive, animated, narrated architecture tour. Website, CLI, Claude Code skill and GitHub Action. Zero dependencies, no API keys.",
+  "homepage": "https://kaushik2210.github.io/gitvisualise/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kaushik2210/gitvisualise.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Kaushik2210/gitvisualise/issues"
+  },
+  "author": "Kaushik",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "gitvisualise": "skills/repo-architecture/scripts/gitvisualise.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "docs": "node skills/repo-architecture/scripts/gitvisualise.mjs all . --ignore examples,test --max-nodes 26 --no-pin",
+    "serve": "node skills/repo-architecture/scripts/gitvisualise.mjs serve . --out docs --port 4173",
+    "site": "node tools/build-site.mjs",
+    "serve:tour": "node skills/repo-architecture/scripts/gitvisualise.mjs serve . --port 4174"
+  },
+  "files": [
+    "skills"
+  ],
+  "keywords": [
+    "architecture",
+    "visualization",
+    "code-visualization",
+    "diagram",
+    "onboarding",
+    "documentation",
+    "github",
+    "github-action",
+    "claude-code",
+    "static-analysis",
+    "dependency-graph"
+  ]
+}

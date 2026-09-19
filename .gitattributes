@@ -1,0 +1,5 @@
+# Normalise line endings so history and generated files are identical on every OS.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.gif binary
