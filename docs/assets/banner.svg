@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" role="img" aria-labelledby="t d">
+  <title id="t">gitvisualise</title>
+  <desc id="d">A repository turned into an animated architecture diagram with a narration caption.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="1" stop-color="#171a3a"/>
+    </linearGradient>
+    <linearGradient id="ttl" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7ee7b0"/>
+      <stop offset="0.5" stop-color="#8db3ff"/>
+      <stop offset="1" stop-color="#c79bff"/>
+    </linearGradient>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8db3ff"/>
+    </marker>
+    <marker id="ad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4a5578"/>
+    </marker>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .f { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      .flow { stroke-dasharray: 9 7; animation: dash 1s linear infinite; }
+      @keyframes dash { to { stroke-dashoffset: -16; } }
+      .pulse { animation: pulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+      @keyframes pulse { 0%,100% { opacity: .55; } 50% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .flow, .pulse { animation: none; } }
+    </style>
+  </defs>
+
+  <rect width="1280" height="400" rx="22" fill="url(#bg)"/>
+  <g opacity=".07" stroke="#8db3ff">
+    <path d="M0 80H1280M0 160H1280M0 240H1280M0 320H1280"/>
+    <path d="M160 0V400M320 0V400M480 0V400M640 0V400M800 0V400M960 0V400M1120 0V400"/>
+  </g>
+
+  <!-- copy -->
+  <g class="f">
+    <text x="64" y="128" font-size="64" font-weight="800" fill="url(#ttl)">gitvisualise</text>
+    <text x="66" y="176" font-size="24" fill="#e8ecf2">Turn any repo into an interactive,</text>
+    <text x="66" y="208" font-size="24" fill="#e8ecf2">narrated architecture tour.</text>
+    <g font-size="15" fill="#9fb0d0">
+      <text x="66" y="258">&#10003; Zero dependencies &#160;&#160;&#10003; No API keys &#160;&#160;&#10003; Any GitHub repo</text>
+    </g>
+    <rect x="64" y="288" width="196" height="46" rx="23" fill="#8db3ff"/>
+    <path d="M98 300 L98 322 L116 311 Z" fill="#0b1020"/>
+    <text x="128" y="318" font-size="18" font-weight="700" fill="#0b1020">Play the tour</text>
+    <rect x="276" y="288" width="120" height="46" rx="23" fill="none" stroke="#3a4570"/>
+    <text x="304" y="318" font-size="16" fill="#c6d3f0">Open source</text>
+  </g>
+
+  <!-- diagram -->
+  <g class="f" transform="translate(552 40)">
+    <!-- edges -->
+    <g fill="none" stroke-width="2.5">
+      <path d="M170 150 C210 150 200 70 250 70" stroke="#4a5578" marker-end="url(#ad)"/>
+      <path d="M170 150 C210 150 200 150 250 150" class="flow" stroke="#8db3ff" marker-end="url(#ar)"/>
+      <path d="M170 150 C210 150 200 230 250 230" stroke="#4a5578" marker-end="url(#ad)"/>
+      <path d="M430 150 C470 150 460 100 510 100" class="flow" stroke="#8db3ff" marker-end="url(#ar)" style="animation-delay:-.4s"/>
+      <path d="M430 150 C470 150 460 205 510 205" stroke="#4a5578" marker-end="url(#ad)"/>
+      <path d="M430 70 C470 70 460 100 510 100" stroke="#4a5578" marker-end="url(#ad)"/>
+      <path d="M430 230 C470 230 460 205 510 205" stroke="#4a5578" marker-end="url(#ad)"/>
+    </g>
+    <!-- nodes -->
+    <g>
+      <g transform="translate(-10 122)"><rect width="180" height="56" rx="12" fill="#12182e" stroke="#7ee7b0" stroke-width="2.5" class="pulse"/><rect x="0" y="12" width="5" height="32" rx="2" fill="#7ee7b0"/>
+        <text x="20" y="26" font-size="16" font-weight="700" fill="#e8ecf2">index.js</text><text x="20" y="44" font-size="12" fill="#8fa0c4">entry &#183; JavaScript</text></g>
+      <g transform="translate(250 42)"><rect width="180" height="56" rx="12" fill="#12182e" stroke="#4a5578" stroke-width="1.5"/><rect x="0" y="12" width="5" height="32" rx="2" fill="#c79bff"/>
+        <text x="20" y="26" font-size="16" font-weight="600" fill="#e8ecf2">Navbar.jsx</text><text x="20" y="44" font-size="12" fill="#8fa0c4">ui &#183; JavaScript</text></g>
+      <g transform="translate(250 122)"><rect width="180" height="56" rx="12" fill="#161e3a" stroke="#8db3ff" stroke-width="2.5" filter="url(#glow)"/><rect x="0" y="12" width="5" height="32" rx="2" fill="#8db3ff"/>
+        <text x="20" y="26" font-size="16" font-weight="700" fill="#e8ecf2">App.jsx</text><text x="20" y="44" font-size="12" fill="#8fa0c4">ui &#183; JavaScript</text></g>
+      <g transform="translate(250 202)"><rect width="180" height="56" rx="12" fill="#12182e" stroke="#4a5578" stroke-width="1.5"/><rect x="0" y="12" width="5" height="32" rx="2" fill="#ffab6b"/>
+        <text x="20" y="26" font-size="16" font-weight="600" fill="#e8ecf2">events.js</text><text x="20" y="44" font-size="12" fill="#8fa0c4">api &#183; JavaScript</text></g>
+      <g transform="translate(510 72)"><rect width="190" height="56" rx="12" fill="#12182e" stroke="#4a5578" stroke-width="1.5"/><rect x="0" y="12" width="5" height="32" rx="2" fill="#ff8fb1"/>
+        <text x="20" y="26" font-size="16" font-weight="600" fill="#e8ecf2">store.js</text><text x="20" y="44" font-size="12" fill="#8fa0c4">data &#183; JavaScript</text></g>
+      <g transform="translate(510 177)"><rect width="190" height="56" rx="12" fill="#12182e" stroke="#4a5578" stroke-width="1.5"/><rect x="0" y="12" width="5" height="32" rx="2" fill="#8590a8"/>
+        <text x="20" y="26" font-size="16" font-weight="600" fill="#e8ecf2">axios</text><text x="20" y="44" font-size="12" fill="#8fa0c4">external</text></g>
+    </g>
+    <!-- caption -->
+    <g transform="translate(-10 296)">
+      <rect width="710" height="52" rx="14" fill="#0e1430" stroke="#2c3766"/>
+      <text x="20" y="24" font-size="13" font-weight="700" fill="#8db3ff">Step 3 / 9</text>
+      <text x="100" y="24" font-size="14" fill="#e8ecf2">App.jsx pulls events from the events API, then renders the list.</text>
+      <rect x="20" y="36" width="670" height="5" rx="2.5" fill="#1d2647"/>
+      <rect x="20" y="36" width="223" height="5" rx="2.5" fill="#8db3ff"/>
+    </g>
+  </g>
+</svg>
