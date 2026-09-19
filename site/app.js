@@ -32,12 +32,32 @@ const keyOf = (t) => `${t.owner}/${t.repo}${t.ref ? '@' + t.ref : ''}`;
 const hashOf = (t) => '#/' + keyOf(t);
 
 // ---------- views ----------
+/**
+ * Always mount a brand-new frame, and only after the result view is visible.
+ * Reusing one frame that was created inside a display:none container, and navigating it in the same task that
+ * un-hides the container, can leave the sandboxed document without any layout (a blank tour). A fresh frame
+ * inserted into an already-visible container always renders.
+ */
+function mountFrame(html) {
+  const old = $('frame');
+  const f = document.createElement('iframe');
+  f.id = 'frame';
+  f.title = 'Architecture tour';
+  // Scripts run, but with an opaque origin: nothing in a repository can reach this page or a stored token.
+  f.setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox');
+  old.replaceWith(f);
+  if (html) {
+    void f.offsetHeight; // flush layout so the frame has a size before its document loads
+    f.srcdoc = html;
+  }
+}
+
 function showView(name) {
   $('landing').hidden = name !== 'landing';
   $('progress').hidden = name !== 'progress';
   $('result').hidden = name !== 'result';
   document.body.style.overflow = name === 'result' ? 'hidden' : '';
-  if (name !== 'result') $('frame').srcdoc = '';
+  if (name !== 'result') mountFrame(''); // stop any running tour (scripts, speech) when leaving the result view
 }
 
 function toast(msg) {
@@ -171,7 +191,7 @@ function showResult(entry, target) {
   notice.hidden = !parts.length;
 
   showView('result');
-  $('frame').srcdoc = entry.html;
+  mountFrame(entry.html);
 }
 
 function back() {

@@ -174,3 +174,15 @@ test('renderPage inline mode produces one self-contained file', async () => {
   assert.ok(html.includes('<style>') && html.includes('function computeLayout'));
   assert.ok(Object.keys(JSON.parse(html.match(/<script id="arch-data"[^>]*>([\s\S]*?)<\/script>/)[1]).snippets).length > 0);
 });
+
+test('website: the tour frame is always mounted fresh, never navigated in place', () => {
+  // Regression guard. Assigning srcdoc to a long-lived frame in the same task that un-hides its container can leave
+  // the sandboxed document without a layout (a blank tour). Only mountFrame() may create or load the frame.
+  const app = fs.readFileSync(path.resolve('site/app.js'), 'utf8');
+  assert.ok(/function mountFrame\(/.test(app), 'mountFrame exists');
+  assert.ok(!/\$\('frame'\)\.srcdoc/.test(app), 'no direct srcdoc assignment on the shared frame');
+  const assignments = app.match(/\.srcdoc\s*=/g) || [];
+  assert.equal(assignments.length, 1, 'srcdoc is assigned in exactly one place (mountFrame)');
+  assert.match(app, /sandbox['"], 'allow-scripts allow-popups allow-popups-to-escape-sandbox'/, 'every mounted frame stays sandboxed');
+  assert.ok(!/allow-same-origin/.test(app), 'the frame must never get same-origin access');
+});
