@@ -3,17 +3,17 @@
   "project": {
     "name": "gitvisualise",
     "description": "Turn any GitHub repo into an interactive, animated, narrated architecture tour: on the website, from the command line, as a Claude Code skill, or as a GitHub Action. Zero dependencies, no API keys.",
-    "repoUrl": "https://github.com/Kaushik2210/gitvisualise",
+    "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-09-19T05:38:01.971Z",
+    "generatedAt": "2026-09-19T06:33:44.801Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
       "Markdown",
+      "YAML",
       "CSS",
-      "HTML",
-      "YAML"
+      "HTML"
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",

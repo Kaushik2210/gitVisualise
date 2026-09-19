@@ -4,9 +4,9 @@ Thanks for wanting to help! This is a small, friendly, **zero-dependency** proje
 hack on: a few plain Node files and one plain browser script. You do not need to be an expert. Typos, docs,
 tests, a new language parser, or a wild new viewer feature are all welcome.
 
-> **Not sure where to start?** Pick an issue labelled [good first issue](https://github.com/Kaushik2210/gitvisualise/labels/good%20first%20issue) or
-> [help wanted](https://github.com/Kaushik2210/gitvisualise/labels/help%20wanted), and comment "I'll take this". Have your own idea? Open an issue or a
-> [discussion](https://github.com/Kaushik2210/gitvisualise/discussions) first so we can point you at the right files.
+> **Not sure where to start?** Pick an issue labelled [good first issue](https://github.com/Kaushik2210/gitVisualise/labels/good%20first%20issue) or
+> [help wanted](https://github.com/Kaushik2210/gitVisualise/labels/help%20wanted), and comment "I'll take this". Have your own idea? Open an issue or a
+> [discussion](https://github.com/Kaushik2210/gitVisualise/discussions) first so we can point you at the right files.
 
 ## Ground rules (the four things that keep this project good)
 
@@ -21,7 +21,7 @@ tests, a new language parser, or a wild new viewer feature are all welcome.
 ## Setup
 
 ```bash
-git clone https://github.com/Kaushik2210/gitvisualise.git
+git clone https://github.com/Kaushik2210/gitVisualise.git gitvisualise
 cd gitvisualise
 node --version        # 18 or newer
 npm test              # 7+ tests, ~1 second, no install step

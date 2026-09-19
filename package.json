@@ -2,13 +2,13 @@
   "name": "gitvisualise",
   "version": "1.0.0",
   "description": "Turn any GitHub repository into an interactive, animated, narrated architecture tour. Website, CLI, Claude Code skill and GitHub Action. Zero dependencies, no API keys.",
-  "homepage": "https://kaushik2210.github.io/gitvisualise/",
+  "homepage": "https://kaushik2210.github.io/gitVisualise/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Kaushik2210/gitvisualise.git"
+    "url": "git+https://github.com/Kaushik2210/gitVisualise.git"
   },
   "bugs": {
-    "url": "https://github.com/Kaushik2210/gitvisualise/issues"
+    "url": "https://github.com/Kaushik2210/gitVisualise/issues"
   },
   "author": "Kaushik",
   "license": "MIT",

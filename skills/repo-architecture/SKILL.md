@@ -127,7 +127,7 @@ After a merge, always run `validate`: a kept item may reference a file that has 
 
 ## The website
 
-The same engine powers https://kaushik2210.github.io/gitvisualise/ : anyone can paste a GitHub link and get an automatic tour. If a repo
+The same engine powers https://kaushik2210.github.io/gitVisualise/ : anyone can paste a GitHub link and get an automatic tour. If a repo
 commits a curated `docs/architecture/architecture.json`, the website shows that curated tour, so finishing the skill's workflow and pushing
 `docs/architecture/` is how a repo gets a narrated tour on the site.
 

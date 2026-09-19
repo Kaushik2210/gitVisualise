@@ -4,18 +4,18 @@
 
 <br>
 
-[![CI](https://github.com/Kaushik2210/gitvisualise/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaushik2210/gitvisualise/actions/workflows/ci.yml)
+[![CI](https://github.com/Kaushik2210/gitVisualise/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaushik2210/gitVisualise/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/Kaushik2210/gitvisualise?style=flat&logo=github&color=e3b341)](https://github.com/Kaushik2210/gitvisualise/stargazers)
+[![Stars](https://img.shields.io/github/stars/Kaushik2210/gitVisualise?style=flat&logo=github&color=e3b341)](https://github.com/Kaushik2210/gitVisualise/stargazers)
 [![Node](https://img.shields.io/badge/node-%E2%89%A518-339933.svg)](package.json)
 [![Dependencies](https://img.shields.io/badge/dependencies-0-8db3ff.svg)](package.json)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff8fb1.svg)](CONTRIBUTING.md)
-[![Good first issues](https://img.shields.io/github/issues/Kaushik2210/gitvisualise/good%20first%20issue?label=good%20first%20issues&color=7057ff)](https://github.com/Kaushik2210/gitvisualise/labels/good%20first%20issue)
+[![Good first issues](https://img.shields.io/github/issues/Kaushik2210/gitVisualise/good%20first%20issue?label=good%20first%20issues&color=7057ff)](https://github.com/Kaushik2210/gitVisualise/labels/good%20first%20issue)
 
 **Paste a GitHub link. Get an animated, narrated, click-through map of how the repo works.**<br>
 Free, open source, and it runs in your browser: no sign-up, no server, no API keys.
 
-### [▶ Try it now: kaushik2210.github.io/gitvisualise](https://kaushik2210.github.io/gitvisualise/)
+### [▶ Try it now: kaushik2210.github.io/gitVisualise](https://kaushik2210.github.io/gitVisualise/)
 
 [**Website**](#-the-website) ·
 [**GitHub Action**](#-github-action) ·
@@ -53,7 +53,7 @@ regenerated (without losing your edits) when the code changes.
 
 ## 🌐 The website
 
-**[kaushik2210.github.io/gitvisualise](https://kaushik2210.github.io/gitvisualise/)**
+**[kaushik2210.github.io/gitVisualise](https://kaushik2210.github.io/gitVisualise/)**
 
 1. **Paste** `github.com/owner/repo` (or just `owner/repo`), **or** type a username to **pick from their repos**.
 2. Watch it read the repo, then **play the tour**. Share it, or download it as a single HTML file or JSON.
@@ -94,7 +94,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: Kaushik2210/gitvisualise@main
+      - uses: Kaushik2210/gitVisualise@main
         with:
           out: docs/architecture     # keep curated architecture.json here
       - uses: actions/upload-pages-artifact@v3
@@ -114,7 +114,7 @@ The website and CLI give you an automatic picture (imports, entry points, depend
 Add the skill and Claude Code reads your code and writes the real explanation on top:
 
 ```bash
-git clone https://github.com/Kaushik2210/gitvisualise.git
+git clone https://github.com/Kaushik2210/gitVisualise.git gitvisualise
 node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skill            # → ~/.claude/skills
 node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skill --project  # → ./.claude/skills
 ```
@@ -131,7 +131,7 @@ edits you (or it) already made. Commit `docs/architecture/` and the website will
 ## ⌨️ Command line
 
 ```bash
-git clone https://github.com/Kaushik2210/gitvisualise.git && cd gitvisualise
+git clone https://github.com/Kaushik2210/gitVisualise.git gitvisualise && cd gitvisualise
 
 # any local repo → <repo>/docs/architecture/
 node skills/repo-architecture/scripts/gitvisualise.mjs all /path/to/your/repo
@@ -215,34 +215,34 @@ when a real server framework is imported, never client `fetch` calls), and entry
 Action). Every task below is a real, scoped issue with acceptance criteria and pointers to the exact files, so you can
 start without asking. Comment "I'll take this" and a maintainer will help you get going.
 
-[**Browse good first issues →**](https://github.com/Kaushik2210/gitvisualise/labels/good%20first%20issue) &nbsp;·&nbsp;
-[**All help wanted →**](https://github.com/Kaushik2210/gitvisualise/labels/help%20wanted) &nbsp;·&nbsp;
-[**Start a discussion →**](https://github.com/Kaushik2210/gitvisualise/discussions)
+[**Browse good first issues →**](https://github.com/Kaushik2210/gitVisualise/labels/good%20first%20issue) &nbsp;·&nbsp;
+[**All help wanted →**](https://github.com/Kaushik2210/gitVisualise/labels/help%20wanted) &nbsp;·&nbsp;
+[**Start a discussion →**](https://github.com/Kaushik2210/gitVisualise/discussions)
 
 **🟢 Good first issues** (an afternoon each)
 
-- [#1](https://github.com/Kaushik2210/gitvisualise/issues/1) Theme toggle: light / dark / auto
-- [#2](https://github.com/Kaushik2210/gitvisualise/issues/2) Deep-link to a specific tour step
-- [#3](https://github.com/Kaushik2210/gitvisualise/issues/3) Component search box in the viewer
-- [#4](https://github.com/Kaushik2210/gitvisualise/issues/4) Export the diagram as SVG or PNG
-- [#5](https://github.com/Kaushik2210/gitvisualise/issues/5) Paginate the account repository picker
-- [#6](https://github.com/Kaushik2210/gitvisualise/issues/6) Fixture tests for the Python import resolver
-- [#7](https://github.com/Kaushik2210/gitvisualise/issues/7) Add a demo GIF and screenshots to this README
+- [#1](https://github.com/Kaushik2210/gitVisualise/issues/1) Theme toggle: light / dark / auto
+- [#2](https://github.com/Kaushik2210/gitVisualise/issues/2) Deep-link to a specific tour step
+- [#3](https://github.com/Kaushik2210/gitVisualise/issues/3) Component search box in the viewer
+- [#4](https://github.com/Kaushik2210/gitVisualise/issues/4) Export the diagram as SVG or PNG
+- [#5](https://github.com/Kaushik2210/gitVisualise/issues/5) Paginate the account repository picker
+- [#6](https://github.com/Kaushik2210/gitVisualise/issues/6) Fixture tests for the Python import resolver
+- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) Add a demo GIF and screenshots to this README
 
 **🟡 Intermediate**
 
-- [#8](https://github.com/Kaushik2210/gitvisualise/issues/8) Language support: Java import graph
-- [#9](https://github.com/Kaushik2210/gitvisualise/issues/9) Language support: Rust module graph
-- [#10](https://github.com/Kaushik2210/gitvisualise/issues/10) Resolve tsconfig / Vite / webpack path aliases
-- [#11](https://github.com/Kaushik2210/gitvisualise/issues/11) Monorepo support: sub-paths and per-package graphs
-- [#12](https://github.com/Kaushik2210/gitvisualise/issues/12) Cache analyses in IndexedDB on the website
-- [#13](https://github.com/Kaushik2210/gitvisualise/issues/13) Swimlanes: group nodes by directory or kind
+- [#8](https://github.com/Kaushik2210/gitVisualise/issues/8) Language support: Java import graph
+- [#9](https://github.com/Kaushik2210/gitVisualise/issues/9) Language support: Rust module graph
+- [#10](https://github.com/Kaushik2210/gitVisualise/issues/10) Resolve tsconfig / Vite / webpack path aliases
+- [#11](https://github.com/Kaushik2210/gitVisualise/issues/11) Monorepo support: sub-paths and per-package graphs
+- [#12](https://github.com/Kaushik2210/gitVisualise/issues/12) Cache analyses in IndexedDB on the website
+- [#13](https://github.com/Kaushik2210/gitVisualise/issues/13) Swimlanes: group nodes by directory or kind
 
 **🔴 Ambitious** (discuss the design first)
 
-- [#14](https://github.com/Kaushik2210/gitvisualise/issues/14) "Sign in with GitHub" to list private repositories
-- [#15](https://github.com/Kaushik2210/gitvisualise/issues/15) Request-flow tracing: match client calls to server routes
-- [#16](https://github.com/Kaushik2210/gitvisualise/issues/16) Architecture diff between two commits
+- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) "Sign in with GitHub" to list private repositories
+- [#15](https://github.com/Kaushik2210/gitVisualise/issues/15) Request-flow tracing: match client calls to server routes
+- [#16](https://github.com/Kaushik2210/gitVisualise/issues/16) Architecture diff between two commits
 
 **Ideas without an issue yet:** data-model view (SQL / Prisma / ORMs), infrastructure view (Docker Compose, Kubernetes,
 Terraform), recording the tour as a GIF or video, opt-in higher-quality narration voices. Open an issue to propose one.
@@ -254,7 +254,7 @@ Terraform), recording the tour as a GIF or video, opt-in higher-quality narratio
 
 ### Contributors
 
-[![Contributors](https://contrib.rocks/image?repo=Kaushik2210/gitvisualise)](https://github.com/Kaushik2210/gitvisualise/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=Kaushik2210/gitVisualise)](https://github.com/Kaushik2210/gitVisualise/graphs/contributors)
 
 ## 🧭 Design principles
 
@@ -310,7 +310,7 @@ npm run docs      # regenerate this repo's own tour (curated content is preserve
 
 <div align="center">
 
-**If this helps you, [⭐ star the repo](https://github.com/Kaushik2210/gitvisualise) and tell a teammate.**<br>
-Have an idea or found a bug? [Open an issue](https://github.com/Kaushik2210/gitvisualise/issues/new/choose) or [start a discussion](https://github.com/Kaushik2210/gitvisualise/discussions).
+**If this helps you, [⭐ star the repo](https://github.com/Kaushik2210/gitVisualise) and tell a teammate.**<br>
+Have an idea or found a bug? [Open an issue](https://github.com/Kaushik2210/gitVisualise/issues/new/choose) or [start a discussion](https://github.com/Kaushik2210/gitVisualise/discussions).
 
 </div>

@@ -9,12 +9,12 @@
 <meta property="og:description" content="Paste a GitHub link. Get an interactive, narrated architecture tour. Free and open source.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="gitvisualise">
-<meta property="og:url" content="https://kaushik2210.github.io/gitvisualise/">
+<meta property="og:url" content="https://kaushik2210.github.io/gitVisualise/">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="gitvisualise: see how any GitHub repo works">
 <meta name="twitter:description" content="Paste a GitHub link. Get an interactive, narrated architecture tour. Free and open source.">
 <meta name="theme-color" content="#0b1020">
-<link rel="canonical" href="https://kaushik2210.github.io/gitvisualise/">
+<link rel="canonical" href="https://kaushik2210.github.io/gitVisualise/">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b1020'/%3E%3Cg fill='none' stroke='%238db3ff' stroke-width='2'%3E%3Cpath d='M9 16h5M18 9h5M18 23h5M14 16l4-7M14 16l4 7'/%3E%3C/g%3E%3Ccircle cx='8' cy='16' r='3' fill='%237ee7b0'/%3E%3Ccircle cx='25' cy='9' r='3' fill='%23c79bff'/%3E%3Ccircle cx='25' cy='23' r='3' fill='%23ffab6b'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -28,7 +28,7 @@
       <a href="#how">How it works</a>
       <a href="#bring">Add to your repo</a>
       <a href="architecture/">Self-tour</a>
-      <a class="btn small" href="https://github.com/Kaushik2210/gitvisualise" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
+      <a class="btn small" href="https://github.com/Kaushik2210/gitVisualise" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
     </nav>
   </header>
 
@@ -50,7 +50,7 @@
         <button class="chip" data-repo="tj/commander.js">tj/commander.js</button>
         <button class="chip" data-repo="psf/requests">psf/requests</button>
         <button class="chip" data-repo="expressjs/express">expressjs/express</button>
-        <button class="chip" data-repo="Kaushik2210/gitvisualise">Kaushik2210/gitvisualise</button>
+        <button class="chip" data-repo="Kaushik2210/gitVisualise">Kaushik2210/gitVisualise</button>
       </div>
       <div id="recent" class="examples" hidden aria-label="Recent"></div>
     </section>
@@ -98,7 +98,7 @@
         <article>
           <h3>&#129302; Claude Code skill</h3>
           <p>Ask Claude Code to <em>&ldquo;generate an interactive architecture for this project.&rdquo;</em> It reads your code, writes the narration, and validates every claim.</p>
-          <pre><code id="c-skill">git clone https://github.com/Kaushik2210/gitvisualise
+          <pre><code id="c-skill">git clone https://github.com/Kaushik2210/gitVisualise gitvisualise
 node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skill</code></pre>
           <button class="btn small" data-copy="c-skill">Copy</button>
         </article>
@@ -112,20 +112,20 @@ node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skil
           <h3>&#9881;&#65039; GitHub Action</h3>
           <p>Regenerate on every push and publish to GitHub Pages. Curated edits are preserved.</p>
           <pre><code id="c-action">- uses: actions/checkout@v4
-- uses: Kaushik2210/gitvisualise@main
+- uses: Kaushik2210/gitVisualise@main
   with:
     out: docs/architecture</code></pre>
           <button class="btn small" data-copy="c-action">Copy</button>
         </article>
       </div>
-      <p class="center"><a class="btn" href="https://github.com/Kaushik2210/gitvisualise#-use-it-with-claude-code" target="_blank" rel="noopener">Read the docs</a>
-        <a class="btn ghost" href="https://github.com/Kaushik2210/gitvisualise#-help-wanted" target="_blank" rel="noopener">Help build it</a></p>
+      <p class="center"><a class="btn" href="https://github.com/Kaushik2210/gitVisualise#-use-it-with-claude-code" target="_blank" rel="noopener">Read the docs</a>
+        <a class="btn ghost" href="https://github.com/Kaushik2210/gitVisualise#-help-wanted" target="_blank" rel="noopener">Help build it</a></p>
     </section>
   </main>
 
   <footer>
-    <p>gitvisualise is open source under the <a href="https://github.com/Kaushik2210/gitvisualise/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a>. Contributions welcome:
-      <a href="https://github.com/Kaushik2210/gitvisualise/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">how to contribute</a>.</p>
+    <p>gitvisualise is open source under the <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a>. Contributions welcome:
+      <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">how to contribute</a>.</p>
     <p class="muted">Public repos are read anonymously through GitHub&rsquo;s API from your browser (60 requests per hour per network; a token lifts that). We store nothing.</p>
   </footer>
 </div>
