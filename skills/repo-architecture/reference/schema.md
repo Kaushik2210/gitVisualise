@@ -22,6 +22,7 @@ must match exact case. `node scripts/gitvisualise.mjs validate` enforces everyth
       "kind": "api",                        // entry | ui | api | service | data | util | config | external | module | <any>
       "summary": "What it does, 1-3 sentences.",
       "tech": ["JavaScript", "axios"],      // optional chips
+      "group": "Backend",                   // optional swimlane; the viewer offers "By group" when any node has one
       "external": false,                    // true for third-party systems/libraries (sources optional)
       "origin": "auto | claude | manual",   // who owns it (see merge rules)
       "locked": true,                       // or ["summary", "label"]: fields kept on regeneration

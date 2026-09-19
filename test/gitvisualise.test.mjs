@@ -141,3 +141,12 @@ test('Go: a package (directory) is one node, imports resolve across packages, no
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.warnings, [], 'Go import-block lines and module paths must not raise warnings');
 });
+
+test('validate: the optional node "group" (swimlane) must be a string', () => {
+  const root = fixture();
+  const arch = generate(scanRepo(root));
+  arch.nodes[0].group = 'Backend';
+  assert.deepEqual(validate(arch, root).errors, []);
+  arch.nodes[0].group = 42;
+  assert.match(validate(arch, root).errors.join('\n'), /group must be a string/);
+});

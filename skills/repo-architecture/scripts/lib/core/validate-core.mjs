@@ -91,6 +91,7 @@ export function validateCore(arch, view) {
     else nodeIds.add(n.id);
     if (!n.label) err(`${w}: label is required`);
     if (!n.kind) err(`${w}: kind is required`);
+    if (n.group != null && typeof n.group !== 'string') err(`${w}: group must be a string`);
     if (n.origin && !ORIGINS.has(n.origin)) err(`${w}: origin must be auto | claude | manual`);
     if (!n.summary) warn(`${w}: has no summary`);
     if (n.position && !(Number.isFinite(n.position.x) && Number.isFinite(n.position.y))) err(`${w}: position needs numeric x and y`);

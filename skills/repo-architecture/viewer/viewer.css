@@ -106,6 +106,8 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
 .arrow-head { fill: var(--edge); }
 .arrow-head.a { fill: var(--accent); }
 .arrow-head.v { fill: color-mix(in srgb, var(--accent) 55%, var(--edge)); }
+.lane { fill: color-mix(in srgb, var(--kc) 7%, transparent); stroke: color-mix(in srgb, var(--kc) 35%, transparent); stroke-dasharray: 5 5; }
+.lane-label { font-size: 11.5px; font-weight: 700; letter-spacing: .07em; fill: var(--muted); }
 .node { cursor: pointer; transition: opacity .25s; }
 .node rect.box { fill: var(--node-bg); stroke: var(--kc); stroke-width: 1.5; transition: stroke-width .2s, filter .2s; }
 .node rect.bar { fill: var(--kc); }

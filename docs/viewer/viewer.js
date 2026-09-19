@@ -51,8 +51,10 @@
   }
 
   // ---------- layout (layered, left to right; manual `position` wins) ----------
+  var LANE_HEAD = 30, KIND_ORDER = ['entry', 'ui', 'api', 'service', 'data', 'util', 'config', 'module', 'external', 'test'];
+  var laneRects = [], groupMode = 'none';
   var W = 196, H = 60, GX = 58, GY = 22, PAD = 30;
-  function computeLayout() {
+  function computeLayout(mode) {
     var idx = {}, n = nodes.length;
     nodes.forEach(function (nd, i) { idx[nd.id] = i; });
     var out = nodes.map(function () { return []; }), inn = nodes.map(function () { return []; });
@@ -96,6 +98,31 @@
     var boxes = {}, li = 0;
     var layerIndex = {};
     cols.forEach(function (c, ci) { c.forEach(function (i) { layerIndex[i] = ci; }); });
+    laneRects = [];
+    if (mode && mode !== 'none') { // swimlanes: one horizontal band per group, columns still follow dependency depth
+      var laneOf = function (nd) { return mode === 'kind' ? (nd.kind || 'module') : (nd.group || 'Other'); };
+      var order = [];
+      nodes.forEach(function (nd) { var k = laneOf(nd); if (order.indexOf(k) < 0) order.push(k); });
+      if (mode === 'kind') order.sort(function (a, b) { var ia = KIND_ORDER.indexOf(a), ib = KIND_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+      var top = PAD, laneW = cols.length * (W + GX) - GX;
+      order.forEach(function (key) {
+        var perCol = {}, rowsMax = 1;
+        nodes.forEach(function (nd, i) { if (laneOf(nd) === key) (perCol[layerIndex[i]] = perCol[layerIndex[i]] || []).push(i); });
+        Object.keys(perCol).forEach(function (ci) {
+          perCol[ci].sort(function (a, b) { return row[a] - row[b]; });
+          rowsMax = Math.max(rowsMax, perCol[ci].length);
+          perCol[ci].forEach(function (i, r) {
+            var nd = nodes[i], x = PAD + Number(ci) * (W + GX), y = top + LANE_HEAD + r * (H + GY);
+            if (nd.position && isFinite(nd.position.x) && isFinite(nd.position.y)) { x = nd.position.x; y = nd.position.y; }
+            boxes[nd.id] = { x: x, y: y, w: W, h: H };
+          });
+        });
+        var laneH = LANE_HEAD + rowsMax * (H + GY) - GY + 16;
+        laneRects.push({ key: key, x: PAD - 16, y: top - 6, w: laneW + 32, h: laneH + 6 });
+        top += laneH + 26;
+      });
+      return boxes;
+    }
     cols.forEach(function (c, ci) {
       var colH = c.length * (H + GY) - GY;
       c.forEach(function (i, r) {
@@ -138,7 +165,7 @@
   var view = { x: 0, y: 0, w: 1000, h: 600 }, userMoved = false, fitScale = 0;
 
   function render() {
-    boxes = computeLayout();
+    boxes = computeLayout(groupMode);
     svg.replaceChildren();
     var defs = s('defs');
     [['arrow', 'arrow-head'], ['arrow-a', 'arrow-head a'], ['arrow-v', 'arrow-head v']].forEach(function (m) {
@@ -147,6 +174,14 @@
       defs.appendChild(mk);
     });
     svg.appendChild(defs);
+    var gL = s('g', { class: 'lanes' });
+    laneRects.forEach(function (lr) {
+      var g = s('g', { style: '--kc:' + kindColor(lr.key) });
+      g.appendChild(s('rect', { class: 'lane', x: lr.x, y: lr.y, width: lr.w, height: lr.h, rx: 14 }));
+      g.appendChild(s('text', { class: 'lane-label', x: lr.x + 14, y: lr.y + 22 }, trunc(String(lr.key).toUpperCase(), 40)));
+      gL.appendChild(g);
+    });
+    svg.appendChild(gL);
     var gE = s('g', { class: 'edges' }), gN = s('g', { class: 'nodes' });
     edges.forEach(function (e) {
       var a = boxes[e.from], b = boxes[e.to];
@@ -641,6 +676,18 @@
     if (typeof e.data.gvTheme === 'string') applyTheme(e.data.gvTheme, true);
   });
   applyTheme(store('theme') || 'auto', true);
+
+  // ---------- grouping (swimlanes) ----------
+  var hasGroups = nodes.some(function (n) { return typeof n.group === 'string' && n.group; });
+  (function () {
+    var sel = $('group-by');
+    [['none', 'No grouping'], ['kind', 'By kind']].concat(hasGroups ? [['group', 'By group']] : []).forEach(function (o) { sel.appendChild(h('option', { value: o[0], text: o[1] })); });
+    groupMode = hasGroups ? 'group' : 'none';
+    sel.value = groupMode;
+    sel.addEventListener('change', function () {
+      groupMode = sel.value; render(); applyState(); runSearch(); fit();
+    });
+  })();
 
   // ---------- boot ----------
   $('proj-name').textContent = arch.project.name;
