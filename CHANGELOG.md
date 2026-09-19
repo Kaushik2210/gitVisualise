@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.1] - 2026-09-19
+
+### Fixed
+- **Website:** the tour could appear blank after analysing a repository, leaving only the toolbar. The sandboxed
+  frame is now created fresh for every tour, inside the already visible results view.
+
 ## [1.0.0] - 2026-09-19
 
 First public release.
@@ -26,4 +32,5 @@ First public release.
   keyboard shortcuts, dark mode, a phone layout, reduced-motion support and a no-JavaScript fallback.
 - A self-documenting architecture tour of this repository in `docs/architecture/`.
 
+[1.0.1]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.0.0
