@@ -37,6 +37,42 @@ Architecture diagrams answer that, until they go stale or turn out to be someone
 Every box and arrow links to real files and lines, a validator rejects invented ones, and the whole thing is
 regenerated (without losing your edits) when the code changes.
 
+## 📸 See it
+
+<p align="center">
+  <img src="docs/assets/tour.gif" alt="Animation: the gitvisualise home page, then a tour of tj/commander.js stepping through its modules one import at a time" width="100%">
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/tour-dark.png">
+    <img src="docs/assets/tour-light.png" alt="The tour player showing tj/commander.js: a left-to-right diagram of its modules with the step index.js to command.js highlighted, the narration and source links on the right, and play controls underneath" width="100%">
+  </picture>
+</p>
+
+<table>
+  <tr>
+    <td width="62%" align="center">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/assets/diff-dark.png">
+        <img src="docs/assets/diff-dark.png" alt="A comparison of two commander.js versions: added components outlined in green, a removed component in red with a dashed border, and a changed one in amber">
+      </picture><br>
+      <sub><b>Compare two revisions</b> (<code>owner/repo@v5.0.0...v11.0.0</code>): green added, red removed, amber changed</sub>
+    </td>
+    <td width="38%" align="center">
+      <img src="docs/assets/mobile-dark.png" alt="The same tour on a narrow screen: the diagram stacked above the narration and controls"><br>
+      <sub><b>Works on small screens</b></sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/assets/home.png" alt="The gitvisualise home page: a headline, a box to paste a GitHub link, example repositories and a picker for a GitHub account" width="80%"><br>
+  <sub>The website: paste a link, or pick a repository from a GitHub account.</sub>
+</p>
+
+These are real captures of the tool run on [tj/commander.js](https://github.com/tj/commander.js).
+
 ## ✨ What you get
 
 |  |  |
