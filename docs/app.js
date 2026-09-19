@@ -2,6 +2,7 @@
 // No backend. Repo content is untrusted, so everything below writes with textContent, never innerHTML.
 import { analyzeRepo, parseRepoInput, listRepos, GitHubError } from './lib/web/github-loader.mjs';
 import { buildSnippets, renderPage } from './lib/core/build-core.mjs';
+import { keyOf, hashOf, parseHash, stateSuffix } from './lib/web/route.mjs';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -28,8 +29,14 @@ const cache = new Map(); // key -> { res, html }
 let assets = null;
 let lastEntry = null;
 
-const keyOf = (t) => `${t.owner}/${t.repo}${t.ref ? '@' + t.ref : ''}`;
-const hashOf = (t) => '#/' + keyOf(t);
+
+// (Link parsing lives in lib/web/route.mjs so it can be unit tested.)
+let lastState = null; // { flow, step } most recently reported by the tour
+let pendingGoto = null; // position to apply once the tour frame has loaded
+function postToFrame(msg) {
+  const f = $('frame');
+  if (f && f.contentWindow) f.contentWindow.postMessage(msg, '*');
+}
 
 // ---------- views ----------
 /**
@@ -48,7 +55,10 @@ function mountFrame(html) {
   old.replaceWith(f);
   if (html) {
     void f.offsetHeight; // flush layout so the frame has a size before its document loads
-    f.addEventListener('load', tellFrame);
+    f.addEventListener('load', () => {
+      tellFrame();
+      if (pendingGoto) { postToFrame({ gvGoto: pendingGoto }); pendingGoto = null; }
+    });
     f.srcdoc = html;
   }
 }
@@ -141,6 +151,12 @@ window.addEventListener('message', (ev) => {
   const f = $('frame');
   if (!f || ev.source !== f.contentWindow || !ev.data || typeof ev.data !== 'object') return;
   if (THEMES.includes(ev.data.gvTheme)) applyTheme(ev.data.gvTheme, { sync: false });
+  const st = ev.data.gvState;
+  if (st && typeof st.flow === 'string' && st.flow.length < 120 && Number.isInteger(st.step) && st.step >= 0 && lastEntry) {
+    lastState = st;
+    const h = hashOf(lastEntry.target) + stateSuffix(st);
+    if (location.hash !== h) history.replaceState(null, '', h); // keeps the link current without adding history entries
+  }
 });
 applyTheme(theme, { persist: false });
 
@@ -152,6 +168,7 @@ async function run(input, { push = true } = {}) {
     return showError(new GitHubError('bad_input', 'That does not look like a GitHub repository. Try owner/repo or a github.com link.'));
   }
   hideError();
+  lastState = null;
   const key = keyOf(target);
   current = key;
   if (push && location.hash !== hashOf(target)) history.pushState(null, '', hashOf(target));
@@ -228,9 +245,11 @@ function back() {
 }
 
 function route() {
-  const t = /^#\//.test(location.hash) ? parseRepoInput(location.hash.slice(2)) : null;
+  const p = parseHash(location.hash);
+  const t = p && p.target;
   if (t) {
-    if (keyOf(t) !== current) run(t, { push: false });
+    if (keyOf(t) !== current) { pendingGoto = p.goto; run(t, { push: false }); }
+    else if (p.goto && !$('result').hidden) postToFrame({ gvGoto: p.goto }); // same repo, different step
   } else if ($('landing').hidden) {
     if (controller) controller.abort();
     current = null;
@@ -319,7 +338,7 @@ $('cancel').addEventListener('click', back);
 $('back').addEventListener('click', back);
 $('bring-link').addEventListener('click', () => { back(); setTimeout(() => $('bring').scrollIntoView({ behavior: 'smooth' }), 50); });
 $('share').addEventListener('click', async () => {
-  const url = location.origin + location.pathname + hashOf(lastEntry.target);
+  const url = location.origin + location.pathname + hashOf(lastEntry.target) + stateSuffix(lastState);
   try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { toast(url); }
 });
 $('dl-html').addEventListener('click', () => download(`${lastEntry.res.meta.repo}-architecture.html`, 'text/html', lastEntry.html));

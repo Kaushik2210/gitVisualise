@@ -186,3 +186,24 @@ test('website: the tour frame is always mounted fresh, never navigated in place'
   assert.match(app, /sandbox['"], 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads'/, 'every mounted frame stays sandboxed (downloads only)');
   assert.ok(!/allow-same-origin/.test(app), 'the frame must never get same-origin access');
 });
+
+test('route: tour links round-trip, with and without a step, and reject nonsense', async () => {
+  const { parseHash, hashOf, keyOf, stateSuffix } = await import('../skills/repo-architecture/scripts/lib/web/route.mjs');
+  assert.deepEqual(parseHash('#/tj/commander.js'), { target: { owner: 'tj', repo: 'commander.js', ref: null }, goto: null });
+  assert.deepEqual(parseHash('#/o/r@dev'), { target: { owner: 'o', repo: 'r', ref: 'dev' }, goto: null });
+  assert.deepEqual(parseHash('#/o/r/flow/pipeline/step/4').goto, { flow: 'pipeline', step: 4 });
+  assert.deepEqual(parseHash('#/o/r@v1/flow/a%20b/step/12').goto, { flow: 'a b', step: 12 });
+  assert.equal(parseHash('#/o/r@v1/flow/x/step/2').target.ref, 'v1');
+  for (const bad of ['', '#', '#/', '#how', '#/justone', '#/o/r/flow/x/step/notanumber/extra', null, undefined]) assert.equal(parseHash(bad), null, String(bad));
+  assert.deepEqual(parseHash('#/o/r/flow/%E0%A4%A/step/2').goto, null, 'malformed escapes never throw');
+  // suffix formatting
+  assert.equal(stateSuffix({ flow: 'pipeline', step: 3 }), '/flow/pipeline/step/3');
+  assert.equal(stateSuffix({ flow: 'a b', step: 1 }), '/flow/a%20b/step/1');
+  assert.equal(stateSuffix({ flow: 'x', step: 0 }), '');
+  assert.equal(stateSuffix(null), '');
+  // a link built from a position parses back to the same position
+  const t = { owner: 'o', repo: 'r', ref: 'main' };
+  const round = parseHash(hashOf(t) + stateSuffix({ flow: 'website', step: 5 }));
+  assert.equal(keyOf(round.target), 'o/r@main');
+  assert.deepEqual(round.goto, { flow: 'website', step: 5 });
+});

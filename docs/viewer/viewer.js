@@ -497,7 +497,7 @@
     if (!S.flow) return;
     S.step = Math.max(-1, Math.min(S.flow.steps.length - 1, i));
     S.ended = false;
-    applyState(); cameraForStep();
+    applyState(); cameraForStep(); reportState();
     if (S.playing) schedule(); else { clearTimeout(timer); stopSpeech(); }
   }
   function play() {
@@ -574,7 +574,7 @@
   // ---------- flows ----------
   function setFlow(i) {
     stopAll(); S.flow = flows[i] || null; S.step = -1; S.ended = false;
-    buildDots(); applyState();
+    buildDots(); applyState(); reportState();
   }
   var fs = $('flow-select');
   flows.forEach(function (f, i) { fs.appendChild(h('option', { value: i, text: f.title })); });
@@ -674,8 +674,27 @@
   window.addEventListener('message', function (e) {
     if (e.source !== window.parent || !e.data || typeof e.data !== 'object') return;
     if (typeof e.data.gvTheme === 'string') applyTheme(e.data.gvTheme, true);
+    if (e.data.gvGoto && typeof e.data.gvGoto === 'object') gotoState(e.data.gvGoto);
   });
   applyTheme(store('theme') || 'auto', true);
+
+  // Deep links: report where the tour is, and jump to a reported position. Steps are 1-based in links; 0 or missing means the overview.
+  function reportState() {
+    if (!S.flow) return;
+    var st = { flow: S.flow.id, step: S.step + 1 };
+    toHost({ gvState: st });
+    if (window.parent === window) { try { history.replaceState(null, '', st.step > 0 ? '#flow=' + encodeURIComponent(st.flow) + '&step=' + st.step : location.pathname + location.search); } catch (e) { /* not allowed here */ } }
+  }
+  function gotoState(g) {
+    var idx = -1;
+    flows.forEach(function (f, i) { if (idx < 0 && f.id === g.flow) idx = i; });
+    if (idx < 0) idx = 0;
+    if (!flows.length) return;
+    stopAll(); $('flow-select').value = idx; S.flow = flows[idx]; S.step = -1; S.ended = false; buildDots();
+    var n = Number(g.step);
+    if (Number.isInteger(n) && n >= 1 && n <= S.flow.steps.length && (g.flow == null || flows[idx].id === g.flow)) goto(n - 1); // paused on that step
+    else { applyState(); reportState(); }
+  }
 
   // ---------- grouping (swimlanes) ----------
   var hasGroups = nodes.some(function (n) { return typeof n.group === 'string' && n.group; });
@@ -701,4 +720,6 @@
   S.follow = savedFollow == null ? fitScale < 0.5 : savedFollow === '1';
   $('follow').checked = S.follow;
   $('follow').addEventListener('change', function (e) { S.follow = e.target.checked; store('follow', S.follow ? '1' : '0'); if (S.follow) cameraForStep(); else fit(); });
+  var hm = /[#&]flow=([^&]+)&step=(\d+)/.exec(location.hash); // standalone deep link
+  if (hm) gotoState({ flow: decodeURIComponent(hm[1]), step: Number(hm[2]) });
 })();
