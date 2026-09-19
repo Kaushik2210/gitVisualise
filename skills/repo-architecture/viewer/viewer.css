@@ -101,6 +101,8 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
 .edge.visited path.line { stroke: color-mix(in srgb, var(--accent) 55%, var(--edge)); }
 .edge.selected path.line { stroke: var(--accent); }
 .edge.active path.line { stroke: var(--accent); stroke-width: 3; stroke-dasharray: 8 6; animation: flow 0.9s linear infinite; }
+.edge.k-http:not(.active):not(.selected) path.line { stroke: color-mix(in srgb, var(--accent) 70%, var(--edge)); stroke-dasharray: 2 5; stroke-linecap: round; }
+.legend .http-key { display: inline-block; width: 18px; height: 0; border-top: 2px dotted var(--accent); background: none; border-radius: 0; vertical-align: middle; }
 .edge.dim { opacity: .28; }
 @keyframes flow { to { stroke-dashoffset: -14; } }
 .arrow-head { fill: var(--edge); }

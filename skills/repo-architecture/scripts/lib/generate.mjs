@@ -2,6 +2,7 @@
 // found in the repository, and carries `sources` pointing at it. Claude (see SKILL.md) can then refine.
 import * as posix from './core/posix.mjs';
 import { slug } from './core/text.mjs';
+import { matchRequests } from './core/http-core.mjs';
 
 const KIND_RULES = [
   ['test', /(^|\/)(tests?|__tests__|spec)(\/|$)/i],
@@ -204,6 +205,32 @@ export function generate(scan, opts = {}) {
     });
   }
 
+  // ---------- 4b. HTTP requests between components ----------
+  // A client call is linked to a server route only when method and path segments agree (see http-core).
+  const httpPairs = new Map();
+  for (const { call, route } of matchRequests(scan.routes, scan.apiCalls)) {
+    if (!byPath.has(call.file) || !byPath.has(route.file)) continue;
+    const from = unitToId.get(unitKey(call.file)), to = unitToId.get(unitKey(route.file));
+    if (!from || !to || from === to) continue;
+    const p = httpPairs.get(`${from}>${to}`) || { from, to, hits: [] };
+    if (!p.hits.some((h) => h.call.file === call.file && h.call.line === call.line && h.route.path === route.path)) p.hits.push({ call, route });
+    httpPairs.set(`${from}>${to}`, p);
+  }
+  const httpEdges = [];
+  for (const p of httpPairs.values()) {
+    const reqs = [...new Set(p.hits.map((h) => `${h.route.method === 'ANY' ? h.call.method : h.route.method} ${h.route.path}`))];
+    const edge = {
+      id: `h-${p.from}--${p.to}`.slice(0, 120), from: p.from, to: p.to, kind: 'http', origin: 'auto',
+      label: reqs.length === 1 ? reqs[0] : `${reqs.length} API calls`,
+      summary: `${reqs.length} HTTP request${reqs.length > 1 ? 's' : ''} handled by routes here: ${list(reqs, 4)}.`,
+      // Evidence on both sides: where the request is sent and where the route is registered.
+      sources: p.hits.slice(0, 2).flatMap((h) => [{ path: h.call.file, lines: [h.call.line, h.call.line] }, { path: h.route.file, lines: [h.route.line, h.route.line] }]),
+    };
+    edges.push(edge);
+    httpEdges.push({ edge, hits: p.hits, reqs });
+  }
+  httpEdges.sort((a, b) => b.hits.length - a.hits.length);
+
   // ---------- 5. external dependencies ----------
   const idOfFile = (p) => unitToId.get(unitKey(p));
   // Prefer libraries the running code depends on: skip packages only imported by tooling config, and
@@ -290,6 +317,48 @@ export function generate(scan, opts = {}) {
       sources: group[0].sources.slice(0, 1),
     });
   }
+  // One request-flow tour per client -> server pair (the busiest few): the call, the route, then what the route reaches.
+  const requestFlows = [];
+  for (const { edge, hits, reqs } of httpEdges.slice(0, 3)) {
+    const client = nodeById.get(edge.from), server = nodeById.get(edge.to);
+    const { call, route } = hits[0];
+    const steps = [
+      {
+        id: 's1', title: `${client.label} sends ${reqs[0]}`, nodes: [client.id], edges: [], origin: 'auto',
+        narration: `${client.label} makes an HTTP request, ${reqs[0]}, to the backend. The call is at ${call.file}:${call.line}.`,
+        sources: [{ path: call.file, lines: [call.line, call.line] }],
+      },
+      {
+        id: 's2', title: `${server.label} handles it`, nodes: [client.id, server.id], edges: [edge.id], origin: 'auto',
+        narration: `The route ${route.method} ${route.path} is registered in ${route.file}:${route.line}, so ${server.label} receives the request.${reqs.length > 1 ? ` The same pair also talks over ${list(reqs.slice(1), 3)}.` : ''}`,
+        sources: [{ path: route.file, lines: [route.line, route.line] }],
+      },
+    ];
+    // Follow the handler's imports up to two hops to show where the work goes.
+    const seenReq = new Set([client.id, server.id]);
+    let frontier = [server.id];
+    for (let hop = 0; hop < 2 && steps.length < 6; hop++) {
+      const next = [];
+      for (const cur of frontier) {
+        for (const e of out.get(cur)) {
+          if (e.kind !== 'imports' || seenReq.has(e.to) || steps.length >= 6) continue;
+          seenReq.add(e.to); next.push(e.to);
+          const a = nodeById.get(e.from), b = nodeById.get(e.to);
+          steps.push({
+            id: `s${steps.length + 1}`, title: `${a.label} → ${b.label}`, nodes: [e.from, e.to], edges: [e.id], origin: 'auto',
+            narration: `To do its work, ${a.label} imports ${b.label} — ${lowerFirst(stripDot(e.summary))}. ${sentence(b.summary)}`,
+            sources: e.sources.slice(0, 1),
+          });
+        }
+      }
+      frontier = next;
+    }
+    requestFlows.push({
+      id: `request-${slug(client.id)}-${slug(server.id)}`.slice(0, 80), title: `Request: ${reqs[0]}`,
+      description: `Follows an HTTP request from ${client.label} to the route that handles it in ${server.label}.`, origin: 'auto', steps,
+    });
+  }
+  flows.push(...requestFlows);
   if (tourSteps.length > 1) flows.push({ id: 'tour', title: 'Components by role', description: 'Groups the diagram by what each part does.', origin: 'auto', steps: tourSteps });
 
   const sp = scan.subPath || null; // analysing one folder (a package) of a larger repository
@@ -317,6 +386,7 @@ export function generate(scan, opts = {}) {
 
 function verb(from, e) {
   if (e.kind === 'uses') return 'relies on the library';
+  if (e.kind === 'http') return 'sends HTTP requests to';
   return /\.html?$/.test(from.label) ? 'loads' : 'imports';
 }
 const stripDot =(s) => String(s || '').replace(/\.+\s*$/, '');

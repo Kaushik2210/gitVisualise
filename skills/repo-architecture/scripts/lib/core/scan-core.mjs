@@ -1,6 +1,7 @@
 // Deterministic repository scanner core. Produces *facts* (files, imports, entry points, dependencies)
 // that both the heuristic generator and Claude use, so architecture is grounded in the repo.
 // Pure: works on a list of paths plus a read() callback, so it runs unchanged in Node and in the browser.
+import { extractApiCalls, usesHttpClient } from './http-core.mjs';
 import * as posix from './posix.mjs';
 import { countLines } from './text.mjs';
 import { rustImports, buildRustContext, resolveRustImport, rustDependencies } from './lang-rust.mjs';
@@ -582,12 +583,42 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     if (serverFile && !isPy) {
       const re = /\b(?:app|router|server|api|fastify)\.(get|post|put|delete|patch)\(\s*['"`]([^'"`]+)['"`]/g;
       while ((m = re.exec(f._text)) && routes.length < 60) routes.push({ method: m[1].toUpperCase(), path: m[2], file: f.path, line: lineAt(f._text, m.index) });
+      // router.route('/x').get(a).post(b): one path, several verbs.
+      const chain = /\b(?:app|router|server|api)\.route\(\s*['"`]([^'"`]+)['"`]\s*\)((?:\s*\.(?:get|post|put|delete|patch)\([^)]*\))+)/g;
+      while ((m = chain.exec(f._text)) && routes.length < 60) {
+        for (const v of m[2].matchAll(/\.(get|post|put|delete|patch)\(/g)) routes.push({ method: v[1].toUpperCase(), path: m[1], file: f.path, line: lineAt(f._text, m.index) });
+      }
     } else if (serverFile && isPy) {
-      const re = /^@\w+\.(route|get|post|put|delete|patch)\(\s*['"]([^'"]+)['"]/gm;
-      while ((m = re.exec(f._text)) && routes.length < 60) routes.push({ method: m[1] === 'route' ? 'ANY' : m[1].toUpperCase(), path: m[2], file: f.path, line: lineAt(f._text, m.index) });
+      const re = /^@\w+\.(route|get|post|put|delete|patch)\(\s*['"]([^'"]+)['"]([^\n]*)/gm;
+      while ((m = re.exec(f._text)) && routes.length < 60) {
+        // Flask: @app.route('/x', methods=['POST', 'PUT']) declares its verbs in the decorator arguments.
+        const verbs = m[1] === 'route' ? ((/methods\s*=\s*[\[(]([^\])]*)/.exec(m[3]) || [])[1] || '').match(/[A-Za-z]+/g) : null;
+        for (const method of verbs && verbs.length ? verbs : [m[1] === 'route' ? 'ANY' : m[1]]) routes.push({ method: method.toUpperCase(), path: m[2], file: f.path, line: lineAt(f._text, m.index) });
+      }
     }
-    const re2 = /\b(?:fetch|axios(?:\.\w+)?|\$http\.\w+)\(\s*['"`]([^'"`]+)['"`]/g;
-    while ((m = re2.exec(f._text)) && apiCalls.length < 60) apiCalls.push({ target: m[1], file: f.path, line: lineAt(f._text, m.index) });
+    const clientFile = usesHttpClient(f.imports);
+    for (const c of extractApiCalls(f._text, { serverFile, clientFile }, lineAt, 60 - apiCalls.length)) apiCalls.push({ ...c, file: f.path });
+  }
+
+  // Express-style mounting: `app.use('/api/items', itemRouter)` puts every route of the router file that
+  // `itemRouter` was imported from under that prefix. Only unambiguous mounts (one prefix per file) are applied.
+  const mounts = new Map();
+  for (const f of files) {
+    if (f.path.endsWith('.py') || !f.imports.some((i) => SERVER_JS.test(i.spec))) continue;
+    const use = /\.use\(\s*['"`](\/[^'"`]*)['"`]\s*,\s*(?:[\w$.()]+\s*,\s*)*([A-Za-z_$][\w$]*)\s*\)/g;
+    let m;
+    while ((m = use.exec(f._text))) {
+      const id = m[2].replace(/[$]/g, '\\$&');
+      const bind = new RegExp('import\\s+' + id + '\\s+from\\s+[\'"]([^\'"]+)[\'"]|\\b' + id + '\\s*=\\s*require\\(\\s*[\'"]([^\'"]+)[\'"]\\s*\\)').exec(f._text);
+      const spec = bind && (bind[1] || bind[2]);
+      const target = spec && f.imports.find((i) => i.spec === spec)?.resolved;
+      if (!target || target === f.path) continue;
+      mounts.set(target, mounts.has(target) && mounts.get(target) !== m[1] ? null : m[1]);
+    }
+  }
+  for (const r of routes) {
+    const prefix = mounts.get(r.file);
+    if (prefix) r.path = (prefix.replace(/\/+$/, '') + '/' + r.path.replace(/^\/+/, '')).replace(/\/+$/, '') || '/';
   }
 
   const ext = Object.values(externals).map((e) => ({ ...e, kind: KNOWN_EXTERNAL[e.name] || 'external', declaredAt: depLine[e.name] || null }));

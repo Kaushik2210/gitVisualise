@@ -1,25 +1,10 @@
 // Scanner tests for language-specific import resolution. Each test builds a throwaway repository in a temp dir.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { scanRepo } from '../skills/repo-architecture/scripts/lib/scan.mjs';
 import { generate } from '../skills/repo-architecture/scripts/lib/generate.mjs';
 import { validate } from '../skills/repo-architecture/scripts/lib/validate.mjs';
-
-/** Creates a temp repo from { "path": "contents" } and returns its root. */
-export function repo(files) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gvlang-'));
-  for (const [rel, txt] of Object.entries(files)) {
-    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
-    fs.writeFileSync(path.join(root, rel), txt);
-  }
-  return root;
-}
-/** The resolved import targets of a file, as "spec -> resolved|null". */
-export const imports = (scan, file) => Object.fromEntries(scan.files.find((f) => f.path === file).imports.map((i) => [i.spec, i.resolved]));
-export const externals = (scan) => scan.externals.map((e) => e.name).sort();
+import { repo, imports, externals } from './helpers.mjs';
 
 test('python: src layout, absolute imports, relative imports and declared third-party packages', () => {
   const root = repo({

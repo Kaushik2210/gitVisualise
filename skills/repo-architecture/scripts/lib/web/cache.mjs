@@ -21,11 +21,15 @@ export function memoryStore() {
 
 const NOOP = { enabled: false, async get() { return null; }, async set() {}, async clear() {}, async count() { return 0; } };
 
+// Cached tours are generator output: bump this whenever the scanner or generator changes what it produces,
+// so tours written by an older release are ignored instead of shown stale.
+export const DATA_VERSION = 'v2';
+
 /**
- * @param store   { get, set, delete, keys } (all async) or null/undefined to disable caching
+ * @param store  { get, set, delete, keys } (all async) or null/undefined to disable caching
  * @param opts    { max: entries to keep, maxBytes: skip values larger than this, version: data format tag }
  */
-export function createCache(store, { max = 30, maxBytes = 6 * 1024 * 1024, version = 'v1' } = {}) {
+export function createCache(store, { max = 30, maxBytes = 6 * 1024 * 1024, version = DATA_VERSION } = {}) {
   if (!store) return NOOP;
   const INDEX = `${version}:__index__`;
   const k = (key) => `${version}:${key}`;

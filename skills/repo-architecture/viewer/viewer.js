@@ -187,7 +187,7 @@
       var a = boxes[e.from], b = boxes[e.to];
       if (!a || !b) return;
       var geo = edgeGeom(a, b);
-      var g = s('g', { class: 'edge', 'data-id': e.id });
+      var g = s('g', { class: e.kind === 'http' ? 'edge k-http' : 'edge', 'data-id': e.id });
       g.appendChild(s('title', {}, e.label ? (byId[e.from].label + ' → ' + byId[e.to].label + ': ' + e.label) : ''));
       g.appendChild(s('path', { d: geo.d, class: 'hit' }));
       g.appendChild(s('path', { d: geo.d, class: 'line' }));
@@ -216,6 +216,10 @@
       var i = h('i'); i.setAttribute('style', '--kc:' + kindColor(n.kind));
       legend.appendChild(h('span', {}, [i, document.createTextNode(n.kind)]));
     });
+    if (edges.some(function (e) { return e.kind === 'http'; })) {
+      var hl = h('i', { class: 'http-key' });
+      legend.appendChild(h('span', {}, [hl, document.createTextNode('HTTP request')]));
+    }
   }
 
   // ---------- camera ----------

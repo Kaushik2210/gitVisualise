@@ -245,7 +245,7 @@ test('listRepos: follows pagination, streams pages, and reports capped or partia
 });
 
 test('cache: per-commit keys, LRU eviction, versioning and tolerance of broken storage', async () => {
-  const { createCache, cacheKey, memoryStore } = await import('../skills/repo-architecture/scripts/lib/web/cache.mjs');
+  const { createCache, cacheKey, memoryStore, DATA_VERSION } = await import('../skills/repo-architecture/scripts/lib/web/cache.mjs');
   assert.equal(cacheKey('Tj', 'Commander.js', 'ABC'), 'tj/commander.js@abc', 'keys are case-insensitive and per commit');
 
   const store = memoryStore();
@@ -259,10 +259,10 @@ test('cache: per-commit keys, LRU eviction, versioning and tolerance of broken s
   assert.deepEqual(await cache.get('a'), { v: 'a' });
   assert.deepEqual(await cache.get('d'), { v: 'd' });
   assert.equal(await cache.count(), 3);
-  assert.ok(!(await store.keys()).includes('v1:b'), 'evicted entries are really deleted from the store');
+  assert.ok(!(await store.keys()).includes(DATA_VERSION + ':b'), 'evicted entries are really deleted from the store');
 
   // a new data-format version ignores entries written by the old one
-  const v2 = createCache(store, { max: 3, version: 'v2' });
+  const v2 = createCache(store, { max: 3, version: 'next-format' });
   assert.equal(await v2.get('a'), null);
 
   // oversized values are skipped rather than stored
