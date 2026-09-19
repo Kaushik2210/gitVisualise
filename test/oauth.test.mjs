@@ -1,5 +1,6 @@
 // Sign in with GitHub: the stateless exchange function and the browser-side helpers.
 import test from 'node:test';
+import { webcrypto } from 'node:crypto'; // Node 18 has no global crypto
 import assert from 'node:assert/strict';
 import { handle } from '../server/github-oauth/exchange.mjs';
 import { newState, authorizeUrl, readCallback, cleanUrl, exchangeCode } from '../skills/repo-architecture/scripts/lib/web/oauth.mjs';
@@ -61,9 +62,9 @@ test('exchange: contains no logging calls', async () => {
 });
 
 test('client: authorize URL, state and callback handling', () => {
-  const state = newState();
+  const state = newState(webcrypto);
   assert.match(state, /^[0-9a-f]{32}$/);
-  assert.notEqual(state, newState());
+  assert.notEqual(state, newState(webcrypto));
   const u = new URL(authorizeUrl({ clientId: 'Iv1.test', redirectUri: SITE + '/x/', state, scope: 'repo' }));
   assert.equal(u.origin + u.pathname, 'https://github.com/login/oauth/authorize');
   assert.equal(u.searchParams.get('state'), state);
