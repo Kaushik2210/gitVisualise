@@ -241,15 +241,36 @@ export async function analyzeRepo(input, opts = {}) {
 
 // ---------- repo picker helpers ----------
 
-/** Lists public repos for a user/org (or the token owner's repos when `user` is empty and a token is given). */
-export async function listRepos({ user, token, signal, fetchImpl = globalThis.fetch }) {
-  const path = user
+/**
+ * Lists public repos for a user/org (or the token owner's repos when `user` is empty and a token is given).
+ * Follows GitHub's pagination up to `maxPages` pages of 100 and returns every repository found. The array carries two
+ * extra properties: `capped` (more pages existed than were read) and `error` (a later page failed, so the list is partial).
+ * `onPage(reposSoFar)` is called after each page so a UI can render progressively.
+ */
+export async function listRepos({ user, token, signal, fetchImpl = globalThis.fetch, maxPages = 10, onPage }) {
+  if (!user && !token) throw new GitHubError('bad_input', 'Enter a GitHub username, or add a token to list your own repositories.');
+  const base = user
     ? `/users/${encodeURIComponent(user)}/repos?per_page=100&sort=pushed`
     : '/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator,organization_member';
-  if (!user && !token) throw new GitHubError('bad_input', 'Enter a GitHub username, or add a token to list your own repositories.');
-  const res = await apiGet(path, { token, signal, fetchImpl, accept: 'application/vnd.github+json' });
-  const list = await res.json();
-  return list
-    .filter((r) => !r.archived || true)
-    .map((r) => ({ fullName: r.full_name, name: r.name, description: r.description || '', language: r.language || '', stars: r.stargazers_count || 0, updated: r.pushed_at || r.updated_at, private: !!r.private, fork: !!r.fork }));
+  const repos = [];
+  repos.capped = false;
+  repos.error = null;
+  for (let page = 1; page <= maxPages; page++) {
+    let res;
+    try {
+      res = await apiGet(`${base}&page=${page}`, { token, signal, fetchImpl, accept: 'application/vnd.github+json' });
+    } catch (e) {
+      if (page === 1 || (e && e.name === 'AbortError')) throw e; // nothing to show yet: report it as usual
+      repos.error = e; // keep what we already have
+      break;
+    }
+    const list = await res.json();
+    for (const r of list) repos.push({ fullName: r.full_name, name: r.name, description: r.description || '', language: r.language || '', stars: r.stargazers_count || 0, updated: r.pushed_at || r.updated_at, private: !!r.private, fork: !!r.fork });
+    if (onPage) onPage(repos.slice());
+    const link = res.headers.get('link');
+    const hasNext = link ? /rel="next"/.test(link) : list.length === 100;
+    if (!hasNext) return repos;
+    if (page === maxPages) repos.capped = true;
+  }
+  return repos;
 }

@@ -36,7 +36,7 @@ function listFiles(root, rel = '') {
 }
 
 /** A fake api.github.com + raw.githubusercontent.com backed by a directory. Records every request. */
-function fakeGithub(root, { rateLimited = false, missing = false } = {}) {
+function fakeGithub(root, { rateLimited = false, missing = false, failPage2 = false } = {}) {
   const calls = [];
   const impl = async (url, init = {}) => {
     calls.push({ url: String(url), headers: init.headers || {} });
@@ -51,6 +51,13 @@ function fakeGithub(root, { rateLimited = false, missing = false } = {}) {
       }
       const contents = u.pathname.match(/\/contents\/(.+)$/);
       if (contents) return new Response(fs.readFileSync(path.join(root, decodeURIComponent(contents[1])), 'utf8'), { status: 200 });
+      if (/\/users\/many\/repos$/.test(u.pathname)) { // 103 repositories over two pages, with GitHub's Link header
+        const page = Number(u.searchParams.get('page') || 1);
+        if (failPage2 && page === 2) return new Response('{"message":"API rate limit exceeded"}', { status: 403, headers: { 'x-ratelimit-remaining': '0' } });
+        const mk = (n) => ({ full_name: 'many/r' + n, name: 'r' + n, description: '', language: 'Go', stargazers_count: n, pushed_at: '2026-01-01T00:00:00Z' });
+        const items = page === 1 ? Array.from({ length: 100 }, (_, i) => mk(i)) : Array.from({ length: 3 }, (_, i) => mk(100 + i));
+        return new Response(JSON.stringify(items), { status: 200, headers: page === 1 ? { link: '<https://api.github.com/x?page=2>; rel="next"' } : {} });
+      }
       if (/\/users\/.+\/repos$/.test(u.pathname)) return new Response(JSON.stringify([{ full_name: 'o/a', name: 'a', description: 'A', language: 'JavaScript', stargazers_count: 3, pushed_at: '2026-01-01T00:00:00Z' }]), { status: 200 });
     }
     if (u.hostname === 'raw.githubusercontent.com') {
@@ -206,4 +213,29 @@ test('route: tour links round-trip, with and without a step, and reject nonsense
   const round = parseHash(hashOf(t) + stateSuffix({ flow: 'website', step: 5 }));
   assert.equal(keyOf(round.target), 'o/r@main');
   assert.deepEqual(round.goto, { flow: 'website', step: 5 });
+});
+
+test('listRepos: follows pagination, streams pages, and reports capped or partial lists', async () => {
+  const gh = fakeGithub(fixture());
+  const seen = [];
+  const all = await listRepos({ user: 'many', fetchImpl: gh.impl, onPage: (l) => seen.push(l.length) });
+  assert.equal(all.length, 103);
+  assert.deepEqual(seen, [100, 103], 'onPage is called after each page with the cumulative list');
+  assert.equal(all.capped, false);
+  assert.equal(all.error, null);
+  assert.equal(new Set(all.map((r) => r.fullName)).size, 103, 'no duplicates across pages');
+  assert.equal(gh.calls.filter((c) => c.url.includes('/users/many/repos')).length, 2);
+
+  // a page cap is reported, not silently applied
+  const capped = await listRepos({ user: 'many', fetchImpl: fakeGithub(fixture()).impl, maxPages: 1 });
+  assert.equal(capped.length, 100);
+  assert.equal(capped.capped, true);
+
+  // a failure on a later page keeps what was already loaded
+  const partial = await listRepos({ user: 'many', fetchImpl: fakeGithub(fixture(), { failPage2: true }).impl });
+  assert.equal(partial.length, 100);
+  assert.equal(partial.error.kind, 'rate_limit');
+
+  // a failure on the first page is still an error
+  await assert.rejects(listRepos({ user: 'many', fetchImpl: fakeGithub(fixture(), { missing: true }).impl }), (e) => e.kind === 'not_found');
 });

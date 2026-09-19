@@ -288,6 +288,7 @@ function renderRepos() {
   const box = $('repos');
   box.replaceChildren();
   const shown = repoList.filter((r) => !q || r.fullName.toLowerCase().includes(q) || r.description.toLowerCase().includes(q));
+  $('repo-meta').textContent = repoList.length ? (q ? `Showing ${shown.length} of ${repoList.length} repositories.` : `${repoList.length} ${repoList.length === 1 ? 'repository' : 'repositories'}.`) : '';
   if (!shown.length) { box.append(el('p', { class: 'muted', text: repoList.length ? 'No repositories match.' : 'No repositories found.' })); return; }
   for (const r of shown) {
     const name = el('b', { text: r.name }, r.private ? [el('span', { class: 'lock', text: 'private' })] : []);
@@ -306,14 +307,23 @@ function renderRepos() {
 async function browse(user) {
   hideError();
   const box = $('repos');
+  repoList = [];
+  $('repo-tools').hidden = true;
+  $('repo-meta').textContent = '';
   box.replaceChildren(el('p', { class: 'muted', text: 'Loading repositories…' }));
   try {
-    repoList = await listRepos({ user, token: token || undefined });
+    const all = await listRepos({
+      user, token: token || undefined,
+      onPage: (soFar) => { repoList = soFar; $('repo-tools').hidden = false; $('filter').value = ''; renderRepos(); }, // show results as pages arrive
+    });
+    repoList = all;
     $('repo-tools').hidden = !repoList.length;
-    $('filter').value = '';
     renderRepos();
+    if (all.capped) $('repo-meta').textContent += ` Showing the ${all.length} most recently pushed; use the filter or paste a link for others.`;
+    if (all.error) $('repo-meta').textContent += ' The list is partial: ' + (all.error.message || 'a later page failed to load.');
   } catch (e) {
     box.replaceChildren();
+    $('repo-meta').textContent = '';
     showError(e);
   }
 }
