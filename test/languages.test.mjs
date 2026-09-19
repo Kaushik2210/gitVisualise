@@ -330,3 +330,71 @@ test('rust: the generated architecture validates', () => {
   assert.deepEqual(validate(arch, root).errors, []);
   assert.ok(scan.entryPoints.some((e) => e.path === 'src/lib.rs' && /Rust library/.test(e.reason)));
 });
+
+test('monorepo: npm workspaces resolve sibling packages by name and become one component each', () => {
+  const root = repo({
+    'package.json': '{ "name": "mono", "private": true, "workspaces": ["packages/*", "apps/*"] }',
+    'packages/core/package.json': '{ "name": "@acme/core", "main": "src/index.ts" }',
+    'packages/core/src/index.ts': "export * from './engine';\n",
+    'packages/core/src/engine.ts': 'export const engine = 1;\n',
+    'packages/core/src/extra/helper.ts': 'export const helper = 2;\n',
+    'packages/ui/package.json': '{ "name": "@acme/ui", "dependencies": { "@acme/core": "*", "react": "^18" } }',
+    'packages/ui/src/index.ts': "import { engine } from '@acme/core';\nimport { helper } from '@acme/core/extra/helper';\nimport React from 'react';\n",
+    'apps/web/package.json': '{ "name": "web", "dependencies": { "@acme/ui": "*" } }',
+    'apps/web/src/main.ts': "import '@acme/ui';\nimport { x } from '@acme/missing';\n",
+    'tools/notes.txt': 'not a package',
+  });
+  const scan = scanRepo(root);
+  assert.deepEqual(scan.workspaces.map((w) => w.name), ['web', '@acme/core', '@acme/ui'], 'sorted by directory: apps/web, packages/core, packages/ui');
+  assert.equal(imports(scan, 'packages/ui/src/index.ts')['@acme/core'], 'packages/core/src/index.ts', 'the package "main" is the entry');
+  assert.equal(imports(scan, 'packages/ui/src/index.ts')['@acme/core/extra/helper'], 'packages/core/src/extra/helper.ts', 'a sub-path import resolves inside the package');
+  assert.equal(imports(scan, 'apps/web/src/main.ts')['@acme/ui'], 'packages/ui/src/index.ts');
+  assert.equal(imports(scan, 'apps/web/src/main.ts')['@acme/missing'], null, 'an unknown scoped package is dropped');
+  assert.deepEqual(externals(scan), ['react'], 'sibling packages are code in this repository, not external dependencies');
+
+  const arch = generate(scan);
+  assert.deepEqual(validate(arch, root).errors, []);
+  const labels = arch.nodes.filter((n) => !n.external).map((n) => n.label).sort();
+  assert.deepEqual(labels, ['@acme/core', '@acme/ui', 'web'], 'one node per workspace package');
+  const pair = (e) => `${arch.nodes.find((n) => n.id === e.from).label}>${arch.nodes.find((n) => n.id === e.to).label}`;
+  const ends = arch.edges.filter((e) => e.kind === 'imports').map(pair).sort();
+  assert.deepEqual(ends, ['@acme/ui>@acme/core', 'web>@acme/ui'], 'imports between packages become edges between them');
+  assert.match(arch.project.notes.join(' '), /Monorepo: 3 workspace packages/);
+});
+
+test('monorepo: pnpm-workspace.yaml globs and negations', () => {
+  const root = repo({
+    'package.json': '{ "name": "root" }',
+    'pnpm-workspace.yaml': "packages:\n  - 'apps/*'\n  - \"libs/**\"\n  - '!libs/ignored'\n",
+    'apps/a/package.json': '{ "name": "a" }',
+    'apps/a/index.js': '',
+    'libs/x/y/package.json': '{ "name": "deep" }',
+    'libs/x/y/index.js': '',
+    'other/package.json': '{ "name": "not-a-member" }',
+    'other/index.js': '',
+  });
+  assert.deepEqual(scanRepo(root).workspaces.map((w) => w.name), ['a', 'deep']);
+});
+
+test('monorepo: analysing one sub-path keeps paths repo-relative and still sees configs and siblings\' names', () => {
+  const root = repo({
+    'package.json': '{ "name": "mono", "workspaces": ["packages/*"] }',
+    'tsconfig.base.json': '{ "compilerOptions": { "baseUrl": ".", "paths": { "@shared/*": ["packages/shared/src/*"] } } }',
+    'packages/web/package.json': '{ "name": "web", "main": "src/main.ts" }',
+    'packages/web/tsconfig.json': '{ "extends": "../../tsconfig.base.json" }',
+    'packages/web/src/main.ts': "import { s } from '@shared/util';\nimport { l } from './local';\n",
+    'packages/web/src/local.ts': 'export const l = 1;\n',
+    'packages/shared/package.json': '{ "name": "shared" }',
+    'packages/shared/src/util.ts': 'export const s = 1;\n',
+    'packages/api/package.json': '{ "name": "api" }',
+    'packages/api/src/server.ts': 'export const api = 1;\n',
+  });
+  const scan = scanRepo(root, { subPath: 'packages/web' });
+  assert.deepEqual(scan.files.map((f) => f.path).sort(), ['packages/web/src/local.ts', 'packages/web/src/main.ts'], 'only source inside the sub-path is analysed');
+  const m = imports(scan, 'packages/web/src/main.ts');
+  assert.equal(m['./local'], 'packages/web/src/local.ts');
+  assert.equal(m['@shared/util'], null, 'an import that leaves the sub-path stays unresolved');
+  assert.ok(scan.entryPoints.some((e) => e.path === 'packages/web/src/main.ts'), 'the package.json of the sub-path defines the entry point');
+  assert.equal(scan.manifests.find((x) => x.file === 'packages/web/package.json').name, 'web');
+  assert.throws(() => scanRepo(root, { subPath: 'packages/nope' }), /No files found under/);
+});

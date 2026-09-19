@@ -72,8 +72,13 @@ export function generate(scan, opts = {}) {
   // In Go and Java the unit of architecture is the package (a directory): files in one package reference each
   // other without imports, so per-file nodes would look disconnected.
   const isPackageLang = (p) => p.endsWith('.go') || p.endsWith('.java');
+  // In a monorepo each workspace package is one unit, so imports between packages become edges between them.
+  const wsDirs = (scan.workspaces || []).slice().sort((a, b) => b.dir.length - a.dir.length);
+  const wsOf = (p) => wsDirs.find((w) => p.startsWith(w.dir + '/'));
   const goPackage = (p) => dirOf(p) || '.';
   const keyFor = (p, depth) => {
+    const ws = wsOf(p);
+    if (ws) return ws.dir;
     if (isPackageLang(p)) return goPackage(p);
     const rel = prefix ? p.slice(prefix.length + 1) : p;
     const segs = rel.split('/');
@@ -92,7 +97,7 @@ export function generate(scan, opts = {}) {
     // Everything collapsed into a handful of directories: per-file nodes say far more for small repos.
     if (files.length <= 40 && new Set(files.map((f) => keyFor(f.path, chosen))).size < 4) chosen = 0;
   }
-  const unitKey = (p) => (isPackageLang(p) ? goPackage(p) : chosen === 0 ? p : keyFor(p, chosen));
+  const unitKey = (p) => (wsOf(p) ? wsOf(p).dir : isPackageLang(p) ? goPackage(p) : chosen === 0 ? p : keyFor(p, chosen));
   const units = new Map();
   for (const f of files) {
     const k = unitKey(f.path);
@@ -134,13 +139,14 @@ export function generate(scan, opts = {}) {
     const langs = [...new Set(fs_.map((f) => f.lang))];
     const primary = entries[0] || [...fs_].sort((a, b) => b.symbols.length - a.symbols.length || b.lines - a.lines)[0];
     const symbols = fs_.flatMap((f) => f.symbols.map((s) => s.name)).filter((v, i, a) => a.indexOf(v) === i);
-    const label = isFileUnit ? posix.basename(key) : isRootUnit ? `${scan.repo.name || 'root'} (root)` : `${posix.basename(key)}/`;
+    const ws = wsDirs.find((w) => w.dir === key);
+    const label = ws ? ws.name : isFileUnit ? posix.basename(key) : isRootUnit ? `${scan.repo.name || 'root'} (root)` : `${posix.basename(key)}/`;
 
     let summary;
     if (isFileUnit) {
       summary = primary.doc || `${langs[0] || 'Source'} file, ${primary.lines} lines.` + (symbols.length ? ` Defines ${list(symbols)}.` : '');
     } else {
-      summary = `${isRootUnit ? 'Root package' : `Directory \`${key}\``} with ${fs_.length} ${langs.join('/')} file${fs_.length > 1 ? 's' : ''}: ${list(fs_.map((f) => posix.basename(f.path)))}.` + (symbols.length ? ` Defines ${list(symbols, 5)}.` : '');
+      summary = `${ws ? `Workspace package \`${ws.name}\` (${ws.kind})` : isRootUnit ? 'Root package' : `Directory \`${key}\``} with ${fs_.length} ${langs.join('/')} file${fs_.length > 1 ? 's' : ''}: ${list(fs_.map((f) => posix.basename(f.path)))}.` + (symbols.length ? ` Defines ${list(symbols, 5)}.` : '');
     }
     if (routesHere.length) summary += ` Registers routes: ${list(routesHere.map((r) => `${r.method} ${r.path}`), 4)}.`;
     if (entries.length) summary = `Entry point: ${entryReason.get(entries[0].path)}. ` + summary;
@@ -286,9 +292,13 @@ export function generate(scan, opts = {}) {
   }
   if (tourSteps.length > 1) flows.push({ id: 'tour', title: 'Components by role', description: 'Groups the diagram by what each part does.', origin: 'auto', steps: tourSteps });
 
-  const pkg = scan.manifests.find((m) => m.description);
+  const sp = scan.subPath || null; // analysing one folder (a package) of a larger repository
+  const inSub = (m) => !sp || m.file.startsWith(sp + '/');
+  // The shallowest manifest names the project (the monorepo root, or the folder being analysed), not a nested package.
+  const shallow = (list) => list.slice().sort((x, y) => x.file.split('/').length - y.file.split('/').length)[0];
+  const pkg = shallow(scan.manifests.filter((m) => m.description && inSub(m)));
   const project = {
-    name: scan.manifests.find((m) => m.name)?.name || scan.repo.name,
+    name: shallow(scan.manifests.filter((m) => m.name && inSub(m)))?.name || (sp ? `${scan.repo.name}/${sp}` : scan.repo.name),
     description: pkg?.description || scan.readme?.text || `Architecture of ${scan.repo.name}.`,
     repoUrl: scan.repo.url, branch: scan.repo.branch, commit: scan.repo.commit,
     ...(scan.repo.dirty ? { dirty: true } : {}),
@@ -297,6 +307,8 @@ export function generate(scan, opts = {}) {
     notes: [
       `Nodes are ${[...units].every(([k, v]) => v.length === 1 && v[0].path === k) ? 'individual source files' : 'directories or packages (and single files)'}; edges are static imports found by the scanner.`,
       ...(skippedNote ? [`Not diagrammed: ${skippedNote}${opts.noIncludeHint ? '' : ' (add them with --include tests,examples,tooling)'}.`] : []),
+      ...(sp ? [`Analysing the folder ${'`'}${sp}${'`'} of the repository; imports that leave it are not followed.`] : []),
+      ...(wsDirs.length ? [`Monorepo: ${wsDirs.length} workspace packages, each drawn as one component.`] : []),
       ...(opts.extraNotes || []),
     ],
   };

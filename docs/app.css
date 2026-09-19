@@ -142,3 +142,5 @@ footer p { margin: 6px 0; }
   .hero { padding-top: 36px; }
   .acts .ghost { display: none; }
 }
+.pkgs { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 6px; }
+.notice .chip { font-size: 12.5px; }

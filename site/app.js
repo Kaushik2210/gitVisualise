@@ -194,7 +194,7 @@ async function run(input, { push = true } = {}) {
       const { sha, rate } = await resolveCommit(target, { token: token || undefined, signal });
       // Results fetched with a token might come from a private repository: only persist them if the user opted in.
       const persist = !token || $('cache-private').checked;
-      const ck = cacheKey(target.owner, target.repo, sha);
+      const ck = cacheKey(target.owner, target.repo, sha, target.path ? ':' + target.path : '');
       const stored = persist ? await diskCache.get(ck) : null;
       let res, snippets;
       if (stored) {
@@ -252,7 +252,21 @@ function showResult(entry, target) {
   if (m.rate && m.rate.remaining != null && m.rate.remaining < 10) parts.push(`GitHub requests left this hour: ${m.rate.remaining}.`);
   notice.textContent = parts.join(' ');
   notice.className = 'notice' + (bad ? '' : ' info');
-  notice.hidden = !parts.length;
+  // Monorepo: offer one tour per package, or a way back to the whole repository from a single folder.
+  notice.querySelectorAll('.pkgs').forEach((n) => n.remove());
+  const base = `${m.owner}/${m.repo}${m.ref ? '@' + m.ref : ''}`;
+  let chips = null;
+  if (m.path) {
+    chips = el('div', { class: 'pkgs' }, [el('span', { text: `Showing the folder ${m.path}.` }), el('button', { class: 'chip', type: 'button', text: '← Whole repository', onclick: () => run(base) })]);
+  } else if (m.workspaces && m.workspaces.length) {
+    chips = el('div', { class: 'pkgs' }, [
+      el('span', { text: `Monorepo with ${m.workspaces.length} packages. Analyse one:` }),
+      ...m.workspaces.slice(0, 14).map((w) => el('button', { class: 'chip', type: 'button', title: w.dir, text: w.name, onclick: () => run(`${base}:${w.dir}`) })),
+      m.workspaces.length > 14 ? el('span', { text: `and ${m.workspaces.length - 14} more (use owner/repo:folder)` }) : null,
+    ]);
+  }
+  if (chips) notice.append(chips);
+  notice.hidden = !parts.length && !chips;
 
   showView('result');
   mountFrame(entry.html);

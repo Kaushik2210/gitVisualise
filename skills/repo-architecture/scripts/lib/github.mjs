@@ -7,11 +7,11 @@ import { execFileSync } from 'node:child_process';
 export function parseTarget(arg) {
   const a = String(arg || '.').trim();
   let m =
-    a.match(/^https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/(?:tree|blob)\/([^/]+).*)?\/?$/) ||
+    a.match(/^https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/(?:tree|blob)\/([^/]+)(?:\/(.*?))?)?\/?$/) ||
     a.match(/^git@github\.com:([\w.-]+)\/([\w.-]+?)(?:\.git)?$/) ||
     a.match(/^github:([\w.-]+)\/([\w.-]+)$/);
   if (!m && /^[\w.-]+\/[\w.-]+$/.test(a) && !fs.existsSync(a)) m = [a, ...a.split('/')];
-  if (m) return { type: 'github', owner: m[1], repo: m[2], ref: m[3] || null, url: `https://github.com/${m[1]}/${m[2]}` };
+  if (m) return { type: 'github', owner: m[1], repo: m[2], ref: m[3] || null, path: m[4] || null, url: `https://github.com/${m[1]}/${m[2]}` };
   return { type: 'local', dir: path.resolve(a) };
 }
 

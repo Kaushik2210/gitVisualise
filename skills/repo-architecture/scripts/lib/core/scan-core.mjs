@@ -236,7 +236,8 @@ function parseManifests(read, all) {
     const i = txt.split('\n').findIndex((l) => l.includes(`"${name}"`) || new RegExp(`^\\s*${name}\\b`, 'i').test(l) || l.includes(name));
     return i >= 0 ? i + 1 : 1;
   };
-  for (const file of all.filter((f) => /(^|\/)package\.json$/.test(f) && f.split('/').length <= 3)) {
+  // package.json files up to five levels deep, so workspace packages such as packages/@scope/name are found.
+  for (const file of all.filter((f) => /(^|\/)package\.json$/.test(f) && f.split('/').length <= 5)) {
     let pkg;
     try { pkg = JSON.parse(read(file)); } catch { continue; }
     const deps = { ...pkg.dependencies, ...pkg.devDependencies, ...pkg.peerDependencies };
@@ -245,7 +246,7 @@ function parseManifests(read, all) {
       versions[d] = deps[d];
       if (!depLine[d]) depLine[d] = { file, line: findLine(file, d) };
     });
-    manifests.push({ file, type: 'npm', name: pkg.name || null, description: pkg.description || null, main: pkg.main || pkg.module || null, bin: pkg.bin || null, scripts: pkg.scripts || {}, dependencies: Object.keys(pkg.dependencies || {}), devDependencies: Object.keys(pkg.devDependencies || {}) });
+    manifests.push({ file, type: 'npm', name: pkg.name || null, description: pkg.description || null, main: pkg.main || pkg.module || null, bin: pkg.bin || null, scripts: pkg.scripts || {}, workspaces: Array.isArray(pkg.workspaces) ? pkg.workspaces : (pkg.workspaces && pkg.workspaces.packages) || [], dependencies: Object.keys(pkg.dependencies || {}), devDependencies: Object.keys(pkg.devDependencies || {}) });
   }
   for (const file of all.filter((f) => /(^|\/)requirements[^/]*\.txt$/.test(f))) {
     const txt = read(file) || '';
@@ -293,9 +294,14 @@ function readmeSummary(read, all) {
  *   read(rel): file text, or null when unavailable / too large (such files are skipped)
  *   repo: { name, url, branch, commit, dirty? }
  */
-export function scanCore({ paths, read, repo, root = '' }) {
+export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
   const all = paths;
   const allSet = new Set(all);
+  // When analysing one folder of a larger repository, "the project root" (its package.json, index.html, main files)
+  // is that folder; every path in the output stays relative to the repository root.
+  const base = subPath ? subPath.replace(/^\/+|\/+$/g, '') + '/' : '';
+  const inBase = (p) => !base || p.startsWith(base);
+  const relBase = (p) => (base ? p.slice(base.length) : p);
 
   const { manifests, depNames, versions, depLine, goModule } = parseManifests(read, all);
   const langCount = {};
@@ -319,6 +325,31 @@ export function scanCore({ paths, read, repo, root = '' }) {
   const fileSet = new Set(files.map((f) => f.path));
 
   // ---- import resolution ----
+  // ---- workspaces (monorepos): npm/yarn/pnpm packages and Go modules here; Cargo crates are added below ----
+  const workspaces = [];
+  {
+    const globRe = (g) => new RegExp('^' + g.replace(/^\.\//, '').replace(/\/+$/, '').replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*\*/g, '@@GLOBSTAR@@').replace(/\*/g, '[^/]+').replace(/@@GLOBSTAR@@/g, '.*') + '$');
+    const patterns = manifests.filter((m) => m.type === 'npm' && m.file === 'package.json').flatMap((m) => m.workspaces || []);
+    const pnpm = read('pnpm-workspace.yaml');
+    if (pnpm) for (const m of pnpm.matchAll(/^\s*-\s*['"]?([^'"\n#]+?)['"]?\s*(?:#.*)?$/gm)) patterns.push(m[1]);
+    const include = patterns.filter((p) => typeof p === 'string' && !p.startsWith('!')).map(globRe);
+    if (include.length) {
+      for (const m of manifests.filter((x) => x.type === 'npm' && x.file !== 'package.json')) {
+        const dir = posix.dirname(m.file);
+        if (include.some((re) => re.test(dir))) workspaces.push({ name: m.name || dir, dir, kind: 'npm', manifest: m.file });
+      }
+    }
+    const gowork = read('go.work');
+    if (gowork) {
+      const dirs = [...gowork.matchAll(/^\s*(?:use\s+)?(\.{1,2}\/[^\s)]+|\.)\s*$/gm)].map((m) => posix.normalize(m[1]));
+      for (const dir of dirs) {
+        const mod = /^module\s+(\S+)/m.exec(read(dir === '.' ? 'go.mod' : `${dir}/go.mod`) || '');
+        if (mod && dir !== '.') workspaces.push({ name: mod[1], dir, kind: 'go' });
+      }
+    }
+  }
+  const npmWorkspace = (spec) => workspaces.find((w) => w.kind === 'npm' && (spec === w.name || spec.startsWith(w.name + '/')));
+
   // ---- JS/TS path aliases: tsconfig/jsconfig "paths" + "baseUrl" (with "extends"), and simple Vite/webpack aliases ----
   const nearestFile = (from, names) => {
     for (let dir = posix.dirname(from); ; dir = posix.dirname(dir)) {
@@ -402,6 +433,14 @@ export function scanCore({ paths, read, repo, root = '' }) {
     if (spec.startsWith('.')) return tryBase(posix.normalize(posix.join(posix.dirname(from), spec)));
     if (spec.startsWith('/')) return tryBase(spec.slice(1));
     for (const b of aliasBases(from, spec)) { const hit = tryBase(b); if (hit) return hit; }
+    const ws = npmWorkspace(spec); // a sibling package in the same monorepo, imported by its package name
+    if (ws) {
+      const sub = spec.slice(ws.name.length + 1);
+      const main = (manifests.find((m) => m.file === ws.manifest) || {}).main;
+      const cands = sub ? [`${ws.dir}/${sub}`, `${ws.dir}/src/${sub}`] : [...(main ? [`${ws.dir}/${main.replace(/^\.\//, '')}`] : []), `${ws.dir}/src/index`, `${ws.dir}/index`];
+      for (const c of cands) { const hit = tryBase(posix.normalize(c)); if (hit) return hit; }
+      return null;
+    }
     if ((spec.startsWith('@/') || spec.startsWith('~/')) && files.some((f) => f.path.startsWith('src/'))) return tryBase('src/' + spec.slice(2)); // common convention when no config was found
     return null;
   };
@@ -497,7 +536,7 @@ export function scanCore({ paths, read, repo, root = '' }) {
   const addEntry = (p, reason) => {
     if (p && fileSet.has(p) && !entryPoints.some((e) => e.path === p)) entryPoints.push({ path: p, reason });
   };
-  const rootPkg = manifests.find((m) => m.type === 'npm' && !m.file.includes('/'));
+  const rootPkg = manifests.find((m) => m.type === 'npm' && m.file === base + 'package.json');
   if (rootPkg) {
     if (rootPkg.main) addEntry(posix.normalize(rootPkg.main.replace(/^\.\//, '')), `package.json "main"`);
     const bins = typeof rootPkg.bin === 'string' ? [rootPkg.bin] : Object.values(rootPkg.bin || {});
@@ -508,12 +547,12 @@ export function scanCore({ paths, read, repo, root = '' }) {
       if (m) addEntry(posix.normalize(m[1].replace(/^\.\//, '')), `package.json script "${key}"`);
     }
   }
-  for (const f of files.filter((x) => x.path.endsWith('.html') && !x.path.includes('/'))) {
+  for (const f of files.filter((x) => x.path.endsWith('.html') && inBase(x.path) && !relBase(x.path).includes('/'))) {
     for (const imp of f.imports) if (imp.resolved) addEntry(imp.resolved, `loaded by ${f.path} <script>`);
     if (f.imports.some((i) => i.resolved)) addEntry(f.path, 'HTML entry page');
   }
   const conventional = /(^|\/)(main|index|app|server|cli|__main__|manage|wsgi|asgi)\.(m?js|cjs|jsx|ts|tsx|py|go|rs|java)$/;
-  files.filter((f) => !f.isTest && f.path.split('/').length <= 3 && conventional.test(f.path)).forEach((f) => addEntry(f.path, 'conventional entry filename'));
+  files.filter((f) => !f.isTest && inBase(f.path) && relBase(f.path).split('/').length <= 3 && conventional.test(f.path)).forEach((f) => addEntry(f.path, 'conventional entry filename'));
   files.filter((f) => f.path.endsWith('.go') && /^package main\b/m.test(f._text)).forEach((f) => addEntry(f.path, 'Go package main'));
   files.filter((f) => /(^|\/)src\/main\.rs$/.test(f.path) && !f.isTest).forEach((f) => addEntry(f.path, 'Rust binary crate (main.rs)'));
   files.filter((f) => f.path.endsWith('.java') && !f.isTest && hasJavaMain(f._text)).forEach((f) => addEntry(f.path, 'Java main method or Spring Boot application'));
@@ -564,10 +603,15 @@ export function scanCore({ paths, read, repo, root = '' }) {
     schemaVersion: 1,
     scannedAt: new Date().toISOString(),
     root,
+    subPath: subPath ? subPath.replace(/^\/+|\/+$/g, '') : null,
     repo,
     readme: readmeSummary(read, all),
     stats: { files: all.length, sourceFiles: files.length, languages: langCount, topDirs },
     manifests,
+    workspaces: (() => {
+      for (const c of rustCtx.crates) if (c.dir && !workspaces.some((w) => w.dir === c.dir)) workspaces.push({ name: c.name, dir: c.dir, kind: 'cargo', manifest: c.file });
+      return workspaces.length >= 2 ? workspaces.map(({ name, dir, kind }) => ({ name, dir, kind })).sort((a, b) => a.dir.localeCompare(b.dir)) : [];
+    })(),
     entryPoints,
     externals: ext,
     routes,

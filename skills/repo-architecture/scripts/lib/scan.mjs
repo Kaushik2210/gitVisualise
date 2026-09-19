@@ -42,7 +42,12 @@ export function scanRepo(root, opts = {}) {
   ];
   const paths = walk(root, makeIgnorer(ignoreLines), ignoreExtra);
 
+  // With a sub-path, only source inside it is read; manifests and configs anywhere stay readable so workspaces,
+  // tsconfig aliases and dependency lists still work. Imports that leave the sub-path simply stay unresolved.
+  const sub = opts.subPath ? opts.subPath.replace(/^\/+|\/+$/g, '') : '';
+  const CONFIG = /(^|\/)(package\.json|tsconfig[^/]*\.json|jsconfig[^/]*\.json|pnpm-workspace\.yaml|go\.work|go\.mod|Cargo\.toml|pom\.xml|build\.gradle(\.kts)?|requirements[^/]*\.txt|pyproject\.toml|(vite|webpack)\.config\.[cm]?[jt]s|readme(\.md|\.rst|\.txt)?|\.gitignore)$/i;
   const read = (rel) => {
+    if (sub && rel !== sub && !rel.startsWith(sub + '/') && !CONFIG.test(rel)) return null;
     try {
       const abs = path.join(root, rel);
       return fs.statSync(abs).size <= MAX_READ ? fs.readFileSync(abs, 'utf8') : null;
@@ -61,5 +66,6 @@ export function scanRepo(root, opts = {}) {
   if (opts.repoUrl) repo.url = opts.repoUrl;
   if (opts.ref) repo.branch = opts.ref;
 
-  return scanCore({ paths, read, repo, root: toPosix(root) });
+  if (sub && !paths.some((p) => p.startsWith(sub + '/'))) throw new Error(`No files found under "${sub}" in ${root}`);
+  return scanCore({ paths, read, repo, root: toPosix(root), subPath: sub });
 }

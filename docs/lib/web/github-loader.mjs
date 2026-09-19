@@ -28,15 +28,24 @@ export function parseRepoInput(input) {
   const s = String(input || '').trim().replace(/\s+/g, '');
   if (!s) return null;
   const NAME = '[\\w.-]+';
-  let m =
-    s.match(new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?github\\.com\\/(${NAME})\\/(${NAME}?)(?:\\.git)?(?:\\/(?:tree|blob|commit)\\/([^/#?]+).*)?\\/?(?:[?#].*)?$`, 'i')) ||
-    s.match(new RegExp(`^git@github\\.com:(${NAME})\\/(${NAME}?)(?:\\.git)?$`, 'i')) ||
-    s.match(new RegExp(`^github:(${NAME})\\/(${NAME})$`, 'i')) ||
-    s.match(new RegExp(`^(${NAME})\\/(${NAME})(?:@([^/#?]+))?$`));
-  if (!m) return null;
-  const [, owner, repo, ref] = m;
+  let owner, repo, ref = null, path = null, m;
+  if ((m = s.match(new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?github\\.com\\/(${NAME})\\/(${NAME}?)(?:\\.git)?(?:\\/(tree|blob|commit)\\/([^/#?]+)(?:\\/([^#?]*))?)?\\/?(?:[?#].*)?$`, 'i')))) {
+    [, owner, repo] = m;
+    ref = m[4] || null;
+    if (/^tree$/i.test(m[3] || '')) path = m[5] || null; // .../tree/<ref>/<folder> names a folder to analyse
+  } else if ((m = s.match(new RegExp(`^git@github\\.com:(${NAME})\\/(${NAME}?)(?:\\.git)?$`, 'i')))) {
+    [, owner, repo] = m;
+  } else if ((m = s.match(new RegExp(`^github:(${NAME})\\/(${NAME})$`, 'i')))) {
+    [, owner, repo] = m;
+  } else if ((m = s.match(new RegExp(`^(${NAME})\\/(${NAME})(?:@([^/#?:]+))?(?::(.+))?$`)))) {
+    [, owner, repo] = m; // owner/repo[@ref][:folder]
+    ref = m[3] || null;
+    path = m[4] || null;
+  } else return null;
   if (owner === '.' || owner === '..' || repo === '.' || repo === '..') return null;
-  return { owner, repo: repo.replace(/\.git$/i, ''), ref: ref || null };
+  path = path ? path.replace(/^\/+|\/+$/g, '') : null;
+  if (path && path.split('/').some((seg) => !seg || seg === '.' || seg === '..')) return null;
+  return { owner, repo: repo.replace(/\.git$/i, ''), ref, ...(path ? { path } : {}) };
 }
 
 const encPath = (p) => p.split('/').map(encodeURIComponent).join('/');
@@ -177,7 +186,7 @@ export async function analyzeRepo(input, opts = {}) {
   const { token, signal, onProgress = () => {}, fetchImpl = globalThis.fetch, maxFiles = 300, preferCurated = true } = opts; // opts.sha: a commit already resolved with resolveCommit()
   const target = typeof input === 'string' ? parseRepoInput(input) : input;
   if (!target) throw new GitHubError('bad_input', 'That does not look like a GitHub repository. Try owner/repo or a github.com link.');
-  const { owner, repo, ref } = target;
+  const { owner, repo, ref, path: sub = '' } = target;
   const o = { token, signal, fetchImpl };
   let rate = { remaining: null, reset: null };
 
@@ -211,10 +220,10 @@ export async function analyzeRepo(input, opts = {}) {
   };
 
   const repoUrl = `https://github.com/${owner}/${repo}`;
-  const meta = { owner, repo, ref, sha, repoUrl, truncated: !!tree.truncated, totalFiles: allPaths.length, rate, curated: false };
+  const meta = { owner, repo, ref, sha, repoUrl, truncated: !!tree.truncated, totalFiles: allPaths.length, rate, curated: false, path: sub || null };
 
   // 1) Prefer the tour the repository's own authors published (docs/architecture/architecture.json).
-  if (preferCurated && sizes.has(CURATED_PATH)) {
+  if (preferCurated && !sub && sizes.has(CURATED_PATH)) { // a folder of a repo is analysed, not the whole-repo tour
     await download([CURATED_PATH], 'curated tour');
     let curated = null;
     try { curated = JSON.parse(contents.get(CURATED_PATH)); } catch { /* fall through to analysis */ }
@@ -232,14 +241,17 @@ export async function analyzeRepo(input, opts = {}) {
   // 2) Otherwise analyse the code.
   const ignoreText = sizes.has('.gitignore') ? (await fetchText(owner, repo, sha, '.gitignore', o)) : null;
   const paths = filterPaths(allPaths, makeIgnorer((ignoreText || '').split('\n')));
-  const manifests = paths.filter((p) => MANIFEST_RE.test(p) && p.split('/').length <= 3);
+  // Manifests and configs: shallow ones everywhere, plus package.json up to five levels deep (monorepo packages).
+  const manifests = paths.filter((p) => MANIFEST_RE.test(p) && p.split('/').length <= (/(^|\/)package\.json$/.test(p) ? 5 : 3)).slice(0, 150);
   const readme = paths.find((p) => /^readme(\.md|\.rst|\.txt)?$/i.test(p));
-  const picked = pickSourceFiles(paths, sizes, maxFiles);
+  const inScope = sub ? paths.filter((p) => p.startsWith(sub + '/')) : paths;
+  if (sub && !inScope.length) throw new GitHubError('empty', `Nothing was found under "${sub}" in ${owner}/${repo}. Check the folder name.`);
+  const picked = pickSourceFiles(inScope, sizes, maxFiles);
   if (!picked.chosen.length) throw new GitHubError('empty', 'No analysable source files were found (supported: JavaScript/TypeScript, Python, Go, Java, Rust and more, as structure only). This may be a docs-only or asset-only repository.');
   await download([...manifests, ...(readme ? [readme] : []), ...picked.chosen], 'source files');
 
   onProgress({ stage: 'analyse' });
-  const scan = scanCore({ paths, read: (p) => (contents.has(p) ? contents.get(p) : null), repo: { name: repo, url: repoUrl, branch: ref || null, commit: sha }, root: '' });
+  const scan = scanCore({ paths, read: (p) => (contents.has(p) ? contents.get(p) : null), repo: { name: repo, url: repoUrl, branch: ref || null, commit: sha }, root: '', subPath: sub });
   const notes = [];
   if (picked.total > picked.chosen.length) notes.push(`Analysed the ${picked.chosen.length} shallowest of ${picked.total} source files.`);
   if (tree.truncated) notes.push('GitHub truncated the file listing for this very large repository, so the picture is partial.');
@@ -249,7 +261,7 @@ export async function analyzeRepo(input, opts = {}) {
 
   const view = makeView(allPaths, contents);
   const validation = validateCore(arch, view);
-  return { arch, view, validation, meta: { ...meta, analysed: picked.chosen.length, sourceTotal: picked.total, skipped: picked.skipped } };
+  return { arch, view, validation, meta: { ...meta, analysed: picked.chosen.length, sourceTotal: picked.total, skipped: picked.skipped, workspaces: scan.workspaces } };
 }
 
 // ---------- repo picker helpers ----------

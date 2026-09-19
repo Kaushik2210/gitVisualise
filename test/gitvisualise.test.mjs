@@ -114,7 +114,8 @@ test('build: writes a static site and neutralises </script> in repo-derived text
 });
 
 test('parseTarget understands GitHub URLs, shorthand and local paths', () => {
-  assert.deepEqual(parseTarget('https://github.com/o/r.git'), { type: 'github', owner: 'o', repo: 'r', ref: null, url: 'https://github.com/o/r' });
+  assert.deepEqual(parseTarget('https://github.com/o/r.git'), { type: 'github', owner: 'o', repo: 'r', ref: null, path: null, url: 'https://github.com/o/r' });
+  assert.deepEqual([parseTarget('https://github.com/o/r/tree/dev/packages/x').ref, parseTarget('https://github.com/o/r/tree/dev/packages/x').path], ['dev', 'packages/x']);
   assert.equal(parseTarget('https://github.com/o/r/tree/dev/src').ref, 'dev');
   assert.equal(parseTarget('git@github.com:o/r.git').repo, 'r');
   assert.equal(parseTarget('github:o/r').owner, 'o');

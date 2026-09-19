@@ -76,11 +76,15 @@ test('parseRepoInput: URLs, shorthand, refs, and rejects non-GitHub input', () =
   ok('https://github.com/tj/commander.js', { owner: 'tj', repo: 'commander.js', ref: null });
   ok('https://github.com/tj/commander.js.git', { owner: 'tj', repo: 'commander.js', ref: null });
   ok('github.com/psf/requests/', { owner: 'psf', repo: 'requests', ref: null });
-  ok('https://github.com/o/r/tree/dev/src/x', { owner: 'o', repo: 'r', ref: 'dev' });
+  ok('https://github.com/o/r/tree/dev/src/x', { owner: 'o', repo: 'r', ref: 'dev', path: 'src/x' });
+  ok('https://github.com/o/r/tree/dev', { owner: 'o', repo: 'r', ref: 'dev' });
+  ok('https://github.com/o/r/blob/dev/src/x.js', { owner: 'o', repo: 'r', ref: 'dev' }); // a file link analyses the whole repo
+  ok('o/r:packages/web', { owner: 'o', repo: 'r', ref: null, path: 'packages/web' });
+  ok('o/r@v2:apps/x/y/', { owner: 'o', repo: 'r', ref: 'v2', path: 'apps/x/y' });
   ok('git@github.com:o/r.git', { owner: 'o', repo: 'r', ref: null });
   ok('o/r@v2', { owner: 'o', repo: 'r', ref: 'v2' });
   ok('  https://github.com/o/r?tab=readme  ', { owner: 'o', repo: 'r', ref: null });
-  for (const bad of ['', 'hello', 'https://gitlab.com/o/r', 'o/r/extra', '../x', 'a b']) assert.equal(parseRepoInput(bad), null, bad);
+  for (const bad of ['', 'hello', 'https://gitlab.com/o/r', 'o/r/extra', '../x', 'a b', 'o/r:../secrets', 'o/r:a//b', 'o/r:./x']) assert.equal(parseRepoInput(bad), null, bad);
 });
 
 test('analyzeRepo: analyses a GitHub repo with no server, pins the commit, skips tests/examples/ignored', async () => {
@@ -310,4 +314,38 @@ test('analyzeRepo: downloads tsconfig and resolves path aliases in the browser t
   const edge = res.arch.edges.find((e) => /app/.test(e.from) && /clock/.test(e.to));
   assert.ok(edge, 'src/app.ts -> src/lib/clock.ts via the @lib alias');
   assert.deepEqual(res.validation.errors, []);
+});
+
+test('analyzeRepo: analyses one folder of a monorepo, lists the packages, and keeps repo-relative sources', async () => {
+  const root = fixture({
+    'package.json': JSON.stringify({ name: 'mono', workspaces: ['packages/*'] }),
+    'packages/core/package.json': '{ "name": "@m/core", "main": "src/index.js" }',
+    'packages/core/src/index.js': 'export const core = 1;\n',
+    'packages/web/package.json': '{ "name": "@m/web", "main": "src/main.js" }',
+    'packages/web/src/main.js': "import { core } from '@m/core';\nimport './view.js';\n",
+    'packages/web/src/view.js': 'export const v = 1;\n',
+  });
+  const whole = await analyzeRepo('o/r', { fetchImpl: fakeGithub(root).impl });
+  assert.deepEqual(whole.meta.workspaces.map((w) => w.name), ['@m/core', '@m/web'], 'the loader reports the packages so the page can offer them');
+  assert.ok(whole.arch.edges.some((e) => /web/.test(e.from) && /core/.test(e.to)), 'cross-package edge in the whole-repo view');
+
+  const gh = fakeGithub(root);
+  const one = await analyzeRepo('o/r:packages/web', { fetchImpl: gh.impl });
+  assert.equal(one.meta.path, 'packages/web');
+  assert.equal(one.arch.project.name, '@m/web', 'named after the package, not the monorepo root');
+  const files = one.arch.nodes.flatMap((n) => n.sources.map((s) => s.path)).filter((p) => !p.endsWith('package.json'));
+  assert.ok(files.length && files.every((p) => p === 'packages/web' || p.startsWith('packages/web/')), 'only the folder is analysed and paths stay relative to the repository root');
+  assert.ok(!gh.calls.some((c) => /packages\/core\/src\/index\.js/.test(c.url)), 'source outside the folder is not downloaded');
+  assert.deepEqual(one.validation.errors, []);
+  assert.match(one.arch.project.notes.join(' '), /Analysing the folder/);
+  await assert.rejects(analyzeRepo('o/r:packages/nope', { fetchImpl: fakeGithub(root).impl }), (e) => e.kind === 'empty');
+});
+
+test('route: a folder is part of the link key and round-trips', async () => {
+  const { parseHash, hashOf, keyOf } = await import('../skills/repo-architecture/scripts/lib/web/route.mjs');
+  const t = { owner: 'o', repo: 'r', ref: 'main', path: 'packages/web' };
+  assert.equal(keyOf(t), 'o/r@main:packages/web');
+  const back = parseHash(hashOf(t) + '/flow/x/step/2');
+  assert.equal(keyOf(back.target), 'o/r@main:packages/web');
+  assert.deepEqual(back.goto, { flow: 'x', step: 2 });
 });

@@ -4,7 +4,7 @@
 //   #/owner/repo[@ref]/flow/<flow-id>/step/<n>          open a tour at a step (n is 1-based)
 import { parseRepoInput } from './github-loader.mjs';
 
-export const keyOf = (t) => `${t.owner}/${t.repo}${t.ref ? '@' + t.ref : ''}`;
+export const keyOf = (t) => `${t.owner}/${t.repo}${t.ref ? '@' + t.ref : ''}${t.path ? ':' + t.path : ''}`;
 export const hashOf = (t) => '#/' + keyOf(t);
 
 /** Returns { target, goto } or null. `goto` is { flow, step } or null. */

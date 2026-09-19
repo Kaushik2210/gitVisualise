@@ -33,6 +33,7 @@ Commands
 Options
   --out <dir>        Output folder (default: <repo>/docs/architecture; for GitHub URLs: ./gitvisualise-out/<owner>__<repo>)
   --ref <ref>        Branch/tag to clone for GitHub URLs
+  --path <dir>       Analyse one folder of a larger repository (a package of a monorepo); paths stay repo-relative
   --repo-url <url>   Override the GitHub URL used for "Open Source" links
   --max-nodes <n>    Target node count for the heuristic generator (default 14)
   --ignore a,b       Extra paths to skip while scanning
@@ -58,19 +59,20 @@ function resolveContext(positional, flags) {
   const outDir = path.resolve(flags.out || defaultOut);
   const rel = toPosix(path.relative(root, outDir));
   const ignore = [...(flags.ignore ? String(flags.ignore).split(',') : []), ...(!rel.startsWith('..') && rel ? [rel] : [])];
-  return { root, outDir, ignore, repoUrl: flags['repo-url'] || (t.type === 'github' ? t.url : undefined), ref: flags.ref || t.ref, name: t.type === 'github' ? t.repo : undefined, noPin: !!flags['no-pin'] };
+  return { root, outDir, ignore, repoUrl: flags['repo-url'] || (t.type === 'github' ? t.url : undefined), ref: flags.ref || t.ref, subPath: flags.path || t.path || undefined, name: t.type === 'github' ? t.repo : undefined, noPin: !!flags['no-pin'] };
 }
 
 const archFile = (ctx) => path.join(ctx.outDir, 'architecture.json');
 
 function doScan(ctx) {
-  const scan = scanRepo(ctx.root, { ignore: ctx.ignore, repoUrl: ctx.repoUrl, name: ctx.name });
+  const scan = scanRepo(ctx.root, { ignore: ctx.ignore, repoUrl: ctx.repoUrl, name: ctx.name, subPath: ctx.subPath });
   if (ctx.noPin) { scan.repo.commit = null; scan.repo.branch = null; delete scan.repo.dirty; } // links then point at the branch tip (HEAD)
   // Cache lives with the repo when the output is inside it, otherwise next to the output (never touches other folders).
   const inside = !path.relative(ctx.root, ctx.outDir).startsWith('..');
   const file = inside ? path.join(ctx.root, '.gitvisualise', 'scan.json') : path.join(ctx.outDir, 'scan.json');
   writeJSON(file, scan);
   console.log(`Scanned ${scan.stats.sourceFiles} source files (${scan.stats.files} total), ${scan.entryPoints.length} entry point(s), ${scan.externals.length} external dependencies.`);
+  if (scan.workspaces.length) console.log(`Monorepo: ${scan.workspaces.length} packages (${scan.workspaces.slice(0, 6).map((w) => w.name).join(', ')}${scan.workspaces.length > 6 ? ', ...' : ''}). Use --path <dir> to analyse one.`);
   console.log(`Facts written to ${file}`);
   return scan;
 }
