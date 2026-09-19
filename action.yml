@@ -1,0 +1,49 @@
+name: 'gitvisualise'
+description: 'Generate an interactive, narrated architecture tour for this repository. Zero dependencies, no API keys.'
+author: 'Kaushik2210'
+branding:
+  icon: 'map'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Folder of the repository to analyse'
+    default: '.'
+  out:
+    description: 'Output folder for architecture.json and the static site (curated edits already in this folder are preserved)'
+    default: 'docs/architecture'
+  include:
+    description: 'Also diagram these categories, comma separated: tests, examples, tooling'
+    default: ''
+  ignore:
+    description: 'Extra paths to skip, comma separated'
+    default: ''
+  force:
+    description: 'Build even if validation reports errors (for example stale line numbers in a curated tour)'
+    default: 'false'
+
+outputs:
+  out:
+    description: 'The folder that now contains the site (index.html, viewer files, architecture.json)'
+    value: ${{ inputs.out }}
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Generate architecture tour
+      shell: bash
+      env:
+        GV_PATH: ${{ inputs.path }}
+        GV_OUT: ${{ inputs.out }}
+        GV_INCLUDE: ${{ inputs.include }}
+        GV_IGNORE: ${{ inputs.ignore }}
+        GV_FORCE: ${{ inputs.force }}
+      run: |
+        args=()
+        [ -n "$GV_INCLUDE" ] && args+=(--include "$GV_INCLUDE")
+        [ -n "$GV_IGNORE" ] && args+=(--ignore "$GV_IGNORE")
+        [ "$GV_FORCE" = "true" ] && args+=(--force)
+        node "$GITHUB_ACTION_PATH/skills/repo-architecture/scripts/gitvisualise.mjs" all "$GV_PATH" --out "$GV_OUT" "${args[@]}"
