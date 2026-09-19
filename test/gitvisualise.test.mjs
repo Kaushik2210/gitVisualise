@@ -141,3 +141,28 @@ test('Go: a package (directory) is one node, imports resolve across packages, no
   assert.deepEqual(r.errors, []);
   assert.deepEqual(r.warnings, [], 'Go import-block lines and module paths must not raise warnings');
 });
+
+test('Python: resolves src layouts, relative imports and package re-exports; reports declared dependencies only', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gv-py-'));
+  const w = (rel, txt) => {
+    fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true });
+    fs.writeFileSync(path.join(root, rel), txt);
+  };
+  w('requirements.txt', 'requests>=2.31\n');
+  w('pyproject.toml', '[project]\nname = "demo"\ndependencies = ["httpx>=0.27"]\n');
+  w('src/demo/__init__.py', 'from .api import create_app\n');
+  w('src/demo/api.py', 'from . import helpers\nfrom requests import get\nimport httpx\nimport undeclared_package\n');
+  w('src/demo/helpers.py', 'def normalize(value):\n    return value\n');
+  w('src/demo/features/worker.py', 'from ..pkg import utility\n');
+  w('src/demo/pkg/utility.py', 'def run():\n    return True\n');
+
+  const scan = scanRepo(root);
+  const imports = (file) => scan.files.find((f) => f.path === file).imports;
+  assert.equal(imports('src/demo/__init__.py')[0].resolved, 'src/demo/api.py', '__init__.py re-exports resolve');
+  assert.equal(imports('src/demo/api.py').find((i) => i.spec === '.').resolved, 'src/demo/helpers.py', 'from . import x resolves');
+  assert.equal(imports('src/demo/features/worker.py')[0].resolved, 'src/demo/pkg/utility.py', 'from ..pkg import y resolves');
+  assert.ok(scan.externals.some((e) => e.name === 'requests'), 'requirements.txt dependencies are reported');
+  assert.ok(scan.externals.some((e) => e.name === 'httpx'), 'pyproject.toml dependencies are reported');
+  assert.equal(imports('src/demo/api.py').find((i) => i.spec === 'undeclared_package').resolved, null);
+  assert.ok(!scan.externals.some((e) => e.name === 'undeclared_package'), 'unresolvable, undeclared imports are not guessed as dependencies');
+});
