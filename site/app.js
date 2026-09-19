@@ -48,6 +48,7 @@ function mountFrame(html) {
   old.replaceWith(f);
   if (html) {
     void f.offsetHeight; // flush layout so the frame has a size before its document loads
+    f.addEventListener('load', tellFrame);
     f.srcdoc = html;
   }
 }
@@ -118,6 +119,30 @@ function onProgress(evt) {
   } else $('prog-count').textContent = '';
   $('prog-bar').style.width = `${Math.max(4, Math.min(100, pct))}%`;
 }
+
+// ---------- theme ----------
+const THEMES = ['auto', 'light', 'dark'];
+const THEME_LABEL = { auto: '◐ Auto', light: '☀ Light', dark: '☾ Dark' };
+let theme = THEMES.includes(store.get('theme')) ? store.get('theme') : 'auto';
+function tellFrame() {
+  const f = $('frame');
+  if (f && f.contentWindow) f.contentWindow.postMessage({ gvTheme: theme }, '*');
+}
+function applyTheme(t, { persist = true, sync = true } = {}) {
+  theme = t;
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+  $('theme').textContent = THEME_LABEL[t];
+  $('theme').setAttribute('aria-label', `Theme: ${t}. Click to change.`);
+  if (persist) store.set('theme', t);
+  if (sync) tellFrame();
+}
+$('theme').addEventListener('click', () => applyTheme(THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]));
+window.addEventListener('message', (ev) => {
+  const f = $('frame');
+  if (!f || ev.source !== f.contentWindow || !ev.data || typeof ev.data !== 'object') return;
+  if (THEMES.includes(ev.data.gvTheme)) applyTheme(ev.data.gvTheme, { sync: false });
+});
+applyTheme(theme, { persist: false });
 
 // ---------- run ----------
 async function run(input, { push = true } = {}) {

@@ -546,6 +546,26 @@
   if (flows.length < 2) fs.closest('.field').hidden = true;
   if (!flows.length) { ['btn-play', 'btn-next', 'btn-prev', 'btn-restart'].forEach(function (id) { $(id).disabled = true; }); }
 
+  // ---------- theme & host bridge ----------
+  // The tour usually runs in a sandboxed frame (no storage, opaque origin), so the hosting page and the tour keep
+  // each other in sync with postMessage. Standalone, the choice is remembered in localStorage.
+  var THEMES = ['auto', 'light', 'dark'], theme = 'auto';
+  var THEME_LABEL = { auto: '◐ Auto', light: '☀ Light', dark: '☾ Dark' };
+  function toHost(msg) { try { if (window.parent && window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) { /* not framed */ } }
+  function applyTheme(t, fromHost) {
+    if (THEMES.indexOf(t) < 0) return;
+    theme = t;
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', t);
+    var b = $('theme-btn'); b.textContent = THEME_LABEL[t]; b.setAttribute('aria-label', 'Theme: ' + t + '. Click to change.');
+    if (!fromHost) { store('theme', t); toHost({ gvTheme: t }); }
+  }
+  $('theme-btn').addEventListener('click', function () { applyTheme(THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]); });
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent || !e.data || typeof e.data !== 'object') return;
+    if (typeof e.data.gvTheme === 'string') applyTheme(e.data.gvTheme, true);
+  });
+  applyTheme(store('theme') || 'auto', true);
+
   // ---------- boot ----------
   $('proj-name').textContent = arch.project.name;
   $('proj-desc').textContent = arch.project.description || '';
