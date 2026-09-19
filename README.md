@@ -22,6 +22,7 @@ Free, open source, and it runs in your browser: no sign-up, no server, no API ke
 [**Claude Code skill**](#-use-it-with-claude-code) ·
 [**CLI**](#-command-line) ·
 [**Help wanted**](#-help-wanted) ·
+[**Roadmap**](ROADMAP.md) ·
 [**Contribute**](CONTRIBUTING.md)
 
 </div>
@@ -277,32 +278,48 @@ start without asking. Comment "I'll take this" and a maintainer will help you ge
 [**All help wanted →**](https://github.com/Kaushik2210/gitVisualise/labels/help%20wanted) &nbsp;·&nbsp;
 [**Start a discussion →**](https://github.com/Kaushik2210/gitVisualise/discussions)
 
-**🟢 Good first issues**
+**🟢 Good first issues** (an afternoon each)
 
-- [#20](https://github.com/Kaushik2210/gitVisualise/issues/20) Language support: Kotlin imports
-- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) A screen recording of pasting a link and playing the tour (screenshots and a step-through animation are already in this README)
+- [#26](https://github.com/Kaushik2210/gitVisualise/issues/26) Export the architecture as Mermaid or PlantUML
+- [#27](https://github.com/Kaushik2210/gitVisualise/issues/27) "Copy README badge" button on the website
+- [#28](https://github.com/Kaushik2210/gitVisualise/issues/28) Guide: publish your own tour with GitHub Pages
+- [#29](https://github.com/Kaushik2210/gitVisualise/issues/29) Accessibility: screen reader and keyboard-only tour
+- [#36](https://github.com/Kaushik2210/gitVisualise/issues/36) `gitvisualise watch`: regenerate on change
+- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) A screen recording of pasting a link and playing the tour
 
 **🟡 Intermediate**
 
 - [#21](https://github.com/Kaushik2210/gitVisualise/issues/21) Language support: C# `using` directives
 - [#22](https://github.com/Kaushik2210/gitVisualise/issues/22) Language support: Ruby and PHP
+- [#30](https://github.com/Kaushik2210/gitVisualise/issues/30) Language support: C and C++ `#include`
+- [#31](https://github.com/Kaushik2210/gitVisualise/issues/31) Language support: Dart and Flutter
+- [#32](https://github.com/Kaushik2210/gitVisualise/issues/32) Refactor: a common language plug-in interface
+- [#33](https://github.com/Kaushik2210/gitVisualise/issues/33) Viewer: collapse and expand groups
+- [#34](https://github.com/Kaushik2210/gitVisualise/issues/34) Run the analysis in a Web Worker
+- [#35](https://github.com/Kaushik2210/gitVisualise/issues/35) Browser end-to-end smoke test
 
 **🔴 Ambitious** (discuss the design first)
 
-- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) "Sign in with GitHub": the code is in, a maintainer has to register the app and deploy the exchange function
-- [#23](https://github.com/Kaushik2210/gitVisualise/issues/23) Request tracing: base URLs, OpenAPI and GraphQL
+- [#37](https://github.com/Kaushik2210/gitVisualise/issues/37) Data-model view: SQL, Prisma and ORMs
+- [#38](https://github.com/Kaushik2210/gitVisualise/issues/38) Infrastructure view: Docker Compose, Kubernetes, Terraform
+- [#39](https://github.com/Kaushik2210/gitVisualise/issues/39) Optional AI narration with your own API key
+- [#40](https://github.com/Kaushik2210/gitVisualise/issues/40) VS Code extension
 - [#24](https://github.com/Kaushik2210/gitVisualise/issues/24) GitHub Action: comment the architecture diff on pull requests
+- [#23](https://github.com/Kaushik2210/gitVisualise/issues/23) Request tracing: base URLs, OpenAPI and GraphQL
+- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) "Sign in with GitHub": the code is in, a maintainer has to register the app and deploy the function
+
+The full plan, grouped into milestones, is in [ROADMAP.md](ROADMAP.md).
 
 <details>
-<summary><b>✅ Shipped in v1.1.0, all from this list</b></summary>
+<summary><b>✅ Already shipped from this list</b></summary>
 
-Theme toggle (#1), deep links to a tour step (#2), component search (#3), SVG/PNG export (#4), paginated repository picker (#5),
+Kotlin imports (#20, the first community contribution), theme toggle (#1), deep links to a tour step (#2), component search (#3), SVG/PNG export (#4), paginated repository picker (#5),
 Python resolver tests (#6), Java (#8) and Rust (#9) import graphs, tsconfig / Vite / webpack aliases (#10), monorepo support (#11),
 IndexedDB cache (#12), swimlanes (#13), request-flow tracing (#15) and architecture diffs (#16).
 
 </details>
-**Ideas without an issue yet:** data-model view (SQL / Prisma / ORMs), infrastructure view (Docker Compose, Kubernetes,
-Terraform), rename detection in comparisons, opt-in higher-quality narration voices. Open an issue to propose one.
+
+**Ideas without an issue yet:** rename detection in comparisons, opt-in higher-quality narration voices, a Swift import graph. Open an issue to propose one.
 
 > [!NOTE]
 > Got a different idea? **Build something new.** The scanner, the data format and the viewer are all small and
