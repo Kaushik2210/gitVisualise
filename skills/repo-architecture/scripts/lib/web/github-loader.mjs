@@ -7,7 +7,7 @@
 // The heavy lifting (scan, generate, validate) is the exact same pure code the CLI uses.
 import { scanCore, makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf } from '../core/scan-core.mjs';
 import { validateCore } from '../core/validate-core.mjs';
-import { generate, EXAMPLE_RE, TOOLING_RE } from '../generate.mjs';
+import { generate, isExamplePath, TOOLING_RE } from '../generate.mjs';
 
 const API = 'https://api.github.com';
 const RAW = 'https://raw.githubusercontent.com';
@@ -141,7 +141,7 @@ export function pickSourceFiles(paths, sizes, maxFiles) {
   for (const p of paths) {
     if (!UNIT_EXT.has(extOf(p)) || (sizes.get(p) || 0) > MAX_FILE_BYTES) continue;
     if (TEST_RE.test(p)) { skipped.tests++; continue; }
-    if (EXAMPLE_RE.test(p)) { skipped.examples++; continue; }
+    if (isExamplePath(p)) { skipped.examples++; continue; }
     if (TOOLING_RE.test(p)) { skipped.tooling++; continue; }
     candidates.push(p);
   }

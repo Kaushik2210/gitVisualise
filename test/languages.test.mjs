@@ -151,3 +151,107 @@ test('parseJsonc: comments, trailing commas, strings that look like comments', a
   assert.equal(parseJsonc('{ nope'), null);
   assert.equal(parseJsonc(''), null);
 });
+
+const MAVEN = `<project>
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>3.14.0</version>
+    </dependency>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+</project>
+`;
+
+function javaRepo(extra = {}) {
+  return repo({
+    'pom.xml': MAVEN,
+    'src/main/java/com/acme/App.java': [
+      'package com.acme;', '',
+      'import com.acme.util.Strings;',
+      'import com.acme.model.*;',
+      'import static com.acme.util.Strings.shout;',
+      'import com.acme.util.Strings.Inner;',
+      'import org.apache.commons.lang3.StringUtils;',
+      'import java.util.List;',
+      'import com.other.Missing;',
+      '// import com.acme.ghost.Ghost;',
+      '',
+      '/** Application entry point. */',
+      'public class App {',
+      '  public static void main(String[] args) {}',
+      '}', ''].join('\n'),
+    'src/main/java/com/acme/util/Strings.java': 'package com.acme.util;\n\npublic class Strings {\n  public static String shout(String s) { return s; }\n  public static class Inner {}\n}\n',
+    'src/main/java/com/acme/model/User.java': 'package com.acme.model;\npublic class User {}\n',
+    'src/main/java/com/acme/model/Order.java': 'package com.acme.model;\npublic class Order {}\n',
+    'src/test/java/com/acme/AppTest.java': 'package com.acme;\nimport org.junit.Test;\npublic class AppTest {}\n',
+    ...extra,
+  });
+}
+
+test('java: resolves classes, nested classes, static members and package wildcards to real files', () => {
+  const scan = scanRepo(javaRepo());
+  const app = scan.files.find((f) => f.path === 'src/main/java/com/acme/App.java');
+  assert.equal(app.package, 'com.acme');
+  const resolved = app.imports.filter((i) => i.resolved).map((i) => `${i.spec} -> ${i.resolved.split('/').slice(-2).join('/')}`).sort();
+  assert.deepEqual(resolved, [
+    'com.acme.model.* -> model/Order.java',
+    'com.acme.model.* -> model/User.java',
+    'com.acme.util.Strings -> util/Strings.java',
+    'com.acme.util.Strings.Inner -> util/Strings.java',
+    'com.acme.util.Strings.shout -> util/Strings.java',
+  ]);
+  const dropped = app.imports.filter((i) => !i.resolved).map((i) => i.spec);
+  assert.ok(dropped.includes('java.util.List') && dropped.includes('com.other.Missing'), 'JDK and unknown types are dropped, not guessed');
+  assert.ok(!app.imports.some((i) => /ghost/i.test(i.spec)), 'commented-out imports are ignored');
+});
+
+test('java: Maven dependencies become external nodes only when actually imported (tests and JDK excluded)', () => {
+  const scan = scanRepo(javaRepo());
+  assert.deepEqual(externals(scan), ['org.apache.commons:commons-lang3']);
+  const ext = scan.externals[0];
+  assert.equal(ext.version, '3.14.0');
+  assert.equal(ext.declaredAt.file, 'pom.xml');
+  assert.equal(scan.manifests.find((m) => m.type === 'maven').dependencies[0], 'org.apache.commons:commons-lang3');
+});
+
+test('java: Gradle dependencies, and an import whose package is not the groupId is dropped rather than guessed', () => {
+  const root = repo({
+    'build.gradle': "dependencies {\n  implementation 'org.apache.commons:commons-lang3:3.14.0'\n  implementation 'com.google.guava:guava:33.0.0-jre'\n  testImplementation 'junit:junit:4.13'\n}\n",
+    'src/main/java/app/Main.java': 'package app;\nimport org.apache.commons.lang3.StringUtils;\nimport com.google.common.collect.ImmutableList;\npublic class Main { public static void main(String[] a) {} }\n',
+  });
+  const scan = scanRepo(root);
+  assert.deepEqual(externals(scan), ['org.apache.commons:commons-lang3'], 'guava\'s package (com.google.common) differs from its groupId, so it is not guessed');
+  assert.equal(scan.externals[0].declaredAt.file, 'build.gradle');
+});
+
+test('java: packages are the unit of architecture, an entry point is found, and the result validates', () => {
+  const root = javaRepo();
+  const arch = generate(scanRepo(root));
+  assert.deepEqual(validate(arch, root).errors, []);
+  const internal = arch.nodes.filter((n) => !n.external);
+  assert.equal(internal.length, 3, 'com.acme, com.acme.util and com.acme.model packages (tests excluded)');
+  assert.ok(internal.some((n) => n.kind === 'entry'), 'the package holding the main method is the entry');
+  assert.ok(arch.edges.some((e) => e.kind === 'imports' && /model/.test(e.to)), 'com.acme -> com.acme.model through the wildcard import');
+  assert.ok(arch.nodes.some((n) => n.external && /commons-lang3/.test(n.label)));
+});
+
+test('java: a package named "samples" or "demo" inside a JVM source root is not an examples folder', () => {
+  const root = repo({
+    'pom.xml': '<project/>',
+    'src/main/java/org/acme/samples/Petclinic.java': 'package org.acme.samples;\nimport org.acme.samples.owner.Owner;\npublic class Petclinic { public static void main(String[] a) {} }\n',
+    'src/main/java/org/acme/samples/owner/Owner.java': 'package org.acme.samples.owner;\npublic class Owner {}\n',
+    'examples/Demo.java': 'public class Demo {}\n', // a real examples folder outside the source root is still skipped
+  });
+  const arch = generate(scanRepo(root));
+  const files = arch.nodes.flatMap((n) => n.sources.map((s) => s.path));
+  assert.ok(files.some((p) => p.endsWith('Petclinic.java')), 'source under org/acme/samples is kept');
+  assert.ok(!files.some((p) => p.startsWith('examples/')));
+  assert.match(arch.project.notes.join(' '), /1 examples file/);
+  assert.ok(arch.edges.length >= 1, 'the package edge exists');
+});

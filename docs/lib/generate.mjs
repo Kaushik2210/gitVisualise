@@ -15,6 +15,16 @@ const KIND_RULES = [
 
 export const EXAMPLE_RE = /(^|\/)(examples?|samples?|demos?|docs?|benchmarks?|fixtures?|playground)(\/|$)/i;
 export const TOOLING_RE = /(^|\/)(\.[\w-]+rc(\.[\w]+)?|[\w.-]+\.config(\.[\w-]+)?\.[cm]?[jt]s)$/i;
+
+// Under a standard JVM source root the folders are package names, not project folders: org/springframework/samples/...
+// is a package, not an "examples" directory. Only the part outside the source root can be an examples folder.
+const JVM_ROOT = /^(?:.*\/)?src\/(?:main|test|integration-test)\/(?:java|kotlin|scala)\//;
+export const isExamplePath = (p) => {
+  const root = /\.(java|kt|scala)$/.test(p) ? JVM_ROOT.exec(p) : null;
+  if (!root) return EXAMPLE_RE.test(p);
+  // Only the directories in front of src/main/java can name an examples folder; the rest is a package name.
+  return EXAMPLE_RE.test(root[0].replace(/src\/(?:main|test|integration-test)\/(?:java|kotlin|scala)\/$/, ''));
+};
 const KIND_ORDER =['entry', 'ui', 'api', 'service', 'data', 'util', 'config', 'module', 'external', 'test'];
 
 function classify(paths, isEntry, langs, byPathHints) {
@@ -31,7 +41,7 @@ export function generate(scan, opts = {}) {
   const maxNodes = Number(opts.maxNodes) || 14;
   // Tests, examples and tooling config are not the architecture: skip them unless asked (--include).
   const include = new Set(String(opts.include || '').split(',').map((s) => s.trim()).filter(Boolean));
-  const category = (f) => (f.isTest ? 'tests' : EXAMPLE_RE.test(f.path) ? 'examples' : TOOLING_RE.test(f.path) ? 'tooling' : null);
+  const category = (f) => (f.isTest ? 'tests' : isExamplePath(f.path) ? 'examples' : TOOLING_RE.test(f.path) ? 'tooling' : null);
   // `opts.alreadySkipped` lets a caller that never downloaded such files (the web app) report their counts.
   const pre = opts.alreadySkipped || {};
   const skipped = { tests: pre.tests || 0, examples: pre.examples || 0, tooling: pre.tooling || 0 };
@@ -59,10 +69,12 @@ export function generate(scan, opts = {}) {
     prefix = common.join('/');
     if (files.some((f) => dirOf(f.path) === '' )) prefix = '';
   }
-  // In Go the unit of architecture is the package (a directory): files in one package never import each other.
+  // In Go and Java the unit of architecture is the package (a directory): files in one package reference each
+  // other without imports, so per-file nodes would look disconnected.
+  const isPackageLang = (p) => p.endsWith('.go') || p.endsWith('.java');
   const goPackage = (p) => dirOf(p) || '.';
   const keyFor = (p, depth) => {
-    if (p.endsWith('.go')) return goPackage(p);
+    if (isPackageLang(p)) return goPackage(p);
     const rel = prefix ? p.slice(prefix.length + 1) : p;
     const segs = rel.split('/');
     if (segs.length === 1) return p; // file at the (prefixed) root => its own unit
@@ -80,7 +92,7 @@ export function generate(scan, opts = {}) {
     // Everything collapsed into a handful of directories: per-file nodes say far more for small repos.
     if (files.length <= 40 && new Set(files.map((f) => keyFor(f.path, chosen))).size < 4) chosen = 0;
   }
-  const unitKey = (p) => (p.endsWith('.go') ? goPackage(p) : chosen === 0 ? p : keyFor(p, chosen));
+  const unitKey = (p) => (isPackageLang(p) ? goPackage(p) : chosen === 0 ? p : keyFor(p, chosen));
   const units = new Map();
   for (const f of files) {
     const k = unitKey(f.path);

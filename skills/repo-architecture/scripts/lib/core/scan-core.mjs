@@ -3,6 +3,7 @@
 // Pure: works on a list of paths plus a read() callback, so it runs unchanged in Node and in the browser.
 import * as posix from './posix.mjs';
 import { countLines } from './text.mjs';
+import { javaImports, javaPackage, javaSymbols, buildJavaIndex, resolveJavaImport, parseJavaDeps, matchJavaDependency, hasJavaMain } from './lang-java.mjs';
 
 export const IGNORE_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'out', '.next', '.nuxt', '.cache', 'coverage', 'venv', '.venv', 'env',
@@ -143,6 +144,8 @@ function symbolsOf(text, ext) {
   } else if (ext === 'go') {
     re = /^func\s+(?:\([^)]*\)\s*)?([A-Z]\w*)/gm;
     while ((m = re.exec(text))) push(m[1], m.index);
+  } else if (ext === 'java') {
+    return javaSymbols(text);
   }
   return out;
 }
@@ -304,8 +307,9 @@ export function scanCore({ paths, read, repo, root = '' }) {
     let imports = [];
     if (ext === 'py') imports = pyImports(text);
     else if (ext === 'go') imports = goImports(text);
+    else if (ext === 'java') imports = javaImports(text);
     else if (['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'vue', 'svelte', 'html'].includes(ext)) imports = jsImports(text, ext);
-    files.push({ path: rel, lang, lines: countLines(text), isTest: TEST_RE.test(rel), doc: firstDoc(text, ext), symbols: symbolsOf(text, ext), imports, _text: text });
+    files.push({ path: rel, lang, lines: countLines(text), isTest: TEST_RE.test(rel), doc: firstDoc(text, ext), symbols: symbolsOf(text, ext), imports, ...(ext === 'java' ? { package: javaPackage(text) } : {}), _text: text });
   }
   const fileSet = new Set(files.map((f) => f.path));
 
@@ -420,6 +424,12 @@ export function scanCore({ paths, read, repo, root = '' }) {
     if (!goDirs.has(d)) goDirs.set(d, f.path);
   }
 
+  // Java: an index of the repository's own types, plus dependencies declared in pom.xml / build.gradle.
+  const javaIndex = buildJavaIndex(files);
+  const javaDeps = parseJavaDeps(read, all);
+  for (const d of javaDeps) { versions[d.name] = d.version; if (!depLine[d.name]) depLine[d.name] = { file: d.file, line: d.line }; }
+  for (const file of new Set(javaDeps.map((d) => d.file))) manifests.push({ file, type: file.endsWith('pom.xml') ? 'maven' : 'gradle', dependencies: javaDeps.filter((d) => d.file === file).map((d) => d.name) });
+
   const externals = {};
   const noteExternal = (name, file, line) => {
     const e = (externals[name] ||= { name, version: versions[name] || null, files: [], firstRef: { path: file, line } });
@@ -429,6 +439,7 @@ export function scanCore({ paths, read, repo, root = '' }) {
 
   for (const f of files) {
     const ext = extOf(f.path);
+    const extraImports = []; // a package wildcard import resolves to several files
     for (const imp of f.imports) {
       let resolved = null;
       if (ext === 'py') {
@@ -436,6 +447,15 @@ export function scanCore({ paths, read, repo, root = '' }) {
         if (!resolved) {
           const top = imp.spec.split('.')[0].toLowerCase();
           if (top && depNames.has(top)) noteExternal(top, f.path, imp.line);
+        }
+      } else if (ext === 'java') {
+        const hits = resolveJavaImport(imp, javaIndex, f.path);
+        if (hits.length) {
+          resolved = hits[0];
+          extraImports.push(...hits.slice(1).map((p) => ({ spec: imp.spec, line: imp.line, names: [], resolved: p })));
+        } else {
+          const dep = matchJavaDependency(imp.spec, javaDeps);
+          if (dep) noteExternal(dep.name, f.path, imp.line);
         }
       } else if (ext === 'go') {
         if (goModule && imp.spec.startsWith(goModule)) {
@@ -454,8 +474,9 @@ export function scanCore({ paths, read, repo, root = '' }) {
       }
       imp.resolved = resolved;
       imp.spec = String(imp.spec);
-      delete imp.py; delete imp.go;
+      delete imp.py; delete imp.go; delete imp.java;
     }
+    f.imports.push(...extraImports);
   }
 
   // ---- entry points ----
@@ -481,6 +502,7 @@ export function scanCore({ paths, read, repo, root = '' }) {
   const conventional = /(^|\/)(main|index|app|server|cli|__main__|manage|wsgi|asgi)\.(m?js|cjs|jsx|ts|tsx|py|go|rs|java)$/;
   files.filter((f) => !f.isTest && f.path.split('/').length <= 3 && conventional.test(f.path)).forEach((f) => addEntry(f.path, 'conventional entry filename'));
   files.filter((f) => f.path.endsWith('.go') && /^package main\b/m.test(f._text)).forEach((f) => addEntry(f.path, 'Go package main'));
+  files.filter((f) => f.path.endsWith('.java') && !f.isTest && hasJavaMain(f._text)).forEach((f) => addEntry(f.path, 'Java main method or Spring Boot application'));
   if (!entryPoints.length) {
     // Libraries have no main(): use the package's public entry (shallowest __init__.py, most imports).
     const init = files
