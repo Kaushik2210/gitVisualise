@@ -89,7 +89,10 @@ export function generate(scan, opts = {}) {
   };
   const maxDepth = Math.max(1, ...files.map((f) => (prefix ? f.path.slice(prefix.length + 1) : f.path).split('/').length - 1));
   let chosen = 0; // 0 = one unit per file
-  if (files.length > maxNodes) {
+  // opts.layout is in/out: a caller comparing two revisions passes the depth chosen for one so both use the same node ids.
+  const layout = opts.layout || {};
+  if (Number.isInteger(layout.depth)) chosen = layout.depth;
+  else if (files.length > maxNodes) {
     chosen = 1;
     for (let d = maxDepth; d >= 1; d--) {
       const n = new Set(files.map((f) => keyFor(f.path, d))).size;
@@ -98,6 +101,7 @@ export function generate(scan, opts = {}) {
     // Everything collapsed into a handful of directories: per-file nodes say far more for small repos.
     if (files.length <= 40 && new Set(files.map((f) => keyFor(f.path, chosen))).size < 4) chosen = 0;
   }
+  layout.depth = chosen;
   const unitKey = (p) => (wsOf(p) ? wsOf(p).dir : isPackageLang(p) ? goPackage(p) : chosen === 0 ? p : keyFor(p, chosen));
   const units = new Map();
   for (const f of files) {

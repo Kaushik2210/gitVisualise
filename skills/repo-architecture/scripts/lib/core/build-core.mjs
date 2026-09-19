@@ -6,12 +6,13 @@ const DEFAULT_LINES = 40;
 
 export const srcKey = (s) => `${s.path}#${s.lines ? s.lines.join('-') : ''}`;
 
+// Evidence pinned to another commit (removed components in a comparison) is not in this tree, so it gets no embedded snippet.
 function collectSources(arch) {
   const all = [];
   for (const n of arch.nodes) all.push(...(n.sources || []));
   for (const e of arch.edges) all.push(...(e.sources || []));
   for (const f of arch.flows) for (const s of f.steps) all.push(...(s.sources || []));
-  return all;
+  return all.filter((s) => !s.commit);
 }
 
 /** `view` is the same repository view the validator uses: exists / read / list. */

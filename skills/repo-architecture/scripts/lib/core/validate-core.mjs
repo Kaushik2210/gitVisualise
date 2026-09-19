@@ -6,6 +6,7 @@ import { countLines } from './text.mjs';
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/;
 const FILE_EXT_RE = /\.(m?[jt]sx?|cjs|vue|svelte|py|go|rs|java|kt|rb|php|cs|html?|css|scss|json|ya?ml|toml|md|sh|sql|txt|lock|env)$/i;
 const ORIGINS = new Set(['auto', 'claude', 'manual']);
+const DIFFS = new Set(['added', 'removed', 'changed', 'same']);
 
 /**
  * Pure validation. `view` abstracts the repository:
@@ -43,6 +44,12 @@ export function validateCore(arch, view) {
     sources.forEach((s, i) => {
       const w = `${where} sources[${i}]`;
       if (!s || typeof s.path !== 'string') return err(`${w}: missing path`);
+      // Evidence pinned to another commit (a component that was removed in a comparison) cannot be checked against this tree.
+      if (s.commit != null) {
+        if (typeof s.commit !== 'string' || !s.commit) err(`${w}: commit must be a non-empty string`);
+        if (s.lines != null && !(Array.isArray(s.lines) && s.lines.length === 2 && s.lines.every((n) => Number.isInteger(n)) && s.lines[0] >= 1 && s.lines[0] <= s.lines[1])) err(`${w}: lines must be [start, end] integers with 1 <= start <= end`);
+        return;
+      }
       const kind = view.exists(s.path.replace(/\/$/, ''));
       if (!kind) return err(`${w}: "${s.path}" does not exist in the repository (paths are relative to the repo root, exact case)`);
       if (s.lines != null) {
@@ -92,12 +99,13 @@ export function validateCore(arch, view) {
     if (!n.label) err(`${w}: label is required`);
     if (!n.kind) err(`${w}: kind is required`);
     if (n.group != null && typeof n.group !== 'string') err(`${w}: group must be a string`);
+    if (n.diff != null && !DIFFS.has(n.diff)) err(`${w}: diff must be added | removed | changed | same`);
     if (n.origin && !ORIGINS.has(n.origin)) err(`${w}: origin must be auto | claude | manual`);
     if (!n.summary) warn(`${w}: has no summary`);
     if (n.position && !(Number.isFinite(n.position.x) && Number.isFinite(n.position.y))) err(`${w}: position needs numeric x and y`);
     checkSources(w, n.sources, { required: !n.external });
     if (n.external && (!n.sources || !n.sources.length)) warn(`${w}: external node has no source reference (add the manifest line that declares it)`);
-    checkText(`${w} summary`, n.summary);
+    if (n.diff !== 'removed') checkText(`${w} summary`, n.summary); // a removed component describes the old tree
   });
 
   // ---- edges ----
@@ -115,11 +123,13 @@ export function validateCore(arch, view) {
     if (!e.sources || !e.sources.length) warn(`${w}: no source evidence for this relationship`);
     if (e.kind === 'imports') {
       for (const s of e.sources || []) {
+        if (s.commit) continue;
         const f = s.lines && linesOf(s.path);
         if (f && !f.text.slice(s.lines[0] - 1, s.lines[1]).some((l) => /import|require|from|src\s*=|include|use\b|load|^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*;/i.test(l) ||/^\s*(?:[\w.]+\s+)?"[^"]+"\s*$/.test(l))) warn(`${w}: kind "imports" but ${s.path}:${s.lines[0]} does not look like an import`);
       }
     }
-    checkText(`${w} summary`, e.summary);
+    if (e.diff != null && !DIFFS.has(e.diff)) err(`${w}: diff must be added | removed | changed | same`);
+    if (e.diff !== 'removed') checkText(`${w} summary`, e.summary);
   });
 
   // ---- flows & narration ----

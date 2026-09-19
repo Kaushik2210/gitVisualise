@@ -11,6 +11,7 @@ import { generate } from './lib/generate.mjs';
 import { mergeArchitecture } from './lib/merge.mjs';
 import { validate } from './lib/validate.mjs';
 import { build } from './lib/build.mjs';
+import { diffArchitectures } from './lib/core/diff-core.mjs';
 import { parseTarget, ensureClone } from './lib/github.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -28,6 +29,7 @@ Commands
   build      Validate, then write index.html + viewer files next to architecture.json
   all        generate + validate + build
   serve      Serve the output folder locally (default http://localhost:4173)
+  diff       Compare two architecture.json files (older, newer): marks components and relationships added / removed / changed
   install-skill   Copy this skill to ~/.claude/skills (or ./.claude/skills with --project)
 
 Options
@@ -40,6 +42,8 @@ Options
   --include a,b      Also diagram: tests, examples, tooling (skipped by default)
   --no-pin           Do not pin "Open Source" links to the current commit; link to the branch tip instead.
                      Use for a tour committed inside the repo it describes (it cannot know its own commit).
+  --root <dir>       diff: the newer revision's checkout; validates the result against it and builds a page in --out
+  --base-ref, --head-ref <name>   diff: labels for the two revisions (default: the file names)
   --force            Build even if validation reports errors
   --port <n>         Port for serve
 `;
@@ -112,6 +116,33 @@ function doBuild(ctx, flags) {
   console.log(`Built ${path.join(ctx.outDir, 'index.html')} (${b.snippets} code snippets embedded).`);
 }
 
+function doDiff(positional, flags) {
+  if (positional.length !== 2) throw new Error('usage: gitvisualise diff <older architecture.json> <newer architecture.json> [--out <dir>] [--root <newer checkout>]');
+  const load = (p) => {
+    const file = fs.existsSync(p) && fs.statSync(p).isDirectory() ? path.join(p, 'architecture.json') : p;
+    if (!fs.existsSync(file)) throw new Error(`No such file: ${file}`);
+    try { return readJSON(file); } catch (e) { throw new Error(`${file} is not valid JSON: ${e.message}`); }
+  };
+  const [base, head] = positional.map(load);
+  const { arch, summary } = diffArchitectures(base, head, {
+    baseRef: flags['base-ref'] || path.basename(positional[0]), headRef: flags['head-ref'] || path.basename(positional[1]),
+    baseCommit: base.project && base.project.commit, headCommit: head.project && head.project.commit,
+  });
+  const outDir = path.resolve(flags.out || 'gitvisualise-diff');
+  const file = path.join(outDir, 'architecture.json');
+  writeJSON(file, arch);
+  const n = summary.nodes, e = summary.edges;
+  console.log(summary.empty ? 'No structural differences.' : `Components: +${n.added} -${n.removed} ~${n.changed}   Relationships: +${e.added} -${e.removed} ~${e.changed}`);
+  console.log(`Wrote ${file}`);
+  if (flags.root) {
+    const r = validate(arch, path.resolve(flags.root));
+    r.errors.forEach((x) => console.log(`ERROR:   ${x}`));
+    if (r.errors.length && !flags.force) throw new Error('The comparison does not validate against --root (pass --force to build anyway).');
+    const b = build({ arch, root: path.resolve(flags.root), outDir, viewerDir: VIEWER_DIR });
+    console.log(`Built ${path.join(outDir, 'index.html')} (${b.snippets} code snippets embedded).`);
+  }
+}
+
 function serve(dir, port) {
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript','.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.ico': 'image/x-icon' };
   const server = http.createServer((req, res) => {
@@ -137,6 +168,7 @@ const cmd = positional.shift();
 try {
   if (!cmd || cmd === 'help' || flags.help) console.log(HELP);
   else if (cmd === 'install-skill') installSkill(flags);
+  else if (cmd === 'diff') doDiff(positional, flags);
   else {
     const ctx = resolveContext(positional, flags);
     if (cmd === 'scan') doScan(ctx);

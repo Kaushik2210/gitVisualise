@@ -28,7 +28,7 @@ must match exact case. `node scripts/gitvisualise.mjs validate` enforces everyth
       "locked": true,                       // or ["summary", "label"]: fields kept on regeneration
       "position": { "x": 320, "y": 80 },    // optional hand-placed layout (otherwise auto layered layout)
       "sources": [                          // REQUIRED (except external): evidence in the repo
-        { "path": "src/api/events.js", "lines": [1, 16], "note": "optional" }   // lines optional; dirs allowed without lines
+        { "path": "src/api/events.js", "lines": [1, 16], "note": "optional" }   // lines optional; dirs allowed without lines; "commit" pins evidence to another revision (comparisons)
       ]
     }
   ],
@@ -71,6 +71,14 @@ must match exact case. `node scripts/gitvisualise.mjs validate` enforces everyth
 | `origin: "manual"` | Written by a human; kept verbatim |
 | `locked: true` | Kept verbatim regardless of origin |
 | `locked: ["summary"]` | Item regenerates but keeps those fields |
+
+## Comparisons (`diff`)
+
+`gitvisualise diff <older> <newer>` and the website's `owner/repo@base...head` produce an architecture in which every node and edge carries an optional
+`diff` of `added | removed | changed | same` (matched by id, so a moved file is a removal plus an addition). Nodes that changed also carry a
+`diffNote` (what the description used to say). Evidence for a **removed** item lives in the older tree, so its sources carry a `commit`;
+the validator only checks their shape, and the viewer links them to that commit. `project.compare` records `{ base: { ref, commit }, head: { ref, commit } }`,
+and a generated **What changed** flow comes first.
 
 ## Validation errors you will actually see
 

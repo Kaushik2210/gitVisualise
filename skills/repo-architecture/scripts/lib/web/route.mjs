@@ -1,10 +1,12 @@
 // Pure URL-state helpers for the website, kept out of app.js so they can be unit tested without a DOM.
 //
 //   #/owner/repo[@ref]                                  open a repository
+//   #/owner/repo@base...head                            compare two revisions
 //   #/owner/repo[@ref]/flow/<flow-id>/step/<n>          open a tour at a step (n is 1-based)
 import { parseRepoInput } from './github-loader.mjs';
 
-export const keyOf = (t) => `${t.owner}/${t.repo}${t.ref ? '@' + t.ref : ''}${t.path ? ':' + t.path : ''}`;
+// A comparison is written owner/repo@base...head (head may be empty for the default branch).
+export const keyOf = (t) => `${t.owner}/${t.repo}${t.base ? '@' + t.base + '...' + (t.ref || '') : t.ref ? '@' + t.ref : ''}${t.path ? ':' + t.path : ''}`;
 export const hashOf = (t) => '#/' + keyOf(t);
 
 /** Returns { target, goto } or null. `goto` is { flow, step } or null. */

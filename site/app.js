@@ -1,6 +1,6 @@
 // gitvisualise website: paste a GitHub link (or pick a repo) -> analysed in your browser -> played in the viewer.
 // No backend. Repo content is untrusted, so everything below writes with textContent, never innerHTML.
-import { analyzeRepo, resolveCommit, parseRepoInput, listRepos, GitHubError } from './lib/web/github-loader.mjs';
+import { analyzeRepo, compareRepos, resolveCommit, parseRepoInput, listRepos, GitHubError } from './lib/web/github-loader.mjs';
 import { createCache, cacheKey } from './lib/web/cache.mjs';
 import { idbStore } from './lib/web/idb-store.mjs';
 import { buildSnippets, renderPage } from './lib/core/build-core.mjs';
@@ -194,14 +194,18 @@ async function run(input, { push = true } = {}) {
       const { sha, rate } = await resolveCommit(target, { token: token || undefined, signal });
       // Results fetched with a token might come from a private repository: only persist them if the user opted in.
       const persist = !token || $('cache-private').checked;
-      const ck = cacheKey(target.owner, target.repo, sha, target.path ? ':' + target.path : '');
+      // A comparison also needs the base commit; both are pinned before anything is downloaded.
+      let baseSha = null;
+      if (target.base) baseSha = (await resolveCommit({ owner: target.owner, repo: target.repo, ref: target.base }, { token: token || undefined, signal })).sha;
+      const ck = cacheKey(target.owner, target.repo, sha, (target.path ? ':' + target.path : '') + (baseSha ? '<' + baseSha : ''));
       const stored = persist ? await diskCache.get(ck) : null;
       let res, snippets;
       if (stored) {
         res = { arch: stored.arch, validation: stored.validation, meta: { ...stored.meta, fromCache: true, cachedAt: stored.ts, rate }, view: null };
         snippets = stored.snippets;
       } else {
-        res = await analyzeRepo(target, { token: token || undefined, signal, onProgress, sha, rate });
+        const load = target.base ? compareRepos : analyzeRepo;
+        res = await load(target, { token: token || undefined, signal, onProgress, sha, baseSha, rate });
         snippets = buildSnippets(res.arch, res.view);
         if (persist) diskCache.set(ck, { arch: res.arch, validation: res.validation, meta: res.meta, snippets, ts: Date.now() }).then(refreshCacheUi);
       }
@@ -229,9 +233,9 @@ function showResult(entry, target) {
   const title = $('r-title');
   title.textContent = `${m.owner}/${m.repo}`;
   title.href = m.repoUrl;
-  $('r-sha').textContent = m.sha.slice(0, 7);
+  $('r-sha').textContent = m.compare ? `${m.compare.baseSha.slice(0, 7)}…${m.sha.slice(0, 7)}` : m.sha.slice(0, 7);
   const badge = $('r-badge');
-  badge.textContent = m.curated ? 'Curated by the repo’s authors' : 'Auto-generated from the code';
+  badge.textContent = m.compare ? 'Comparison: ' + m.compare.base + ' → ' + (m.ref || 'default branch') : m.curated ? 'Curated by the repo’s authors' : 'Auto-generated from the code';
   badge.className = 'badge' + (m.curated ? ' curated' : '');
 
   const notice = $('r-notice');
@@ -241,7 +245,10 @@ function showResult(entry, target) {
     bad = true;
     parts.push(`${res.validation.errors.length} reference${res.validation.errors.length > 1 ? 's' : ''} in this authored tour no longer match the code, so parts may be out of date.`);
   }
-  if (!m.curated) {
+  if (m.compare) {
+    const s = m.compare.summary;
+    parts.push(s.empty ? 'No structural differences between these two revisions.' : `${s.nodes.added} component(s) added, ${s.nodes.removed} removed, ${s.nodes.changed} changed; ${s.edges.added} relationship(s) added, ${s.edges.removed} removed.`);
+  } else if (!m.curated) {
     for (const n of res.arch.project.notes || []) if (/^Analysed|truncated/.test(n)) parts.push(n);
     parts.push('This is an automatic picture from imports. Repos can publish a richer, narrated tour with the Claude Code skill.');
   }
@@ -383,6 +390,12 @@ $('filter').addEventListener('input', renderRepos);
 $('cancel').addEventListener('click', back);
 $('back').addEventListener('click', back);
 $('bring-link').addEventListener('click', () => { back(); setTimeout(() => $('bring').scrollIntoView({ behavior: 'smooth' }), 50); });
+$('compare').addEventListener('click', () => {
+  if (!lastEntry) return;
+  const t = lastEntry.target;
+  const base = (window.prompt('Compare ' + t.owner + '/' + t.repo + (t.ref ? '@' + t.ref : '') + ' with which branch, tag or commit? This one is the newer side.', t.base || 'main') || '').trim();
+  if (base) run({ owner: t.owner, repo: t.repo, ref: t.ref || null, base, ...(t.path ? { path: t.path } : {}) });
+});
 $('share').addEventListener('click', async () => {
   const url = location.origin + location.pathname + hashOf(lastEntry.target) + stateSuffix(lastState);
   try { await navigator.clipboard.writeText(url); toast('Link copied'); } catch { toast(url); }

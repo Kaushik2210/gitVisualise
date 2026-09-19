@@ -187,7 +187,7 @@
       var a = boxes[e.from], b = boxes[e.to];
       if (!a || !b) return;
       var geo = edgeGeom(a, b);
-      var g = s('g', { class: e.kind === 'http' ? 'edge k-http' : 'edge', 'data-id': e.id });
+      var g = s('g', { class: (e.kind === 'http' ? 'edge k-http' : 'edge') + diffClass(e), 'data-id': e.id });
       g.appendChild(s('title', {}, e.label ? (byId[e.from].label + ' → ' + byId[e.to].label + ': ' + e.label) : ''));
       g.appendChild(s('path', { d: geo.d, class: 'hit' }));
       g.appendChild(s('path', { d: geo.d, class: 'line' }));
@@ -196,12 +196,12 @@
     });
     nodes.forEach(function (n) {
       var b = boxes[n.id];
-      var g = s('g', { class: 'node', transform: 'translate(' + b.x + ',' + b.y + ')', tabindex: 0, role: 'button', 'aria-label': n.label + ', ' + n.kind + '. ' + (n.summary || ''), 'data-id': n.id, style: '--kc:' + kindColor(n.kind) });
+      var g = s('g', { class: 'node' + diffClass(n), transform: 'translate(' + b.x + ',' + b.y + ')', tabindex: 0, role: 'button', 'aria-label': n.label + ', ' + n.kind + '. ' + (n.summary || ''), 'data-id': n.id, style: '--kc:' + kindColor(n.kind) });
       g.appendChild(s('title', {}, n.summary || n.label));
       g.appendChild(s('rect', { class: 'box', width: b.w, height: b.h, rx: 10 }));
       g.appendChild(s('rect', { class: 'bar', x: 0, y: 12, width: 5, height: b.h - 24, rx: 2.5 }));
       g.appendChild(s('text', { class: 'lbl', x: 18, y: 26 }, trunc(n.label, 23)));
-      var sub = n.kind + (n.tech && n.tech.length ? ' · ' + n.tech[0] : '');
+      var sub = (DIFF_MARK[n.diff] ? DIFF_MARK[n.diff] + ' ' : '') + n.kind + (n.tech && n.tech.length ? ' · ' + n.tech[0] : '');
       g.appendChild(s('text', { class: 'sub', x: 18, y: 44 }, trunc(sub, 30)));
       g.addEventListener('click', function (ev) { ev.stopPropagation(); selectNode(n.id, false); });
       g.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); selectNode(n.id, false); } });
@@ -215,6 +215,11 @@
       if (seen[n.kind]) return; seen[n.kind] = 1;
       var i = h('i'); i.setAttribute('style', '--kc:' + kindColor(n.kind));
       legend.appendChild(h('span', {}, [i, document.createTextNode(n.kind)]));
+    });
+    ['added', 'removed', 'changed'].forEach(function (d) {
+      if (!nodes.some(function (n) { return n.diff === d; }) && !edges.some(function (e) { return e.diff === d; })) return;
+      var k = h('i', { class: 'diff-key d-' + d });
+      legend.appendChild(h('span', {}, [k, document.createTextNode(d)]));
     });
     if (edges.some(function (e) { return e.kind === 'http'; })) {
       var hl = h('i', { class: 'http-key' });
@@ -387,19 +392,24 @@
     });
   }
 
+  // ---------- comparison marks (architecture diff) ----------
+  var DIFF_MARK = { added: '+', removed: '−', changed: '~' };
+  var DIFF_LABEL = { added: 'Added', removed: 'Removed', changed: 'Changed' };
+  function diffClass(x) { return x.diff && x.diff !== 'same' ? ' d-' + x.diff : ''; }
+
   // ---------- detail panel ----------
   function srcLabel(src) { return src.path + (src.lines ? ':' + src.lines[0] + (src.lines[1] !== src.lines[0] ? '-' + src.lines[1] : '') : ''); }
   function srcKey(src) { return src.path + '#' + (src.lines ? src.lines.join('-') : ''); }
   function srcUrl(src) {
     var p = arch.project || {};
     if (typeof p.repoUrl !== 'string' || p.repoUrl.indexOf('https://github.com/') !== 0) return null;
-    var ref = p.commit || (p.branch && p.branch !== 'HEAD' ? p.branch : 'HEAD');
-    var sn = snippets[srcKey(src)];
+    var ref = src.commit || p.commit || (p.branch && p.branch !== 'HEAD' ? p.branch : 'HEAD');
+    var sn = src.commit ? null : snippets[srcKey(src)];
     var path = src.path.replace(/\/$/, '').split('/').map(encodeURIComponent).join('/');
     return p.repoUrl.replace(/\/$/, '') + '/' + (sn && sn.type === 'dir' ? 'tree' : 'blob') + '/' + encodeURIComponent(ref) + '/' + path + (src.lines ? '#L' + src.lines[0] + '-L' + src.lines[1] : '');
   }
   function sourceBlock(src, open) {
-    var sn = snippets[srcKey(src)], url = srcUrl(src);
+    var sn = src.commit ? null : snippets[srcKey(src)], url = srcUrl(src);
     var pre = sn ? h('pre', { hidden: open ? null : '' }) : null;
     if (pre) { pre.textContent = sn.text; if (!open) pre.hidden = true; else pre.removeAttribute('hidden'); }
     var action;
@@ -417,6 +427,7 @@
     var head = h('h3', { text: d.title });
     if (d.kind) { var pill = h('span', { class: 'pill', text: d.kind }); pill.setAttribute('style', '--kc:' + kindColor(d.kind)); body.appendChild(h('div', {}, [pill, head])); }
     else body.appendChild(head);
+    if (d.diff && d.diff !== 'same') body.appendChild(h('p', { class: 'kv diff-note d-' + d.diff }, [h('b', { text: DIFF_LABEL[d.diff] + (d.diffNote ? ': ' : '.') }), document.createTextNode(d.diffNote || '')]));
     if (d.summary) { var p = h('p'); rich(p, d.summary); p.style.margin = '8px 0 0'; body.appendChild(p); }
     if (d.tech && d.tech.length) body.appendChild(h('p', { class: 'kv' }, [h('b', { text: 'Tech: ' }), document.createTextNode(d.tech.join(', '))]));
     (d.lists || []).forEach(function (l) {
@@ -435,7 +446,7 @@
     S.sel = id;
     var uses = [], usedBy = [];
     edges.forEach(function (e) { if (e.from === id && byId[e.to]) uses.push(e.to); if (e.to === id && byId[e.from]) usedBy.push(e.from); });
-    showDetail({ title: n.label, kind: n.kind, summary: n.summary, tech: n.tech, sources: n.sources, origin: n.origin, lists: [{ title: 'Depends on / calls', ids: uses }, { title: 'Used by', ids: usedBy }] });
+    showDetail({ title: n.label, kind: n.kind, summary: n.summary, tech: n.tech, sources: n.sources, origin: n.origin, diff: n.diff, diffNote: n.diffNote, lists: [{ title: 'Depends on / calls', ids: uses }, { title: 'Used by', ids: usedBy }] });
     applyState();
     if (pan) reveal([id]);
     var det = $('detail'); if (window.innerWidth <= 900 && det.scrollIntoView) det.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });

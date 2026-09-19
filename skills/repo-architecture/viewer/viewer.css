@@ -150,3 +150,22 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
   .controls { justify-content: space-between; }
   .step-count { flex-basis: 100%; order: 9; }
 }
+
+/* architecture diff: components and relationships marked added / removed / changed */
+:root { --d-added: #2ea043; --d-removed: #f85149; --d-changed: #d29922; }
+.node.d-added rect.box { stroke: var(--d-added); stroke-width: 3; }
+.node.d-changed rect.box { stroke: var(--d-changed); stroke-width: 3; }
+.node.d-removed rect.box { stroke: var(--d-removed); stroke-width: 2.5; stroke-dasharray: 6 4; }
+.node.d-removed .lbl { text-decoration: line-through; }
+.node.d-removed rect.bar { fill: var(--d-removed); }
+.edge.d-added:not(.active):not(.selected) path.line { stroke: var(--d-added); stroke-width: 2.5; stroke-dasharray: none; }
+.edge.d-changed:not(.active):not(.selected) path.line { stroke: var(--d-changed); stroke-width: 2.5; stroke-dasharray: none; }
+.edge.d-removed:not(.active):not(.selected) path.line { stroke: var(--d-removed); stroke-dasharray: 6 4; }
+.legend .diff-key { background: none; border: 2px solid var(--kc); width: 10px; height: 10px; box-sizing: border-box; }
+.legend .diff-key.d-added { --kc: var(--d-added); }
+.legend .diff-key.d-removed { --kc: var(--d-removed); border-style: dashed; }
+.legend .diff-key.d-changed { --kc: var(--d-changed); }
+.diff-note b { color: var(--kc); }
+.diff-note.d-added { --kc: var(--d-added); }
+.diff-note.d-removed { --kc: var(--d-removed); }
+.diff-note.d-changed { --kc: var(--d-changed); }

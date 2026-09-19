@@ -8,6 +8,7 @@
 import { scanCore, makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf } from '../core/scan-core.mjs';
 import { validateCore } from '../core/validate-core.mjs';
 import { generate, isExamplePath, TOOLING_RE } from '../generate.mjs';
+import { diffArchitectures } from '../core/diff-core.mjs';
 
 const API = 'https://api.github.com';
 const RAW = 'https://raw.githubusercontent.com';
@@ -28,8 +29,11 @@ export function parseRepoInput(input) {
   const s = String(input || '').trim().replace(/\s+/g, '');
   if (!s) return null;
   const NAME = '[\\w.-]+';
-  let owner, repo, ref = null, path = null, m;
-  if ((m = s.match(new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?github\\.com\\/(${NAME})\\/(${NAME}?)(?:\\.git)?(?:\\/(tree|blob|commit)\\/([^/#?]+)(?:\\/([^#?]*))?)?\\/?(?:[?#].*)?$`, 'i')))) {
+  let owner, repo, ref = null, path = null, base = null, m;
+  // github.com/o/r/compare/<base>...<head> compares two revisions.
+  if ((m = s.match(new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?github\\.com\\/(${NAME})\\/(${NAME}?)\\/compare\\/([^/#?]+?)\\.\\.\\.([^/#?]+)\\/?(?:[?#].*)?$`, 'i')))) {
+    [, owner, repo, base, ref] = m;
+  } else if ((m = s.match(new RegExp(`^(?:https?:\\/\\/)?(?:www\\.)?github\\.com\\/(${NAME})\\/(${NAME}?)(?:\\.git)?(?:\\/(tree|blob|commit)\\/([^/#?]+)(?:\\/([^#?]*))?)?\\/?(?:[?#].*)?$`, 'i')))) {
     [, owner, repo] = m;
     ref = m[4] || null;
     if (/^tree$/i.test(m[3] || '')) path = m[5] || null; // .../tree/<ref>/<folder> names a folder to analyse
@@ -41,11 +45,14 @@ export function parseRepoInput(input) {
     [, owner, repo] = m; // owner/repo[@ref][:folder]
     ref = m[3] || null;
     path = m[4] || null;
+    // owner/repo@base...head compares two revisions; "@base..." compares against the default branch.
+    const range = ref && /^(.+?)\.\.\.(.*)$/.exec(ref);
+    if (range) { base = range[1]; ref = range[2] || null; }
   } else return null;
   if (owner === '.' || owner === '..' || repo === '.' || repo === '..') return null;
   path = path ? path.replace(/^\/+|\/+$/g, '') : null;
   if (path && path.split('/').some((seg) => !seg || seg === '.' || seg === '..')) return null;
-  return { owner, repo: repo.replace(/\.git$/i, ''), ref, ...(path ? { path } : {}) };
+  return { owner, repo: repo.replace(/\.git$/i, ''), ref, ...(base ? { base } : {}), ...(path ? { path } : {}) };
 }
 
 const encPath = (p) => p.split('/').map(encodeURIComponent).join('/');
@@ -255,13 +262,35 @@ export async function analyzeRepo(input, opts = {}) {
   const notes = [];
   if (picked.total > picked.chosen.length) notes.push(`Analysed the ${picked.chosen.length} shallowest of ${picked.total} source files.`);
   if (tree.truncated) notes.push('GitHub truncated the file listing for this very large repository, so the picture is partial.');
-  const arch = generate(scan, { alreadySkipped: picked.skipped, extraNotes: notes, noIncludeHint: true });
+  const arch = generate(scan, { alreadySkipped: picked.skipped, extraNotes: notes, noIncludeHint: true, layout: opts.layout });
   arch.project.repoUrl = repoUrl;
   arch.project.generatedBy = 'heuristic';
 
   const view = makeView(allPaths, contents);
   const validation = validateCore(arch, view);
   return { arch, view, validation, meta: { ...meta, analysed: picked.chosen.length, sourceTotal: picked.total, skipped: picked.skipped, workspaces: scan.workspaces } };
+}
+
+/**
+ * Compares two revisions of a repository (`target.base` against `target.ref`, default branch when empty).
+ * Both are analysed from the code (an authored tour would not be comparable) with the same node granularity,
+ * then merged into one architecture whose components and relationships are marked added / removed / changed.
+ * opts: the analyzeRepo options; `sha` pins the head commit and `baseSha` the base commit when already resolved.
+ */
+export async function compareRepos(input, opts = {}) {
+  const target = typeof input === 'string' ? parseRepoInput(input) : input;
+  if (!target || !target.base) throw new GitHubError('bad_input', 'A comparison needs two revisions, written owner/repo@base...head.');
+  const { base, ...headTarget } = target;
+  const { onProgress = () => {} } = opts;
+  const half = (offset) => (p) => onProgress(p && p.stage === 'download' ? { ...p, label: `${offset ? 'base' : 'head'} revision: ${p.label}` } : p);
+  // Head first: its node granularity is reused for the base so unchanged components keep the same ids.
+  const layout = {};
+  const head = await analyzeRepo(headTarget, { ...opts, preferCurated: false, layout, onProgress: half(0) });
+  const old = await analyzeRepo({ ...headTarget, ref: base }, { ...opts, sha: opts.baseSha, rate: undefined, preferCurated: false, layout: { depth: layout.depth }, onProgress: half(1) });
+  const { arch, summary } = diffArchitectures(old.arch, head.arch, { baseRef: base, headRef: headTarget.ref || 'default branch', baseCommit: old.meta.sha, headCommit: head.meta.sha });
+  arch.project.repoUrl = head.arch.project.repoUrl;
+  const validation = validateCore(arch, head.view);
+  return { arch, view: head.view, validation, meta: { ...head.meta, curated: false, compare: { base, baseSha: old.meta.sha, summary } } };
 }
 
 // ---------- repo picker helpers ----------
