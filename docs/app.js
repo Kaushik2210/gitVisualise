@@ -5,6 +5,8 @@ import { createCache, cacheKey } from './lib/web/cache.mjs';
 import { idbStore } from './lib/web/idb-store.mjs';
 import { buildSnippets, renderPage } from './lib/core/build-core.mjs';
 import { keyOf, hashOf, parseHash, stateSuffix } from './lib/web/route.mjs';
+import { newState, authorizeUrl, readCallback, cleanUrl, exchangeCode } from './lib/web/oauth.mjs';
+import { OAUTH } from './config.js';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -416,6 +418,38 @@ tokenInput.addEventListener('input', syncToken);
 $('remember').addEventListener('change', syncToken);
 if (token) { tokenInput.value = token; $('remember').checked = true; $('mine').hidden = false; }
 
+// ---------- Sign in with GitHub (only when site/config.js sets OAUTH) ----------
+// The code-for-token exchange needs a client secret, so it goes through the tiny stateless function in server/github-oauth.
+const session = {
+  get(k) { try { return sessionStorage.getItem('gv:' + k); } catch { return null; } },
+  set(k, v) { try { if (v == null) sessionStorage.removeItem('gv:' + k); else sessionStorage.setItem('gv:' + k, v); } catch { /* storage unavailable */ } },
+};
+const redirectUri = () => location.origin + location.pathname;
+async function handleSignInCallback() {
+  if (!OAUTH) return;
+  const saved = JSON.parse(session.get('oauth') || 'null');
+  const cb = readCallback(location.search, saved && saved.state);
+  if (!cb) return;
+  session.set('oauth', null);
+  history.replaceState(null, '', cleanUrl(location.href) + ((saved && saved.hash) || ''));
+  if (cb.error) return showError(new GitHubError('auth', cb.error));
+  try {
+    tokenInput.value = await exchangeCode({ exchangeUrl: OAUTH.exchangeUrl, code: cb.code, redirectUri: redirectUri() });
+    syncToken();
+    toast('Signed in with GitHub');
+  } catch (e) {
+    showError(new GitHubError('auth', e.message));
+  }
+}
+if (OAUTH) {
+  $('signin-row').hidden = false;
+  $('signin').addEventListener('click', () => {
+    const state = newState();
+    session.set('oauth', JSON.stringify({ state, hash: location.hash }));
+    location.assign(authorizeUrl({ clientId: OAUTH.clientId, redirectUri: redirectUri(), state, scope: OAUTH.scope }));
+  });
+}
+
 // ---------- cache controls ----------
 async function refreshCacheUi() {
   const n = await diskCache.count();
@@ -431,4 +465,5 @@ refreshCacheUi();
 window.addEventListener('popstate', route);
 window.addEventListener('hashchange', route);
 renderRecent();
+await handleSignInCallback();
 route();
