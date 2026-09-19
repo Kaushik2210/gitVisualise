@@ -245,6 +245,7 @@ viewer is a pure function of it.
 | Python | ✅ | Absolute and relative imports (Python 3 semantics), `__init__.py` re-exports, `src/` layouts, entry detection |
 | Go | ✅ | Packages (directories) as nodes, module-internal imports, `go.mod` and `go.work` |
 | Java | ✅ | Classes, nested classes, static and wildcard imports resolved to real files; Maven and Gradle dependencies; Spring Boot entry points |
+| Kotlin | ✅ | Class, wildcard and aliased imports resolve to Kotlin or Java files in the repository; `fun main` entry points |
 | Rust | ✅ | `mod`, `use crate::`/`self::`/`super::`, workspaces and `Cargo.toml` dependencies |
 | Everything else | ➖ | Structure, manifests and dependencies only. **[Add yours!](#-help-wanted)** |
 

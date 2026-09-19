@@ -6,6 +6,7 @@ import * as posix from './posix.mjs';
 import { countLines } from './text.mjs';
 import { rustImports, buildRustContext, resolveRustImport, rustDependencies } from './lang-rust.mjs';
 import { javaImports, javaPackage, javaSymbols, buildJavaIndex, resolveJavaImport, parseJavaDeps, matchJavaDependency, hasJavaMain } from './lang-java.mjs';
+import { kotlinImports, kotlinPackage, kotlinSymbols, hasKotlinMain } from './lang-kotlin.mjs';
 
 export const IGNORE_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'out', '.next', '.nuxt', '.cache', 'coverage', 'venv', '.venv', 'env',
@@ -148,6 +149,8 @@ function symbolsOf(text, ext) {
     while ((m = re.exec(text))) push(m[1], m.index);
   } else if (ext === 'java') {
     return javaSymbols(text);
+  } else if (ext === 'kt') {
+    return kotlinSymbols(text);
   } else if (ext === 'rs') {
     re = /^pub(?:\([^)]*\))?\s+(?:async\s+)?(?:fn|struct|enum|trait)\s+(\w+)/gm;
     while ((m = re.exec(text))) push(m[1], m.index);
@@ -319,9 +322,10 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     if (ext === 'py') imports = pyImports(text);
     else if (ext === 'go') imports = goImports(text);
     else if (ext === 'java') imports = javaImports(text);
+    else if (ext === 'kt') imports = kotlinImports(text);
     else if (ext === 'rs') imports = rustImports(text);
     else if (['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'vue', 'svelte', 'html'].includes(ext)) imports = jsImports(text, ext);
-    files.push({ path: rel, lang, lines: countLines(text), isTest: TEST_RE.test(rel), doc: firstDoc(text, ext), symbols: symbolsOf(text, ext), imports, ...(ext === 'java' ? { package: javaPackage(text) } : {}), _text: text });
+    files.push({ path: rel, lang, lines: countLines(text), isTest: TEST_RE.test(rel), doc: firstDoc(text, ext), symbols: symbolsOf(text, ext), imports, ...(['java', 'kt'].includes(ext) ? { package: ext === 'java' ? javaPackage(text) : kotlinPackage(text) } : {}), _text: text });
   }
   const fileSet = new Set(files.map((f) => f.path));
 
@@ -501,7 +505,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
         const r = resolveRustImport(imp, rustCtx, f.path);
         if (r.file) resolved = r.file;
         else if (r.external) noteExternal(r.external, f.path, imp.line);
-      } else if (ext === 'java') {
+      } else if (ext === 'java' || ext === 'kt') {
         const hits = resolveJavaImport(imp, javaIndex, f.path);
         if (hits.length) {
           resolved = hits[0];
@@ -557,6 +561,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
   files.filter((f) => f.path.endsWith('.go') && /^package main\b/m.test(f._text)).forEach((f) => addEntry(f.path, 'Go package main'));
   files.filter((f) => /(^|\/)src\/main\.rs$/.test(f.path) && !f.isTest).forEach((f) => addEntry(f.path, 'Rust binary crate (main.rs)'));
   files.filter((f) => f.path.endsWith('.java') && !f.isTest && hasJavaMain(f._text)).forEach((f) => addEntry(f.path, 'Java main method or Spring Boot application'));
+  files.filter((f) => f.path.endsWith('.kt') && !f.isTest && hasKotlinMain(f._text)).forEach((f) => addEntry(f.path, 'Kotlin main function'));
   if (!entryPoints.length) {
     // Libraries have no main(): use the package's public entry (shallowest __init__.py, most imports).
     const init = files
