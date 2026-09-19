@@ -79,7 +79,11 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 |---|---|
 | 🌐 **A website for any repo** | Paste a link, or pick from a GitHub account. No install, no sign-up |
 | 🗺️ **Interactive diagram** | Components laid out in layers, with pan, zoom and a "zoom to step" camera |
-| ▶️ **Guided flows** | Play, pause, next, previous, restart, speed control, progress dots, keyboard shortcuts |
+| ▶️ **Guided flows** | Play, pause, next, previous, restart, speed control, progress dots, keyboard shortcuts, deep links to any step |
+| 🔌 **Request tracing** | A `fetch`/`axios` call is linked to the server route that handles it, with evidence on both sides and a "Request: GET /x" tour |
+| 🔀 **Compare two revisions** | `owner/repo@v1...v2` marks components and relationships added, removed or changed, and narrates the difference |
+| 🧩 **Monorepos** | One component per workspace package, or analyse a single folder (`owner/repo:apps/web`) |
+| 🔎 **Search, swimlanes, export** | Find a component with `/`, group by folder or kind, save the diagram as SVG or PNG |
 | 🔊 **Voice narration** | Uses your browser's built-in speech: pick a voice, stop, mute. No server, no keys |
 | 🔗 **Click through to source** | Every component shows its code and an **Open Source** link to the exact lines on GitHub |
 | ✅ **Grounded by construction** | Validator rejects nonexistent files, out-of-range lines, and fake paths in narration |
@@ -94,6 +98,7 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 1. **Paste** `github.com/owner/repo` (or just `owner/repo`), **or** type a username to **pick from their repos**.
 2. Watch it read the repo, then **play the tour**. Share it, or download it as a single HTML file or JSON.
 3. Deep links work: `…/gitvisualise/#/tj/commander.js` opens straight into that repo's tour, and `owner/repo@branch` pins a ref.
+   A link can also name a step (`…/flow/startup/step/3`), a folder of a monorepo (`owner/repo:apps/web`) or a comparison (`owner/repo@v1...v2`).
 
 **How it works with no server:** your browser asks GitHub's public API for the commit and file tree (2 requests),
 downloads the source files from `raw.githubusercontent.com`, and runs the *same* scanner, generator and validator the
@@ -106,6 +111,8 @@ CLI uses. Nothing is uploaded anywhere but requests to GitHub.
 | **Repos that publish their own tour** | If `docs/architecture/architecture.json` exists, you get the authors' curated tour, checked against the real files |
 | **Safety** | The tour plays in a sandboxed frame with no access to the page or your token. Repo text is never inserted as HTML |
 | **Big repos** | Analyses the 300 shallowest source files (tests, examples and tooling skipped) and says so |
+| **Repeat visits** | Tours are cached in your browser (IndexedDB) per commit, so reopening one costs a single request. "Clear cached tours" empties it; private repos are cached only if you opt in |
+| **Sign in with GitHub** | Optional and off by default: it needs a tiny token-exchange function that a maintainer deploys. See [`server/github-oauth`](server/github-oauth/README.md) |
 
 ## ⚙️ GitHub Action
 
@@ -182,9 +189,20 @@ node skills/repo-architecture/scripts/gitvisualise.mjs all https://github.com/tj
 
 ```
 gitvisualise <command> [repo] [options]
-  scan | generate | validate | build | all | serve | install-skill
-  --out <dir>   --ref <ref>   --repo-url <url>   --max-nodes <n>
+  scan | generate | validate | build | all | serve | diff | install-skill
+  --out <dir>   --ref <ref>   --path <dir>   --repo-url <url>   --max-nodes <n>
   --ignore a,b  --include tests,examples,tooling   --no-pin   --force   --port <n>
+```
+
+Two more things worth knowing:
+
+```bash
+# one package of a monorepo (paths stay repo-relative, so links and validation still work)
+gitvisualise all https://github.com/owner/repo --path packages/api
+
+# what changed between two revisions: generate each, then compare (add --root <newer checkout> to build a page)
+gitvisualise generate . --out old && git checkout main && gitvisualise generate . --out new
+gitvisualise diff old new --out changes --root .
 ```
 
 ## 🧠 How it works
@@ -223,13 +241,16 @@ viewer is a pure function of it.
 
 | Language | Import graph | Notes |
 |---|:---:|---|
-| JavaScript / TypeScript (incl. JSX/TSX, Vue, Svelte) | ✅ | ES modules, `require`, dynamic `import()`, `<script src>` |
-| Python | ✅ | Absolute and relative imports, `__init__.py` entry detection |
-| Go | ✅ | Packages (directories) as nodes, module-internal imports, `go.mod` dependencies |
+| JavaScript / TypeScript (incl. JSX/TSX, Vue, Svelte) | ✅ | ES modules, `require`, dynamic `import()`, `<script src>`; `tsconfig`/`jsconfig` `paths`, `baseUrl` and `extends`, plus simple Vite and webpack aliases |
+| Python | ✅ | Absolute and relative imports (Python 3 semantics), `__init__.py` re-exports, `src/` layouts, entry detection |
+| Go | ✅ | Packages (directories) as nodes, module-internal imports, `go.mod` and `go.work` |
+| Java | ✅ | Classes, nested classes, static and wildcard imports resolved to real files; Maven and Gradle dependencies; Spring Boot entry points |
+| Rust | ✅ | `mod`, `use crate::`/`self::`/`super::`, workspaces and `Cargo.toml` dependencies |
 | Everything else | ➖ | Structure, manifests and dependencies only. **[Add yours!](#-help-wanted)** |
 
-Also detected: `package.json` / `requirements.txt` / `pyproject.toml` / `go.mod` dependencies, server routes (only
-when a real server framework is imported, never client `fetch` calls), and entry points.
+Also detected: dependencies from `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `build.gradle` and
+`Cargo.toml`; workspaces (npm, pnpm, Cargo, `go.work`); server routes (only when a real server framework is imported, with
+Express router mounts and Flask `methods=[...]` resolved); the HTTP calls that reach them; and entry points.
 
 ## 🎛️ Viewer controls
 
@@ -255,33 +276,32 @@ start without asking. Comment "I'll take this" and a maintainer will help you ge
 [**All help wanted →**](https://github.com/Kaushik2210/gitVisualise/labels/help%20wanted) &nbsp;·&nbsp;
 [**Start a discussion →**](https://github.com/Kaushik2210/gitVisualise/discussions)
 
-**🟢 Good first issues** (an afternoon each)
+**🟢 Good first issues**
 
-- [#1](https://github.com/Kaushik2210/gitVisualise/issues/1) Theme toggle: light / dark / auto
-- [#2](https://github.com/Kaushik2210/gitVisualise/issues/2) Deep-link to a specific tour step
-- [#3](https://github.com/Kaushik2210/gitVisualise/issues/3) Component search box in the viewer
-- [#4](https://github.com/Kaushik2210/gitVisualise/issues/4) Export the diagram as SVG or PNG
-- [#5](https://github.com/Kaushik2210/gitVisualise/issues/5) Paginate the account repository picker
-- [#6](https://github.com/Kaushik2210/gitVisualise/issues/6) Fixture tests for the Python import resolver
-- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) Add a demo GIF and screenshots to this README
+- [#20](https://github.com/Kaushik2210/gitVisualise/issues/20) Language support: Kotlin imports
+- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) A screen recording of pasting a link and playing the tour (screenshots and a step-through animation are already in this README)
 
 **🟡 Intermediate**
 
-- [#8](https://github.com/Kaushik2210/gitVisualise/issues/8) Language support: Java import graph
-- [#9](https://github.com/Kaushik2210/gitVisualise/issues/9) Language support: Rust module graph
-- [#10](https://github.com/Kaushik2210/gitVisualise/issues/10) Resolve tsconfig / Vite / webpack path aliases
-- [#11](https://github.com/Kaushik2210/gitVisualise/issues/11) Monorepo support: sub-paths and per-package graphs
-- [#12](https://github.com/Kaushik2210/gitVisualise/issues/12) Cache analyses in IndexedDB on the website
-- [#13](https://github.com/Kaushik2210/gitVisualise/issues/13) Swimlanes: group nodes by directory or kind
+- [#21](https://github.com/Kaushik2210/gitVisualise/issues/21) Language support: C# `using` directives
+- [#22](https://github.com/Kaushik2210/gitVisualise/issues/22) Language support: Ruby and PHP
 
 **🔴 Ambitious** (discuss the design first)
 
-- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) "Sign in with GitHub" to list private repositories
-- [#15](https://github.com/Kaushik2210/gitVisualise/issues/15) Request-flow tracing: match client calls to server routes
-- [#16](https://github.com/Kaushik2210/gitVisualise/issues/16) Architecture diff between two commits
+- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) "Sign in with GitHub": the code is in, a maintainer has to register the app and deploy the exchange function
+- [#23](https://github.com/Kaushik2210/gitVisualise/issues/23) Request tracing: base URLs, OpenAPI and GraphQL
+- [#24](https://github.com/Kaushik2210/gitVisualise/issues/24) GitHub Action: comment the architecture diff on pull requests
 
+<details>
+<summary><b>✅ Shipped in v1.1.0, all from this list</b></summary>
+
+Theme toggle (#1), deep links to a tour step (#2), component search (#3), SVG/PNG export (#4), paginated repository picker (#5),
+Python resolver tests (#6), Java (#8) and Rust (#9) import graphs, tsconfig / Vite / webpack aliases (#10), monorepo support (#11),
+IndexedDB cache (#12), swimlanes (#13), request-flow tracing (#15) and architecture diffs (#16).
+
+</details>
 **Ideas without an issue yet:** data-model view (SQL / Prisma / ORMs), infrastructure view (Docker Compose, Kubernetes,
-Terraform), recording the tour as a GIF or video, opt-in higher-quality narration voices. Open an issue to propose one.
+Terraform), rename detection in comparisons, opt-in higher-quality narration voices. Open an issue to propose one.
 
 > [!NOTE]
 > Got a different idea? **Build something new.** The scanner, the data format and the viewer are all small and
@@ -305,11 +325,12 @@ Terraform), recording the tour as a GIF or video, opt-in higher-quality narratio
 
 ```
 site/                            ← the website (landing page + app logic) → assembled into docs/
+server/github-oauth/             ← optional token-exchange function for "Sign in with GitHub" (off by default)
 skills/repo-architecture/        ← the installable Claude Code skill (and the whole engine)
 ├── SKILL.md                     ← instructions for Claude Code
 ├── reference/schema.md          ← the architecture.json format
 ├── scripts/
-│   ├── gitvisualise.mjs         ← CLI: scan | generate | validate | build | all | serve | install-skill
+│   ├── gitvisualise.mjs         ← CLI: scan | generate | validate | build | all | serve | diff | install-skill
 │   └── lib/
 │       ├── core/                ← pure logic shared by CLI and website (scan, validate, build, text, posix)
 │       ├── web/github-loader.mjs← analyse a GitHub repo from a browser
@@ -326,7 +347,7 @@ test/                            ← node:test suite
 ## 🧪 Develop
 
 ```bash
-npm test          # scanner, generator, validator, merge, builder, GitHub loader (with a fake GitHub), Go, URL parsing
+npm test          # scanner, languages, generator, validator, merge, builder, GitHub loader (with a fake GitHub), diff, request tracing, OAuth
 npm run site      # rebuild the website into docs/ (CI fails if you forget)
 npm run serve     # http://localhost:4173 → the website
 npm run docs      # regenerate this repo's own tour (curated content is preserved)
@@ -334,7 +355,8 @@ npm run docs      # regenerate this repo's own tour (curated content is preserve
 
 ## Limits
 
-- Aliased imports (other than `@/` and `~/`) and dynamic dispatch are not resolved yet.
+- Dynamic dispatch is not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match (no guessing through base URLs yet).
+- A comparison matches components by id, so a moved or renamed file shows as one removal plus one addition.
 - The automatic narration is templated; the Claude Code skill is what turns it into an explanation.
 - The website analyses public repos anonymously (GitHub's 60 requests/hour per network); private repos need a token.
 - Very large repos are sampled (300 shallowest source files), and GitHub truncates huge file listings.

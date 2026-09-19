@@ -4,6 +4,35 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-09-19
+
+### Added
+- **Languages:** Java (packages, classes, static and wildcard imports, Maven and Gradle dependencies, Spring Boot entry points) and
+  Rust (`mod` and `use` resolution, workspaces, `Cargo.toml`) import graphs; Go workspaces (`go.work`).
+- **Aliases:** `tsconfig`/`jsconfig` `paths`, `baseUrl` and `extends`, and simple Vite and webpack aliases, resolved to real files.
+- **Monorepos:** one component per workspace package (npm, pnpm, Cargo, `go.work`), and analysis of a single folder with
+  `--path <dir>`, `owner/repo:folder` or a `/tree/<ref>/<folder>` link.
+- **Request tracing:** client `fetch`/`axios`/`$http`/`ky`/`got` calls are linked to the server routes that handle them (exact method and
+  path-segment match, Express router mounts and Flask `methods` resolved), as `http` edges with evidence on both sides and a
+  "Request: METHOD /path" tour.
+- **Architecture diff:** `owner/repo@base...head` (and `gitvisualise diff <older> <newer>`) marks components and relationships added,
+  removed or changed, with a generated "What changed" tour. Removed items carry evidence pinned to the older commit.
+- **Viewer:** light / dark / auto theme, component search (`/`), export as SVG or PNG, swimlanes by group, directory or kind, and deep
+  links to any tour step.
+- **Website:** paginated repository picker, IndexedDB cache keyed by commit (private repositories only if opted in), theme
+  sync, shareable step links, monorepo package chips, a "Compare..." button and optional "Sign in with GitHub" (off by default,
+  see `server/github-oauth`).
+- **Docs:** screenshots and an animated walkthrough in the README.
+
+### Changed
+- Cached tours are versioned, so a release that changes generator output never shows stale results.
+- Python imports follow Python 3 semantics: a bare `import b` inside a package no longer resolves to a sibling module.
+- The project name comes from the shallowest manifest, not the first nested package.
+
+### Fixed
+- Java packages named `samples` or `demo` under `src/main/java` are no longer mistaken for an examples folder.
+- Go `require` lines and Rust `mod x;` declarations no longer produce validator warnings.
+
 ## [1.0.1] - 2026-09-19
 
 ### Fixed
@@ -32,5 +61,6 @@ First public release.
   keyboard shortcuts, dark mode, a phone layout, reduced-motion support and a no-JavaScript fallback.
 - A self-documenting architecture tour of this repository in `docs/architecture/`.
 
+[1.1.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.1.0
 [1.0.1]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.0.0
