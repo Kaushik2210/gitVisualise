@@ -255,3 +255,78 @@ test('java: a package named "samples" or "demo" inside a JVM source root is not 
   assert.match(arch.project.notes.join(' '), /1 examples file/);
   assert.ok(arch.edges.length >= 1, 'the package edge exists');
 });
+
+test('rust: mod declarations and use paths resolve through the module tree (crate, self, super, braces, aliases)', () => {
+  const root = repo({
+    'Cargo.toml': '[package]\nname = "demo"\nversion = "0.1.0"\n\n[dependencies]\nserde = { version = "1", features = ["derive"] }\nanyhow = "1.0"\n\n[dev-dependencies]\ncriterion = "0.5"\n',
+    'src/main.rs': 'mod config;\nmod net;\nmod missing;\nuse crate::config::Settings;\nuse crate::net::client::Client;\nuse serde::Serialize;\nuse anyhow::Result;\nuse std::collections::HashMap;\nuse rand::Rng;\nfn main() {}\n',
+    'src/config.rs': 'use super::net::client::Client;\nuse crate::net::{client::Client as C2, server::{self, Server}};\npub struct Settings;\n',
+    'src/net/mod.rs': 'pub mod client;\npub mod server;\n',
+    'src/net/client.rs': 'use super::server::Server;\nuse self::helper::Thing;\npub struct Client;\n',
+    'src/net/server.rs': 'pub struct Server;\n',
+  });
+  const scan = scanRepo(root);
+  const main = scan.files.find((f) => f.path === 'src/main.rs').imports;
+  const got = (spec) => main.filter((i) => i.spec === spec).map((i) => i.resolved);
+  assert.deepEqual(got('mod:config'), ['src/config.rs']);
+  assert.deepEqual(got('mod:net'), ['src/net/mod.rs'], 'a directory module is found through mod.rs');
+  assert.deepEqual(got('mod:missing'), [null], 'a mod declaration without a file is dropped');
+  assert.deepEqual(got('crate::config::Settings'), ['src/config.rs'], 'the item name is trimmed to its module');
+  assert.deepEqual(got('crate::net::client::Client'), ['src/net/client.rs']);
+  assert.deepEqual(got('std::collections::HashMap'), [null]);
+  assert.deepEqual(got('rand::Rng'), [null], 'a crate that is not declared in Cargo.toml is dropped, not guessed');
+  assert.deepEqual(externals(scan), ['anyhow', 'serde'], 'declared [dependencies] only (dev-dependencies excluded, unused ones absent)');
+  assert.equal(scan.externals.find((e) => e.name === 'serde').version, '1');
+
+  const cfg = scan.files.find((f) => f.path === 'src/config.rs').imports.map((i) => `${i.spec}=${i.resolved}`);
+  assert.ok(cfg.includes('super::net::client::Client=src/net/client.rs'), 'super:: from a top-level module reaches the crate root');
+  assert.ok(cfg.includes('crate::net::client::Client=src/net/client.rs'), 'braces and "as" aliases expand to plain paths');
+  assert.ok(cfg.includes('crate::net::server=src/net/server.rs'), 'nested {self, Server} resolves both');
+  assert.ok(cfg.includes('crate::net::server::Server=src/net/server.rs'));
+  const client = scan.files.find((f) => f.path === 'src/net/client.rs').imports;
+  assert.equal(client.find((i) => i.spec === 'super::server::Server').resolved, 'src/net/server.rs');
+  assert.equal(client.find((i) => i.spec === 'self::helper::Thing').resolved, null, 'self:: into a module that does not exist is dropped');
+  assert.ok(scan.entryPoints.some((e) => e.path === 'src/main.rs'));
+});
+
+test('rust: workspace crates import each other by crate name, and library crates get a root entry', () => {
+  const root = repo({
+    'Cargo.toml': '[workspace]\nmembers = ["crates/*"]\n',
+    'crates/core/Cargo.toml': '[package]\nname = "app-core"\n',
+    'crates/core/src/lib.rs': 'pub mod engine;\npub mod util;\n',
+    'crates/core/src/engine.rs': 'use crate::util::clamp;\npub struct Engine;\n',
+    'crates/core/src/util.rs': 'pub fn clamp() {}\n',
+    'crates/cli/Cargo.toml': '[package]\nname = "app-cli"\n\n[dependencies]\napp-core = { path = "../core" }\nclap = "4"\n',
+    'crates/cli/src/main.rs': 'use app_core::engine::Engine;\nuse app_core::util;\nuse clap::Parser;\nfn main() {}\n',
+  });
+  const scan = scanRepo(root);
+  const cli = scan.files.find((f) => f.path === 'crates/cli/src/main.rs').imports;
+  assert.equal(cli.find((i) => i.spec === 'app_core::engine::Engine').resolved, 'crates/core/src/engine.rs', 'a use of another workspace crate resolves into that crate');
+  assert.equal(cli.find((i) => i.spec === 'app_core::util').resolved, 'crates/core/src/util.rs');
+  assert.equal(scan.files.find((f) => f.path === 'crates/core/src/engine.rs').imports[0].resolved, 'crates/core/src/util.rs');
+  assert.deepEqual(externals(scan), ['clap'], 'workspace members are code in this repository, not external dependencies');
+  assert.ok(scan.entryPoints.some((e) => e.path === 'crates/cli/src/main.rs'), 'a binary crate deeper than the root is still an entry point');
+  const arch = generate(scan);
+  assert.ok(arch.edges.some((e) => e.kind === 'imports'), 'cross-crate edges exist');
+});
+
+test('rust: use-tree expansion', async () => {
+  const { expandUse } = await import('../skills/repo-architecture/scripts/lib/core/lang-rust.mjs');
+  assert.deepEqual(expandUse('a::b::C'), ['a::b::C']);
+  assert.deepEqual(expandUse('a::{b, c::{d, self}, e as f}'), ['a::b', 'a::c::d', 'a::c', 'a::e']);
+  assert.deepEqual(expandUse('crate::m::*'), ['crate::m']);
+  assert.deepEqual(expandUse('::std::fmt'), ['std::fmt']);
+  assert.deepEqual(expandUse('a::{'), [], 'malformed input never throws');
+});
+
+test('rust: the generated architecture validates', () => {
+  const root = repo({
+    'Cargo.toml': '[package]\nname = "solo"\n[dependencies]\nserde = "1"\n',
+    'src/lib.rs': 'pub mod shapes;\nuse serde::Serialize;\n',
+    'src/shapes.rs': 'pub struct Circle;\n',
+  });
+  const scan = scanRepo(root);
+  const arch = generate(scan);
+  assert.deepEqual(validate(arch, root).errors, []);
+  assert.ok(scan.entryPoints.some((e) => e.path === 'src/lib.rs' && /Rust library/.test(e.reason)));
+});

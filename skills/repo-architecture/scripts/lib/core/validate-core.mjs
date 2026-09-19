@@ -116,7 +116,7 @@ export function validateCore(arch, view) {
     if (e.kind === 'imports') {
       for (const s of e.sources || []) {
         const f = s.lines && linesOf(s.path);
-        if (f && !f.text.slice(s.lines[0] - 1, s.lines[1]).some((l) => /import|require|from|src\s*=|include|use\b|load/i.test(l) || /^\s*(?:[\w.]+\s+)?"[^"]+"\s*$/.test(l))) warn(`${w}: kind "imports" but ${s.path}:${s.lines[0]} does not look like an import`);
+        if (f && !f.text.slice(s.lines[0] - 1, s.lines[1]).some((l) => /import|require|from|src\s*=|include|use\b|load|^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*;/i.test(l) ||/^\s*(?:[\w.]+\s+)?"[^"]+"\s*$/.test(l))) warn(`${w}: kind "imports" but ${s.path}:${s.lines[0]} does not look like an import`);
       }
     }
     checkText(`${w} summary`, e.summary);
