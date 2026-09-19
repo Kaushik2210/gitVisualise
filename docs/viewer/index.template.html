@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESCRIPTION}}">
+<script>document.documentElement.classList.add('js');</script>
+<link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+<div id="static" class="static">{{STATIC}}</div>
+
+<div id="app" class="app" hidden>
+  <header class="topbar">
+    <div class="title">
+      <h1 id="proj-name"></h1>
+      <p id="proj-desc"></p>
+    </div>
+    <div class="top-actions">
+      <label class="field"><span>Flow</span><select id="flow-select" aria-label="Choose flow"></select></label>
+      <a id="repo-link" class="btn ghost" target="_blank" rel="noopener noreferrer" hidden>Repository</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage" aria-label="Architecture diagram">
+      <div class="canvas" id="canvas">
+        <svg id="diagram" role="img" aria-label="Architecture diagram" tabindex="-1"></svg>
+        <div class="zoom" role="group" aria-label="Zoom">
+          <button id="zoom-in" class="btn icon" aria-label="Zoom in" title="Zoom in">+</button>
+          <button id="zoom-out" class="btn icon" aria-label="Zoom out" title="Zoom out">&minus;</button>
+          <button id="zoom-fit" class="btn icon" aria-label="Fit to screen" title="Fit to screen">&#9635;</button>
+        </div>
+        <div class="legend" id="legend" aria-label="Legend"></div>
+      </div>
+
+      <div class="player" role="group" aria-label="Playback controls">
+        <div class="progress" id="progress" role="progressbar" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" aria-label="Step progress">
+          <div class="bar" id="progress-bar"></div>
+          <div class="dots" id="progress-dots"></div>
+        </div>
+        <div class="controls">
+          <button id="btn-restart" class="btn icon" aria-label="Restart" title="Restart (R)">&#8634;</button>
+          <button id="btn-prev" class="btn icon" aria-label="Previous step" title="Previous (Left arrow)">&#9198;&#xFE0E;</button>
+          <button id="btn-play" class="btn primary" aria-label="Play" title="Play / pause (Space)">&#9654;&#xFE0E; Play</button>
+          <button id="btn-next" class="btn icon" aria-label="Next step" title="Next (Right arrow)">&#9197;&#xFE0E;</button>
+          <span class="step-count" id="step-count" aria-live="off">Overview</span>
+          <label class="check" title="Zoom the diagram to the active step"><input type="checkbox" id="follow"> <span>Zoom to step</span></label>
+          <label class="field inline"><span>Speed</span>
+            <select id="speed" aria-label="Playback speed">
+              <option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option>
+            </select>
+          </label>
+        </div>
+        <div class="controls narr" id="narration-controls">
+          <label class="check"><input type="checkbox" id="narr-enable"> <span>Voice narration</span></label>
+          <button id="narr-stop" class="btn small" title="Stop speaking">&#9724;&#xFE0E; Stop</button>
+          <label class="field inline"><span>Voice</span><select id="voice" aria-label="Narration voice"></select></label>
+          <span class="hint" id="narr-hint"></span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card" id="narration" aria-label="Narration">
+        <h2 id="step-title">Overview</h2>
+        <p id="step-text" class="caption" aria-live="polite"></p>
+        <div id="step-chips" class="chips"></div>
+      </section>
+      <section class="card" id="detail" aria-label="Component details">
+        <h2>Component</h2>
+        <p class="muted" id="detail-empty">Select a component in the diagram to see what it does and where it lives in the code.</p>
+        <div id="detail-body" hidden></div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<noscript><style>.static{display:block !important}</style></noscript>
+<script id="arch-data" type="application/json">{{DATA}}</script>
+<script src="viewer.js"></script>
+</body>
+</html>
