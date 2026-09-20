@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-09-19T16:30:23.644Z",
+    "generatedAt": "2026-09-20T11:00:04.720Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 21 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 4 tests files, 34 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -35,8 +35,8 @@
         {
           "path": "site/app.js",
           "lines": [
-            169,
-            189
+            172,
+            192
           ]
         }
       ]
@@ -54,15 +54,15 @@
         {
           "path": "site/index.html",
           "lines": [
-            42,
-            42
+            55,
+            55
           ]
         },
         {
           "path": "site/index.html",
           "lines": [
-            171,
-            171
+            279,
+            279
           ]
         }
       ]
@@ -80,15 +80,15 @@
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
           "lines": [
-            51,
-            67
+            57,
+            73
           ]
         },
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
           "lines": [
-            166,
-            182
+            260,
+            276
           ]
         }
       ]
@@ -227,8 +227,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/generate.mjs",
           "lines": [
-            41,
-            47
+            42,
+            48
           ]
         }
       ]
@@ -298,8 +298,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/scan.mjs",
           "lines": [
-            36,
-            44
+            37,
+            45
           ]
         }
       ]
@@ -355,8 +355,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
           "lines": [
-            192,
-            202
+            169,
+            179
           ]
         }
       ]
@@ -374,8 +374,8 @@
         {
           "path": "skills/repo-architecture/viewer/index.template.html",
           "lines": [
-            31,
-            31
+            34,
+            34
           ]
         }
       ]
@@ -393,15 +393,15 @@
         {
           "path": "skills/repo-architecture/viewer/viewer.js",
           "lines": [
-            57,
-            61
+            63,
+            67
           ]
         },
         {
           "path": "skills/repo-architecture/viewer/viewer.js",
           "lines": [
-            498,
-            506
+            593,
+            601
           ]
         }
       ]
@@ -605,7 +605,7 @@
       "label": "http-core.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "JavaScript file, 90 lines. Defines pathSegments, matchScore, matchRequests, usesHttpClient and 1 more.",
+      "summary": "JavaScript file, 125 lines. Defines pathSegments, matchScore, matchRequests, usesHttpClient and 3 more.",
       "tech": [
         "JavaScript"
       ],
@@ -728,7 +728,7 @@
           "path": "skills/repo-architecture/scripts/lib/web/route.mjs",
           "lines": [
             9,
-            25
+            29
           ]
         }
       ]
@@ -749,6 +749,347 @@
             5,
             25
           ]
+        }
+      ]
+    },
+    {
+      "id": "data-core-mjs",
+      "label": "data-core.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "JavaScript file, 163 lines. Defines SQL_RE, PRISMA_RE, DATA_FILE_RE, parseSql and 3 more.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/data-core.mjs",
+          "lines": [
+            5,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": "export-core-mjs",
+      "label": "export-core.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Pure exporters: architecture.json -> Mermaid or PlantUML text, so a tour can be pasted into a README, a wiki page or a pull request (GitHub renders Mermaid natively).",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/export-core.mjs",
+          "lines": [
+            16,
+            36
+          ]
+        }
+      ]
+    },
+    {
+      "id": "infra-core-mjs",
+      "label": "infra-core.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Infrastructure view: the services a Docker Compose file declares, how they depend on each other, and which directory of the repository each one is built from.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
+          "lines": [
+            9,
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-c-mjs",
+      "label": "lang-c.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "C and C++: `#include \"local.h\"` is a path, searched relative to the including file, then in the project's include directories (from CMake's include_directories / target_include_directories, `-I` flags in Makefiles, an...",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-c.mjs",
+          "lines": [
+            9,
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-csharp-mjs",
+      "label": "lang-csharp.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "C#: `using` directives name namespaces, not files, so resolution goes through an index of the namespaces and types the repository itself declares.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-csharp.mjs",
+          "lines": [
+            10,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-dart-mjs",
+      "label": "lang-dart.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Dart: `import 'package:my_app/src/foo.dart'` names a package and a path inside its lib/ directory, and relative imports are plain paths.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-dart.mjs",
+          "lines": [
+            9,
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-php-mjs",
+      "label": "lang-php.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "PHP: `use Vendor\\Package\\Class;` names a class by namespace.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-php.mjs",
+          "lines": [
+            10,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-ruby-mjs",
+      "label": "lang-ruby.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Ruby: `require_relative` is a path relative to the file; `require` searches the load path, which we take to be the repository's `lib` directories, its root, and `app` / `src` (the usual Bundler and Rails layouts).",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-ruby.mjs",
+          "lines": [
+            8,
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "id": "languages-mjs",
+      "label": "languages.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Language plug-ins. Each language that has an import graph is one entry in PLUGINS; the scanner knows nothing else about it.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            36,
+            56
+          ]
+        }
+      ]
+    },
+    {
+      "id": "yaml-lite-mjs",
+      "label": "yaml-lite.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "JavaScript file, 145 lines. Defines parseYaml.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/yaml-lite.mjs",
+          "lines": [
+            69,
+            89
+          ]
+        }
+      ]
+    },
+    {
+      "id": "watch-mjs",
+      "label": "watch.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Helpers for `gitvisualise watch`: which changes matter, and a debouncer.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/watch.mjs",
+          "lines": [
+            9,
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "id": "analyse-mjs",
+      "label": "analyse.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "The CPU-heavy half of analysing a repository: scan the downloaded files, generate the architecture and validate it.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/analyse.mjs",
+          "lines": [
+            9,
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "id": "analysis-worker-mjs",
+      "label": "analysis-worker.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Web Worker entry: runs the analysis off the main thread.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/analysis-worker.mjs"
+        }
+      ]
+    },
+    {
+      "id": "narrate-ai-mjs",
+      "label": "narrate-ai.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Optional, opt-in narration written by a language model with the visitor's OWN API key.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/narrate-ai.mjs",
+          "lines": [
+            16,
+            36
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pr-comment-mjs",
+      "label": "pr-comment.mjs",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "JavaScript file, 110 lines. Defines MARKER, buildComment, NO_CHANGES_BODY, postComment and 1 more.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/pr-comment.mjs",
+          "lines": [
+            13,
+            33
+          ]
+        }
+      ]
+    },
+    {
+      "id": "extension-js",
+      "label": "extension.js",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "JavaScript file, 106 lines.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "vscode-extension/extension.js"
+        }
+      ]
+    },
+    {
+      "id": "lib-js",
+      "label": "lib.js",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "JavaScript file, 59 lines.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "vscode-extension/lib.js"
+        }
+      ]
+    },
+    {
+      "id": "bundle-skill-mjs",
+      "label": "bundle-skill.mjs",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "Copies the CLI and the viewer from skills/repo-architecture into vscode-extension/skill, so a packaged extension carries everything it needs (`vsce package` after `npm run prepare`).",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "vscode-extension/scripts/bundle-skill.mjs"
+        }
+      ]
+    },
+    {
+      "id": "run-in-vscode-mjs",
+      "label": "run-in-vscode.mjs",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "Runs the extension inside a real VS Code (its Extension Host) against a throwaway workspace.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "vscode-extension/scripts/run-in-vscode.mjs"
         }
       ]
     }
@@ -874,8 +1215,8 @@
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
           "lines": [
-            15,
-            15
+            17,
+            17
           ]
         }
       ]
@@ -1061,8 +1402,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/scan.mjs",
           "lines": [
-            6,
-            6
+            7,
+            7
           ]
         }
       ]
@@ -1127,8 +1468,8 @@
       "to": "scan-core-mjs",
       "kind": "imports",
       "origin": "auto",
-      "label": "scanCore, makeIgnorer, filterPaths and 3 more",
-      "summary": "1 import (scanCore, makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf).",
+      "label": "makeIgnorer, filterPaths, UNIT_EXT and 2 more",
+      "summary": "1 import (makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf).",
       "sources": [
         {
           "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
@@ -1163,8 +1504,8 @@
       "to": "generate-mjs",
       "kind": "imports",
       "origin": "auto",
-      "label": "generate, isExamplePath, TOOLING_RE",
-      "summary": "1 import (generate, isExamplePath, TOOLING_RE).",
+      "label": "isExamplePath, TOOLING_RE",
+      "summary": "1 import (isExamplePath, TOOLING_RE).",
       "sources": [
         {
           "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
@@ -1457,8 +1798,8 @@
         {
           "path": "site/app.js",
           "lines": [
-            9,
-            9
+            12,
+            12
           ]
         }
       ]
@@ -1500,42 +1841,6 @@
       ]
     },
     {
-      "id": "e-scan-core-mjs--lang-rust-mjs",
-      "from": "scan-core-mjs",
-      "to": "lang-rust-mjs",
-      "kind": "imports",
-      "origin": "auto",
-      "label": "rustImports, buildRustContext, resolveRustImport and 1 more",
-      "summary": "1 import (rustImports, buildRustContext, resolveRustImport, rustDependencies).",
-      "sources": [
-        {
-          "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
-          "lines": [
-            7,
-            7
-          ]
-        }
-      ]
-    },
-    {
-      "id": "e-scan-core-mjs--lang-java-mjs",
-      "from": "scan-core-mjs",
-      "to": "lang-java-mjs",
-      "kind": "imports",
-      "origin": "auto",
-      "label": "javaImports, javaPackage, javaSymbols and 5 more",
-      "summary": "1 import (javaImports, javaPackage, javaSymbols, buildJavaIndex, resolveJavaImport, parseJavaDeps and 2 more).",
-      "sources": [
-        {
-          "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
-          "lines": [
-            8,
-            8
-          ]
-        }
-      ]
-    },
-    {
       "id": "e-generate-mjs--http-core-mjs",
       "from": "generate-mjs",
       "to": "http-core-mjs",
@@ -1565,8 +1870,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
           "lines": [
-            11,
-            11
+            12,
+            12
           ]
         }
       ]
@@ -1590,8 +1895,206 @@
       ]
     },
     {
-      "id": "e-scan-core-mjs--lang-kotlin-mjs",
-      "from": "scan-core-mjs",
+      "id": "e-gitvisualise-mjs--export-core-mjs",
+      "from": "gitvisualise-mjs",
+      "to": "export-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "EXPORT_FORMATS",
+      "summary": "1 import (EXPORT_FORMATS).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
+          "lines": [
+            15,
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-gitvisualise-mjs--watch-mjs",
+      "from": "gitvisualise-mjs",
+      "to": "watch-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "classifyChange, debounce",
+      "summary": "1 import (classifyChange, debounce).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
+          "lines": [
+            16,
+            16
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-infra-core-mjs--posix-mjs",
+      "from": "infra-core-mjs",
+      "to": "posix-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "posix",
+      "summary": "1 import (posix).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
+          "lines": [
+            4,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-infra-core-mjs--yaml-lite-mjs",
+      "from": "infra-core-mjs",
+      "to": "yaml-lite-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "parseYaml",
+      "summary": "1 import (parseYaml).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-infra-core-mjs--text-mjs",
+      "from": "infra-core-mjs",
+      "to": "text-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "countLines",
+      "summary": "1 import (countLines).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
+          "lines": [
+            6,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-lang-c-mjs--posix-mjs",
+      "from": "lang-c-mjs",
+      "to": "posix-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "posix",
+      "summary": "1 import (posix).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-c.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-lang-csharp-mjs--posix-mjs",
+      "from": "lang-csharp-mjs",
+      "to": "posix-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "posix",
+      "summary": "1 import (posix).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-csharp.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-lang-dart-mjs--posix-mjs",
+      "from": "lang-dart-mjs",
+      "to": "posix-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "posix",
+      "summary": "1 import (posix).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-dart.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-lang-php-mjs--posix-mjs",
+      "from": "lang-php-mjs",
+      "to": "posix-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "posix",
+      "summary": "1 import (posix).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-php.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-lang-ruby-mjs--posix-mjs",
+      "from": "lang-ruby-mjs",
+      "to": "posix-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "posix",
+      "summary": "1 import (posix).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-ruby.mjs",
+          "lines": [
+            4,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-java-mjs",
+      "from": "languages-mjs",
+      "to": "lang-java-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "javaImports, javaPackage, javaSymbols and 5 more",
+      "summary": "1 import (javaImports, javaPackage, javaSymbols, buildJavaIndex, resolveJavaImport, parseJavaDeps and 2 more).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            25,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-kotlin-mjs",
+      "from": "languages-mjs",
       "to": "lang-kotlin-mjs",
       "kind": "imports",
       "origin": "auto",
@@ -1599,10 +2102,406 @@
       "summary": "1 import (kotlinImports, kotlinPackage, kotlinSymbols, hasKotlinMain).",
       "sources": [
         {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            26,
+            26
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-csharp-mjs",
+      "from": "languages-mjs",
+      "to": "lang-csharp-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "csharp",
+      "summary": "1 import (csharp).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            27,
+            27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-ruby-mjs",
+      "from": "languages-mjs",
+      "to": "lang-ruby-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "ruby",
+      "summary": "1 import (ruby).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            28,
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-php-mjs",
+      "from": "languages-mjs",
+      "to": "lang-php-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "php",
+      "summary": "1 import (php).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            29,
+            29
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-c-mjs",
+      "from": "languages-mjs",
+      "to": "lang-c-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "c",
+      "summary": "1 import (c).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            30,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-dart-mjs",
+      "from": "languages-mjs",
+      "to": "lang-dart-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "dart",
+      "summary": "1 import (dart).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            31,
+            31
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-scan-core-mjs--languages-mjs",
+      "from": "scan-core-mjs",
+      "to": "languages-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "PLUGINS, PLUGIN_BY_EXT, PLUGIN_LANG_NAMES",
+      "summary": "1 import (PLUGINS, PLUGIN_BY_EXT, PLUGIN_LANG_NAMES).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
+          "lines": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-scan-core-mjs--infra-core-mjs",
+      "from": "scan-core-mjs",
+      "to": "infra-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "extractInfra",
+      "summary": "1 import (extractInfra).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
+          "lines": [
+            8,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-scan-core-mjs--data-core-mjs",
+      "from": "scan-core-mjs",
+      "to": "data-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "extractDataModel",
+      "summary": "1 import (extractDataModel).",
+      "sources": [
+        {
           "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
           "lines": [
             9,
             9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-generate-mjs--languages-mjs",
+      "from": "generate-mjs",
+      "to": "languages-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "PACKAGE_EXTS",
+      "summary": "1 import (PACKAGE_EXTS).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/generate.mjs",
+          "lines": [
+            6,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-scan-mjs--languages-mjs",
+      "from": "scan-mjs",
+      "to": "languages-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "PLUGIN_MANIFEST_SRC",
+      "summary": "1 import (PLUGIN_MANIFEST_SRC).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/scan.mjs",
+          "lines": [
+            6,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-watch-mjs--scan-core-mjs",
+      "from": "watch-mjs",
+      "to": "scan-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "IGNORE_DIRS",
+      "summary": "1 import (IGNORE_DIRS).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/watch.mjs",
+          "lines": [
+            2,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-analyse-mjs--scan-core-mjs",
+      "from": "analyse-mjs",
+      "to": "scan-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "scanCore",
+      "summary": "1 import (scanCore).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/analyse.mjs",
+          "lines": [
+            4,
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-analyse-mjs--validate-core-mjs",
+      "from": "analyse-mjs",
+      "to": "validate-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "validateCore",
+      "summary": "1 import (validateCore).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/analyse.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-analyse-mjs--generate-mjs",
+      "from": "analyse-mjs",
+      "to": "generate-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "generate",
+      "summary": "1 import (generate).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/analyse.mjs",
+          "lines": [
+            6,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-analysis-worker-mjs--analyse-mjs",
+      "from": "analysis-worker-mjs",
+      "to": "analyse-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "analyseSources",
+      "summary": "1 import (analyseSources).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/analysis-worker.mjs",
+          "lines": [
+            2,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-github-loader-mjs--analyse-mjs",
+      "from": "github-loader-mjs",
+      "to": "analyse-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "makeView, runAnalysis",
+      "summary": "1 import (makeView, runAnalysis).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+          "lines": [
+            11,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-github-loader-mjs--languages-mjs",
+      "from": "github-loader-mjs",
+      "to": "languages-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "PLUGIN_MANIFEST_SRC",
+      "summary": "1 import (PLUGIN_MANIFEST_SRC).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+          "lines": [
+            13,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-github-loader-mjs--infra-core-mjs",
+      "from": "github-loader-mjs",
+      "to": "infra-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "COMPOSE_RE",
+      "summary": "1 import (COMPOSE_RE).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+          "lines": [
+            14,
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-github-loader-mjs--data-core-mjs",
+      "from": "github-loader-mjs",
+      "to": "data-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "DATA_FILE_RE",
+      "summary": "1 import (DATA_FILE_RE).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+          "lines": [
+            15,
+            15
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-narrate-ai-mjs--validate-core-mjs",
+      "from": "narrate-ai-mjs",
+      "to": "validate-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "validateCore",
+      "summary": "1 import (validateCore).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/narrate-ai.mjs",
+          "lines": [
+            14,
+            14
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-pr-comment-mjs--diff-core-mjs",
+      "from": "pr-comment-mjs",
+      "to": "diff-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "diffArchitectures",
+      "summary": "1 import (diffArchitectures).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/pr-comment.mjs",
+          "lines": [
+            11,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-extension-js--lib-js",
+      "from": "extension-js",
+      "to": "lib-js",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "1 imports",
+      "summary": "1 import.",
+      "sources": [
+        {
+          "path": "vscode-extension/extension.js",
+          "lines": [
+            10,
+            10
           ]
         }
       ]
@@ -1700,8 +2599,8 @@
             {
               "path": "skills/repo-architecture/scripts/lib/generate.mjs",
               "lines": [
-                41,
-                47
+                42,
+                48
               ]
             }
           ],
@@ -1798,8 +2697,8 @@
             {
               "path": "skills/repo-architecture/viewer/viewer.js",
               "lines": [
-                57,
-                61
+                63,
+                67
               ]
             }
           ],
@@ -1820,8 +2719,8 @@
             {
               "path": "skills/repo-architecture/viewer/viewer.js",
               "lines": [
-                498,
-                506
+                593,
+                601
               ]
             }
           ],
@@ -1850,8 +2749,8 @@
             {
               "path": "site/index.html",
               "lines": [
-                42,
-                42
+                55,
+                55
               ]
             }
           ],
@@ -1874,8 +2773,8 @@
             {
               "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
               "lines": [
-                209,
-                209
+                186,
+                186
               ]
             }
           ],
@@ -1896,8 +2795,8 @@
             {
               "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
               "lines": [
-                154,
-                158
+                131,
+                135
               ]
             }
           ],
@@ -1915,8 +2814,8 @@
             {
               "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
               "lines": [
-                233,
-                233
+                210,
+                210
               ]
             }
           ],
@@ -1927,22 +2826,24 @@
           "title": "The same brain as the CLI",
           "nodes": [
             "github-loader-mjs",
+            "analyse-mjs",
             "scan-core-mjs",
             "generate-mjs",
             "validate-core-mjs"
           ],
           "edges": [
-            "e-github-loader-mjs--scan-core-mjs",
-            "e-github-loader-mjs--generate-mjs",
-            "e-github-loader-mjs--validate-core-mjs"
+            "e-github-loader-mjs--analyse-mjs",
+            "e-analyse-mjs--scan-core-mjs",
+            "e-analyse-mjs--generate-mjs",
+            "e-analyse-mjs--validate-core-mjs"
           ],
-          "narration": "Otherwise the loader runs the very same scanner, generator and validator the command line uses. There is one implementation with two front ends, so the website and the CLI cannot disagree.",
+          "narration": "Otherwise the loader hands the downloaded files to one function that runs the very same scanner, generator and validator the command line uses, in a Web Worker so the page stays responsive. There is one implementation with two front ends, so the website and the CLI cannot disagree.",
           "sources": [
             {
-              "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+              "path": "skills/repo-architecture/scripts/lib/web/analyse.mjs",
               "lines": [
-                261,
-                261
+                43,
+                43
               ]
             }
           ],
@@ -1963,8 +2864,8 @@
             {
               "path": "site/app.js",
               "lines": [
-                214,
-                214
+                217,
+                217
               ]
             }
           ],
@@ -1985,8 +2886,8 @@
             {
               "path": "site/index.html",
               "lines": [
-                171,
-                171
+                279,
+                279
               ]
             }
           ],
@@ -2005,8 +2906,8 @@
             {
               "path": "site/app.js",
               "lines": [
-                377,
-                377
+                380,
+                380
               ]
             }
           ],
@@ -2062,21 +2963,23 @@
         },
         {
           "id": "n3",
-          "title": "Java and Rust import graphs",
+          "title": "Languages are plug-ins",
           "nodes": [
+            "languages-mjs",
             "lang-java-mjs",
             "lang-rust-mjs",
+            "lang-csharp-mjs",
             "scan-core-mjs"
           ],
           "edges": [],
           "origin": "claude",
-          "narration": "Each language plug-in builds an index of the repository once, then resolves an import to a file that really exists. Anything that resolves to nothing is dropped rather than guessed.",
+          "narration": "Each language is one small object registered in one file. It parses imports, builds an index of the repository once, and resolves an import to a file that really exists. Anything that resolves to nothing is dropped rather than guessed.",
           "sources": [
             {
-              "path": "skills/repo-architecture/scripts/lib/core/lang-java.mjs",
+              "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
               "lines": [
-                58,
-                60
+                96,
+                96
               ]
             }
           ]
@@ -2164,8 +3067,8 @@
             {
               "path": "site/app.js",
               "lines": [
-                9,
-                9
+                12,
+                12
               ]
             }
           ]
@@ -2180,12 +3083,12 @@
             "gitvisualise-mjs",
             "build-mjs",
             "build-core-mjs",
-            "diff-core-mjs",
-            "http-core-mjs"
+            "data-core-mjs",
+            "diff-core-mjs"
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, gitvisualise.mjs, build.mjs, build-core.mjs and 23 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, gitvisualise.mjs, build.mjs, build-core.mjs and 42 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
@@ -2229,7 +3132,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 89 lines.",
+          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 94 lines.",
           "sources": [
             {
               "path": "site/index.html"
@@ -2238,34 +3141,48 @@
         },
         {
           "id": "t3",
-          "title": "Service (22)",
+          "title": "Service (36)",
           "nodes": [
             "build-mjs",
             "build-core-mjs",
+            "data-core-mjs",
             "diff-core-mjs",
+            "export-core-mjs",
             "http-core-mjs",
+            "infra-core-mjs",
+            "lang-c-mjs",
+            "lang-csharp-mjs",
+            "lang-dart-mjs",
             "lang-java-mjs",
             "lang-kotlin-mjs",
+            "lang-php-mjs",
+            "lang-ruby-mjs",
             "lang-rust-mjs",
+            "languages-mjs",
             "posix-mjs",
             "scan-core-mjs",
             "text-mjs",
             "validate-core-mjs",
+            "yaml-lite-mjs",
             "generate-mjs",
             "github-mjs",
             "merge-mjs",
             "scan-mjs",
             "util-mjs",
             "validate-mjs",
+            "watch-mjs",
+            "analyse-mjs",
+            "analysis-worker-mjs",
             "cache-mjs",
             "github-loader-mjs",
             "idb-store-mjs",
+            "narrate-ai-mjs",
             "oauth-mjs",
             "route-mjs"
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "22 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; diff-core.mjs — JavaScript file, 105 lines; http-core.mjs — JavaScript file, 90 lines; and more.",
+          "narration": "36 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",
@@ -2278,17 +3195,22 @@
         },
         {
           "id": "t4",
-          "title": "Module (5)",
+          "title": "Module (10)",
           "nodes": [
             "exchange-mjs",
             "worker-mjs",
             "config-js",
+            "pr-comment-mjs",
             "viewer-js",
-            "build-site-mjs"
+            "build-site-mjs",
+            "extension-js",
+            "lib-js",
+            "bundle-skill-mjs",
+            "run-in-vscode-mjs"
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "5 general parts: exchange.mjs — JavaScript file, 65 lines; worker.mjs — Cloudflare Worker entry point; config.js — JavaScript file, 10 lines; viewer.js — Generic architecture viewer; and more.",
+          "narration": "10 general parts: exchange.mjs — JavaScript file, 65 lines; worker.mjs — Cloudflare Worker entry point; config.js — JavaScript file, 10 lines; pr-comment.mjs — JavaScript file, 110 lines; and more.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",

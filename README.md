@@ -330,46 +330,41 @@ start without asking. Comment "I'll take this" and a maintainer will help you ge
 
 **🟢 Good first issues** (an afternoon each)
 
-- [#26](https://github.com/Kaushik2210/gitVisualise/issues/26) Export the architecture as Mermaid or PlantUML
-- [#27](https://github.com/Kaushik2210/gitVisualise/issues/27) "Copy README badge" button on the website
-- [#28](https://github.com/Kaushik2210/gitVisualise/issues/28) Guide: publish your own tour with GitHub Pages
-- [#29](https://github.com/Kaushik2210/gitVisualise/issues/29) Accessibility: screen reader and keyboard-only tour
-- [#36](https://github.com/Kaushik2210/gitVisualise/issues/36) `gitvisualise watch`: regenerate on change
-- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) A screen recording of pasting a link and playing the tour
+- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) Add a demo GIF and screenshots to the README
+- [#42](https://github.com/Kaushik2210/gitVisualise/issues/42) CLI: `gitvisualise init` sets a repository up in one command
+- [#43](https://github.com/Kaushik2210/gitVisualise/issues/43) A community gallery of tours, added by pull request
+- [#44](https://github.com/Kaushik2210/gitVisualise/issues/44) Viewer: a "?" keyboard shortcuts overlay
+- [#45](https://github.com/Kaushik2210/gitVisualise/issues/45) Viewer: a colour-blind-safe palette option
 
 **🟡 Intermediate**
 
-- [#21](https://github.com/Kaushik2210/gitVisualise/issues/21) Language support: C# `using` directives
-- [#22](https://github.com/Kaushik2210/gitVisualise/issues/22) Language support: Ruby and PHP
-- [#30](https://github.com/Kaushik2210/gitVisualise/issues/30) Language support: C and C++ `#include`
-- [#31](https://github.com/Kaushik2210/gitVisualise/issues/31) Language support: Dart and Flutter
-- [#32](https://github.com/Kaushik2210/gitVisualise/issues/32) Refactor: a common language plug-in interface
-- [#33](https://github.com/Kaushik2210/gitVisualise/issues/33) Viewer: collapse and expand groups
-- [#34](https://github.com/Kaushik2210/gitVisualise/issues/34) Run the analysis in a Web Worker
-- [#35](https://github.com/Kaushik2210/gitVisualise/issues/35) Browser end-to-end smoke test
+- [#46](https://github.com/Kaushik2210/gitVisualise/issues/46) Export the whole tour as a printable document
+- [#47](https://github.com/Kaushik2210/gitVisualise/issues/47) Language support: Swift import graph
+- [#48](https://github.com/Kaushik2210/gitVisualise/issues/48) Language support: Scala
+- [#49](https://github.com/Kaushik2210/gitVisualise/issues/49) Data model: read ORM models from application code
+- [#50](https://github.com/Kaushik2210/gitVisualise/issues/50) Request tracing: read routes from OpenAPI documents
+- [#51](https://github.com/Kaushik2210/gitVisualise/issues/51) Performance: process the file tree off the main thread
+- [#52](https://github.com/Kaushik2210/gitVisualise/issues/52) Viewer: a minimap for large diagrams
+- [#53](https://github.com/Kaushik2210/gitVisualise/issues/53) Diff: detect renamed and moved files
+- [#54](https://github.com/Kaushik2210/gitVisualise/issues/54) Infrastructure view: Kubernetes manifests
+- [#57](https://github.com/Kaushik2210/gitVisualise/issues/57) VS Code extension: "where am I?" and Marketplace publishing
 
 **🔴 Ambitious** (discuss the design first)
 
-- [#37](https://github.com/Kaushik2210/gitVisualise/issues/37) Data-model view: SQL, Prisma and ORMs
-- [#38](https://github.com/Kaushik2210/gitVisualise/issues/38) Infrastructure view: Docker Compose, Kubernetes, Terraform
-- [#39](https://github.com/Kaushik2210/gitVisualise/issues/39) Optional AI narration with your own API key
-- [#40](https://github.com/Kaushik2210/gitVisualise/issues/40) VS Code extension
-- [#24](https://github.com/Kaushik2210/gitVisualise/issues/24) GitHub Action: comment the architecture diff on pull requests
-- [#23](https://github.com/Kaushik2210/gitVisualise/issues/23) Request tracing: base URLs, OpenAPI and GraphQL
-- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) "Sign in with GitHub": the code is in, a maintainer has to register the app and deploy the function
+- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) Sign in with GitHub to list private repositories
+- [#55](https://github.com/Kaushik2210/gitVisualise/issues/55) Infrastructure view: Terraform resources
+- [#56](https://github.com/Kaushik2210/gitVisualise/issues/56) Request tracing: GraphQL operations to resolvers
 
 The full plan, grouped into milestones, is in [ROADMAP.md](ROADMAP.md).
 
 <details>
-<summary><b>✅ Already shipped from this list</b></summary>
+<summary><b>✅ Already shipped from this list</b> (34 issues closed)</summary>
 
-Kotlin imports (#20, the first community contribution), theme toggle (#1), deep links to a tour step (#2), component search (#3), SVG/PNG export (#4), paginated repository picker (#5),
-Python resolver tests (#6), Java (#8) and Rust (#9) import graphs, tsconfig / Vite / webpack aliases (#10), monorepo support (#11),
-IndexedDB cache (#12), swimlanes (#13), request-flow tracing (#15) and architecture diffs (#16).
+Closed so far: #1, #2, #3, #4, #5, #6, #8, #9, #10, #11, #12, #13, #15, #16, #20, #21, #22, #23, #24, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40. The changelog says what each one delivered.
 
 </details>
 
-**Ideas without an issue yet:** rename detection in comparisons, opt-in higher-quality narration voices, a Swift import graph. Open an issue to propose one.
+**Ideas without an issue yet:** opt-in higher-quality narration voices, and Windows path-length edge cases. Open an issue to propose one.
 
 > [!NOTE]
 > Got a different idea? **Build something new.** The scanner, the data format and the viewer are all small and
