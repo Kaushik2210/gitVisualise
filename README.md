@@ -81,7 +81,7 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 | 🌐 **A website for any repo** | Paste a link, or pick from a GitHub account. No install, no sign-up |
 | 🗺️ **Interactive diagram** | Components laid out in layers, with pan, zoom and a "zoom to step" camera |
 | ▶️ **Guided flows** | Play, pause, next, previous, restart, speed control, progress dots, keyboard shortcuts, deep links to any step |
-| 🔌 **Request tracing** | A `fetch`/`axios` call is linked to the server route that handles it, with evidence on both sides and a "Request: GET /x" tour |
+| 🔌 **Request tracing** | A `fetch`/`axios` call (including through a client with a literal `baseURL`) is linked to the server route that handles it, with evidence on both sides and a "Request: GET /x" tour |
 | 🔀 **Compare two revisions** | `owner/repo@v1...v2` marks components and relationships added, removed or changed, and narrates the difference |
 | 🧩 **Monorepos** | One component per workspace package, or analyse a single folder (`owner/repo:apps/web`) |
 | 🔎 **Search, swimlanes, export** | Find a component with `/`, group by folder or kind, save the diagram as SVG or PNG, copy it as Mermaid or PlantUML, or copy a README badge that links back to the tour |
@@ -388,7 +388,7 @@ npm run docs      # regenerate this repo's own tour (curated content is preserve
 
 ## Limits
 
-- Dynamic dispatch and runtime autoloading (Rails constants, PHP classmaps, reflection) are not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match (no guessing through base URLs yet).
+- Dynamic dispatch and runtime autoloading (Rails constants, PHP classmaps, reflection) are not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match; a literal `baseURL` / `prefixUrl` set in the same file is applied, but clients configured in another file, OpenAPI documents and GraphQL are not followed yet.
 - A comparison matches components by id, so a moved or renamed file shows as one removal plus one addition.
 - The automatic narration is templated; the Claude Code skill is what turns it into an explanation.
 - The website analyses public repos anonymously (GitHub's 60 requests/hour per network); private repos need a token.

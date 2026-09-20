@@ -80,11 +80,46 @@ export function extractApiCalls(text, { serverFile, clientFile }, lineAt, limit 
     return m ? m[1].toUpperCase() : 'GET';
   };
   let m;
-  const direct = new RegExp('\\b(?:' + CLIENT_FNS + '|fetch)(?:\\.(get|post|put|delete|patch))?\\(\\s*' + str(2), 'g');
-  while ((m = direct.exec(text))) push(m.index, m[1] ? m[1].toUpperCase() : methodAfter(m.index + m[0].length), m[3]);
+  const bases = baseUrls(text);
+  const direct = new RegExp('\\b(' + CLIENT_FNS + '|fetch)(?:\\.(get|post|put|delete|patch))?\\(\\s*' + str(3), 'g');
+  while ((m = direct.exec(text))) {
+    const url = m[1] === 'fetch' || /^https?:/.test(m[4]) ? m[4] : joinUrl(bases[m[1]], m[4]);
+    push(m.index, m[2] ? m[2].toUpperCase() : methodAfter(m.index + m[0].length), url);
+  }
   if (clientFile && !serverFile) {
-    const inst = new RegExp('\\b(?!(?:' + CLIENT_FNS + ')\\b)[A-Za-z_$][\\w$]*\\.(get|post|put|delete|patch)\\(\\s*' + str(2), 'g');
-    while ((m = inst.exec(text))) if (m[3].startsWith('/') || /^https?:/.test(m[3])) push(m.index, m[1].toUpperCase(), m[3]);
+    const inst = new RegExp('\\b(?!(?:' + CLIENT_FNS + ')\\b)([A-Za-z_$][\\w$]*)\\.(get|post|put|delete|patch)\\(\\s*' + str(3), 'g');
+    while ((m = inst.exec(text))) {
+      const base = bases[m[1]];
+      // A configured client accepts a relative path ('users'); without a base only rooted paths and URLs are calls.
+      if (base || m[4].startsWith('/') || /^https?:/.test(m[4])) push(m.index, m[2].toUpperCase(), joinUrl(base, m[4]));
+    }
   }
   return calls;
+}
+
+/**
+ * Literal base URLs configured on HTTP clients in this file, by the name calls are made on:
+ *   const api = axios.create({ baseURL: '/api' })      ky.extend({ prefixUrl: 'api' })      axios.defaults.baseURL = '/api'
+ * A base that is a variable or a template is not static, so the client is left without one (its calls stay as written).
+ */
+export function baseUrls(text) {
+  const bases = {};
+  const literal = (s) => (/^[`'"]?[^`'"$\n]+[`'"]?$/.test(s) && !s.includes('${') ? s.replace(/^[`'"]|[`'"]$/g, '') : null);
+  let m;
+  const create = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:await\s+)?(?:axios|ky|got|ofetch)\s*\.\s*(?:create|extend)\s*\(\s*\{([^}]*)\}/g;
+  while ((m = create.exec(text))) {
+    const b = /\b(?:baseURL|prefixUrl|baseUrl|prefix_url)\s*:\s*([`'"][^`'"\n]*[`'"])/.exec(m[2]);
+    const v = b && literal(b[1]);
+    if (v) bases[m[1]] = v;
+  }
+  const defaults = /\baxios\s*\.\s*defaults\s*\.\s*baseURL\s*=\s*([`'"][^`'"\n]*[`'"])/.exec(text);
+  if (defaults && literal(defaults[1])) bases.axios = literal(defaults[1]);
+  return bases;
+}
+
+/** base + path the way HTTP clients join them; an absolute URL in `path` wins, and a base without a leading slash is a path. */
+export function joinUrl(base, path) {
+  if (!base || /^https?:\/\//i.test(path)) return path;
+  const b = /^https?:\/\//i.test(base) ? base : '/' + base.replace(/^\/+/, '');
+  return b.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '');
 }

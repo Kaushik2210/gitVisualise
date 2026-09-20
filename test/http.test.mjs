@@ -106,3 +106,40 @@ test('http: a router file mounted under two different prefixes is left unprefixe
   });
   assert.deepEqual(scanRepo(root).routes.map((r) => r.path), ['/x']);
 });
+
+test('http: a literal baseURL / prefixUrl / defaults.baseURL is applied to calls on that client, and only literals', async () => {
+  const { baseUrls, joinUrl } = await import('../skills/repo-architecture/scripts/lib/core/http-core.mjs');
+  const src = [
+    "import axios from 'axios';",
+    "const api = axios.create({ timeout: 5, baseURL: '/api/v1' });",
+    "const abs = axios.create({ baseURL: 'https://svc.example.com/root/' });",
+    "const dyn = axios.create({ baseURL: process.env.API });",
+    'const tpl = axios.create({ baseURL: `${HOST}/x` });',
+    "const k = ky.extend({ prefixUrl: 'kapi' });",
+    "axios.defaults.baseURL = '/global';",
+  ].join('\n');
+  assert.deepEqual(baseUrls(src), { api: '/api/v1', abs: 'https://svc.example.com/root/', k: 'kapi', axios: '/global' });
+  assert.equal(joinUrl('/api/v1', '/users'), '/api/v1/users');
+  assert.equal(joinUrl('/api/v1/', 'users'), '/api/v1/users');
+  assert.equal(joinUrl('kapi', '/x'), '/kapi/x');
+  assert.equal(joinUrl('/api', 'https://other.io/y'), 'https://other.io/y', 'an absolute URL ignores the base');
+  assert.equal(joinUrl(undefined, '/x'), '/x');
+  const lineAt = (t, i) => t.slice(0, i).split('\n').length;
+  const calls = extractApiCalls(src + "\napi.get('/users');\napi.post('items');\naxios.get('/ping');\ndyn.get('/free');\nk.get('feed');\n", { serverFile: false, clientFile: true }, lineAt).map((c) => `${c.method} ${c.target}`);
+  assert.deepEqual(calls, ['GET /global/ping', 'GET /api/v1/users', 'POST /api/v1/items', 'GET /free', 'GET /kapi/feed']);
+});
+
+test('http: calls through a configured client are linked to the routes that handle them', () => {
+  const root = repo({
+    'package.json': '{"name":"shop","dependencies":{"express":"4","axios":"1"}}',
+    'server/index.js': "import express from 'express';\nconst app = express();\napp.get('/api/v1/items/:id', h);\napp.post('/api/v1/items', h);\napp.get('/health', h);\napp.listen(3000);\n",
+    'web/http.js': "import axios from 'axios';\nexport const api = axios.create({ baseURL: '/api/v1' });\nexport const getItem = (id) => api.get(`/items/${id}`);\nexport const addItem = (b) => api.post('items', b);\nexport const nope = () => api.get('/nothing');\n",
+  });
+  const arch = generate(scanRepo(root), { maxNodes: 3 });
+  const http = arch.edges.filter((e) => e.kind === 'http');
+  assert.equal(http.length, 1);
+  assert.match(http[0].summary, /GET \/api\/v1\/items\/:id/);
+  assert.match(http[0].summary, /POST \/api\/v1\/items/);
+  assert.ok(!/nothing|health/.test(http[0].summary), 'unmatched calls and unused routes stay out');
+  assert.deepEqual(validate(arch, root).errors, []);
+});
