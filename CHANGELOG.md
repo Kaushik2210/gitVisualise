@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows
   manifest (`.csproj`, `Gemfile` / gemspec, `composer.json`, `pubspec.yaml`) declares it.
 - **Export:** `gitvisualise export --format mermaid|plantuml`, and Copy as Mermaid / PlantUML / README badge in the website's new Export menu.
 - **Request tracing:** calls made through a client with a literal `baseURL` / `prefixUrl` (`axios.create`, `ky.extend`, `axios.defaults.baseURL`) in the same file are linked to their routes.
+- **GitHub Action:** `comment-diff: true` posts one pull request comment summarising how the architecture changed (off by default).
 - **CLI:** `gitvisualise watch` rebuilds the tour on every change (and on hand edits of `architecture.json`).
 - **Website:** a redesigned landing page with a gallery of real tours, a feature grid and a contributor call to action.
 - **Viewer:** screen reader announcements, keyboard navigation between connected components, a skip link and forced-colors support.

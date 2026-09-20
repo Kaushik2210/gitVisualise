@@ -149,7 +149,33 @@ jobs:
 ```
 
 Inputs: `path` (default `.`), `out` (default `docs/architecture`), `include` (`tests,examples,tooling`),
-`ignore` (comma-separated paths), `force` (build even if a curated tour has stale references).
+`ignore` (comma-separated paths), `force` (build even if a curated tour has stale references)., and `comment-diff` (see below).
+
+**Comment the architecture diff on pull requests** (off by default). When someone changes how components connect, a reviewer sees it
+without opening a diagram: one comment, updated on every push, listing added, removed and changed components and relationships, with a
+link that opens the comparison as a tour.
+
+```yaml
+# .github/workflows/architecture-diff.yml
+name: Architecture diff
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  diff:
+    runs-on: ubuntu-latest
+    continue-on-error: true          # a missing comment must never block a pull request
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kaushik2210/gitVisualise@main
+        with:
+          comment-diff: 'true'
+```
+
+It compares freshly generated architectures of the base and the pull request (so curated edits never show up as noise), posts nothing when
+nothing structural changed, and rewrites its own earlier comment if a later push makes the change disappear. On pull requests from forks
+GitHub gives the workflow a read-only token, so there the step reports a notice and skips the comment instead of failing.
 In your repo's **Settings → Pages**, set the source to **GitHub Actions**.
 A step-by-step walkthrough, including hosting from a branch and curating the narration, is in the [publishing guide](guides/publish-your-tour.md).
 

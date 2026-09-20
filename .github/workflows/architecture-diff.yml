@@ -1,0 +1,19 @@
+# Comments how a pull request changes this project's architecture (using the project's own Action).
+# It never blocks a pull request: forks get a read-only token, so there the comment is skipped with a notice.
+name: Architecture diff
+on: pull_request
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  diff:
+    name: Architecture diff comment
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          comment-diff: 'true'
+          ignore: docs,test
+          force: 'true'

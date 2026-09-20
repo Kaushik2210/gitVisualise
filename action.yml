@@ -21,6 +21,12 @@ inputs:
   force:
     description: 'Build even if validation reports errors (for example stale line numbers in a curated tour)'
     default: 'false'
+  comment-diff:
+    description: 'On pull requests, post (and keep updating) one comment summarising how the architecture changed. Needs "pull-requests: write" and only works with a token that may comment (not on forks). Off by default.'
+    default: 'false'
+  github-token:
+    description: 'Token used to post the comment. The default is the workflow token.'
+    default: ${{ github.token }}
 
 outputs:
   out:
@@ -47,3 +53,25 @@ runs:
         [ -n "$GV_IGNORE" ] && args+=(--ignore "$GV_IGNORE")
         [ "$GV_FORCE" = "true" ] && args+=(--force)
         node "$GITHUB_ACTION_PATH/skills/repo-architecture/scripts/gitvisualise.mjs" all "$GV_PATH" --out "$GV_OUT" "${args[@]}"
+    - name: Comment the architecture diff on the pull request
+      if: ${{ inputs.comment-diff == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GV_PATH: ${{ inputs.path }}
+        GV_OUT: ${{ inputs.out }}
+        GV_INCLUDE: ${{ inputs.include }}
+        GV_IGNORE: ${{ inputs.ignore }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        set -euo pipefail
+        gv="$GITHUB_ACTION_PATH/skills/repo-architecture/scripts"
+        # Compare freshly generated architectures on both sides, so curated edits in the output folder never show up as noise.
+        # The output folder itself is ignored: it holds the built site, not source.
+        args=(--no-pin --ignore "${GV_IGNORE:+$GV_IGNORE,}$GV_OUT")
+        [ -n "$GV_INCLUDE" ] && args+=(--include "$GV_INCLUDE")
+        base_sha=$(node -e "console.log(JSON.parse(require('fs').readFileSync(process.env.GITHUB_EVENT_PATH,'utf8')).pull_request.base.sha)")
+        git fetch --no-tags --depth=1 origin "$base_sha"
+        git worktree add --detach "$RUNNER_TEMP/gv-base" "$base_sha"
+        node "$gv/gitvisualise.mjs" generate "$RUNNER_TEMP/gv-base/$GV_PATH" --out "$RUNNER_TEMP/gv-base-out" "${args[@]}"
+        node "$gv/gitvisualise.mjs" generate "$GV_PATH" --out "$RUNNER_TEMP/gv-head-out" "${args[@]}"
+        node "$gv/pr-comment.mjs" --base "$RUNNER_TEMP/gv-base-out/architecture.json" --head "$RUNNER_TEMP/gv-head-out/architecture.json"
