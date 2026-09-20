@@ -13,6 +13,7 @@ import { validate } from './lib/validate.mjs';
 import { build } from './lib/build.mjs';
 import { diffArchitectures } from './lib/core/diff-core.mjs';
 import { EXPORT_FORMATS } from './lib/core/export-core.mjs';
+import { classifyChange, debounce } from './lib/watch.mjs';
 import { parseTarget, ensureClone } from './lib/github.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -31,6 +32,7 @@ Commands
   all        generate + validate + build
   serve      Serve the output folder locally (default http://localhost:4173)
   diff       Compare two architecture.json files (older, newer): marks components and relationships added / removed / changed
+  watch      generate + build once, then again whenever a source file changes (add --serve to preview it)
   export     Write an architecture.json as Mermaid or PlantUML text (--format mermaid|plantuml [--out file])
   install-skill   Copy this skill to ~/.claude/skills (or ./.claude/skills with --project)
 
@@ -48,6 +50,8 @@ Options
   --base-ref, --head-ref <name>   diff: labels for the two revisions (default: the file names)
   --force            Build even if validation reports errors
   --port <n>         Port for serve
+  --serve            watch: also serve the output folder
+  --debounce <ms>    watch: wait this long after the last change before rebuilding (default 400)
 `;
 
 function resolveContext(positional, flags) {
@@ -160,6 +164,68 @@ function doDiff(positional, flags) {
   }
 }
 
+/**
+ * Rebuilds the tour whenever the repository changes. Source changes regenerate (curated edits are kept by the merge)
+ * and rebuild; a hand edit of architecture.json only rebuilds. The output folder is ignored while a build runs, so the
+ * watcher never triggers itself. Falls back to polling where recursive fs.watch is unavailable (Node 18 on Linux).
+ */
+function doWatch(ctx, flags) {
+  const outRel = toPosix(path.relative(ctx.root, ctx.outDir));
+  const wait = Number(flags.debounce) > 0 ? Number(flags.debounce) : 400;
+  let building = false, again = null, lastBuildEnd = 0;
+  const stamp = () => new Date().toLocaleTimeString();
+
+  const rebuild = (mode) => {
+    if (building) { again = again === 'full' || mode === 'full' ? 'full' : mode; return; }
+    building = true;
+    try {
+      if (mode === 'full') doGenerate(ctx, flags);
+      doBuild(ctx, flags);
+      console.log(`[${stamp()}] rebuilt ${mode === 'full' ? '(source changed)' : '(architecture.json edited)'}`);
+    } catch (e) {
+      console.error(`[${stamp()}] error: ${e.message} (still watching)`);
+    }
+    building = false;
+    lastBuildEnd = Date.now();
+    if (again) { const m = again; again = null; rebuild(m); }
+  };
+
+  let pending = null;
+  const flush = debounce(() => { const m = pending; pending = null; if (m) rebuild(m); }, wait);
+  const onChange = (rel) => {
+    const kind = classifyChange(rel, { outRel, recentBuild: Date.now() - lastBuildEnd < 800 });
+    if (kind === 'ignore') return;
+    pending = kind === 'source' || pending === 'full' ? 'full' : 'architecture';
+    flush();
+  };
+
+  console.log(`Watching ${ctx.root} (Ctrl+C to stop)`);
+  rebuild('full');
+  if (flags.serve) serve(ctx.outDir, Number(flags.port) || 4173);
+
+  try {
+    fs.watch(ctx.root, { recursive: true }, (_evt, filename) => { if (filename) onChange(String(filename)); });
+  } catch {
+    // Polling fallback: a cheap signature of every file's mtime and size, checked once a second.
+    const snapshot = (dir, rel = '', acc = new Map()) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const r = rel ? rel + '/' + e.name : e.name;
+        if (classifyChange(r) === 'ignore') continue; // no outRel here: the output folder is compared too, and classified later
+        if (e.isDirectory()) snapshot(path.join(dir, e.name), r, acc);
+        else { try { const s = fs.statSync(path.join(dir, e.name)); acc.set(r, s.mtimeMs + ':' + s.size); } catch { /* vanished */ } }
+      }
+      return acc;
+    };
+    let prev = snapshot(ctx.root);
+    setInterval(() => {
+      const next = snapshot(ctx.root);
+      for (const [k, v] of next) if (prev.get(k) !== v) onChange(k);
+      for (const k of prev.keys()) if (!next.has(k)) onChange(k);
+      prev = next;
+    }, 1000);
+  }
+}
+
 function serve(dir, port) {
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript','.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.gif': 'image/gif', '.ico': 'image/x-icon' };
   const server = http.createServer((req, res) => {
@@ -195,6 +261,7 @@ try {
     else if (cmd === 'build') doBuild(ctx, flags);
     else if (cmd === 'all') { doGenerate(ctx, flags); doBuild(ctx, flags); }
     else if (cmd === 'serve') serve(ctx.outDir, Number(flags.port) || 4173);
+    else if (cmd === 'watch') doWatch(ctx, flags);
     else { console.log(`Unknown command "${cmd}"\n`); console.log(HELP); process.exitCode = 1; }
   }
 } catch (e) {
