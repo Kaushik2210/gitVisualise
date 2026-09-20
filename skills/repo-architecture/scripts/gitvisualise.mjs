@@ -172,7 +172,7 @@ function doDiff(positional, flags) {
 function doWatch(ctx, flags) {
   const outRel = toPosix(path.relative(ctx.root, ctx.outDir));
   const wait = Number(flags.debounce) > 0 ? Number(flags.debounce) : 400;
-  let building = false, again = null, lastBuildEnd = 0;
+  let building = false, again = null, lastBuildEnd = 0, afterBuild = () => {};
   const stamp = () => new Date().toLocaleTimeString();
 
   const rebuild = (mode) => {
@@ -187,6 +187,7 @@ function doWatch(ctx, flags) {
     }
     building = false;
     lastBuildEnd = Date.now();
+    afterBuild();
     if (again) { const m = again; again = null; rebuild(m); }
   };
 
@@ -203,10 +204,13 @@ function doWatch(ctx, flags) {
   rebuild('full');
   if (flags.serve) serve(ctx.outDir, Number(flags.port) || 4173);
 
+  // GV_WATCH_POLL=1 forces the polling fallback (used by the tests so both paths are exercised on every platform).
+  const forcePoll = process.env.GV_WATCH_POLL === '1';
   try {
+    if (forcePoll) throw new Error('polling requested');
     fs.watch(ctx.root, { recursive: true }, (_evt, filename) => { if (filename) onChange(String(filename)); });
   } catch {
-    // Polling fallback: a cheap signature of every file's mtime and size, checked once a second.
+    // Polling fallback: a cheap signature of every file's mtime and size, compared on every tick.
     const snapshot = (dir, rel = '', acc = new Map()) => {
       for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
         const r = rel ? rel + '/' + e.name : e.name;
@@ -217,12 +221,19 @@ function doWatch(ctx, flags) {
       return acc;
     };
     let prev = snapshot(ctx.root);
+    // What a build just wrote must not be noticed a tick later and mistaken for a hand edit (which would loop): after every
+    // build, re-baseline the output folder only. Source edits made while it ran stay in `prev` and are still detected.
+    afterBuild = () => {
+      const next = snapshot(ctx.root);
+      for (const k of [...prev.keys()]) if (outRel && (k === outRel || k.startsWith(outRel + '/'))) prev.delete(k);
+      for (const [k, v] of next) if (outRel && (k === outRel || k.startsWith(outRel + '/'))) prev.set(k, v);
+    };
     setInterval(() => {
       const next = snapshot(ctx.root);
       for (const [k, v] of next) if (prev.get(k) !== v) onChange(k);
       for (const k of prev.keys()) if (!next.has(k)) onChange(k);
       prev = next;
-    }, 1000);
+    }, Number(process.env.GV_WATCH_POLL_MS) > 0 ? Number(process.env.GV_WATCH_POLL_MS) : 1000);
   }
 }
 

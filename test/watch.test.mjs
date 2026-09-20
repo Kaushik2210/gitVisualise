@@ -43,10 +43,12 @@ test('watch: debounce coalesces a burst into one call', async () => {
   assert.deepEqual(seen, [3, 5]);
 });
 
-test('watch: rebuilds after a source edit and after a hand edit of architecture.json, without looping', async () => {
+// Runs the whole scenario against the real command, once with fs.watch and once with the polling fallback that Node 18 on Linux needs.
+for (const mode of ['fs.watch', 'polling']) test(`watch (${mode}): rebuilds after a source edit and after a hand edit of architecture.json, without looping`, async () => {
   const root = repo({ 'package.json': '{"name":"w","main":"a.js"}', 'a.js': "import './b.js';\n", 'b.js': 'export const b = 1;\n' });
   const cli = path.join(path.dirname(fileURLToPath(import.meta.url)), '../skills/repo-architecture/scripts/gitvisualise.mjs');
-  const child = spawn('node', [cli, 'watch', root, '--debounce', '60'], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const env = { ...process.env, ...(mode === 'polling' ? { GV_WATCH_POLL: '1', GV_WATCH_POLL_MS: '200' } : {}) };
+  const child = spawn('node', [cli, 'watch', root, '--debounce', '60'], { stdio: ['ignore', 'pipe', 'pipe'], env });
   let out = '';
   child.stdout.on('data', (d) => { out += d; });
   child.stderr.on('data', (d) => { out += d; });
@@ -70,6 +72,7 @@ test('watch: rebuilds after a source edit and after a hand edit of architecture.
 
     // a hand edit of architecture.json only rebuilds (curated text is not overwritten)
     await new Promise((r) => setTimeout(r, 1100));
+    assert.ok(!/architecture\.json edited/.test(out), 'the tool\'s own output was not mistaken for a hand edit');
     arch.nodes[0].summary = 'Hand written summary.';
     arch.nodes[0].origin = 'manual';
     fs.writeFileSync(archFile, JSON.stringify(arch, null, 2));
