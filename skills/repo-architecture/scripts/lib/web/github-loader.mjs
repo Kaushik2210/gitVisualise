@@ -11,6 +11,8 @@ import { isExamplePath, TOOLING_RE } from '../generate.mjs';
 import { makeView, runAnalysis } from './analyse.mjs';
 import { diffArchitectures } from '../core/diff-core.mjs';
 import { PLUGIN_MANIFEST_SRC } from '../core/languages.mjs';
+import { COMPOSE_RE } from '../core/infra-core.mjs';
+import { DATA_FILE_RE } from '../core/data-core.mjs';
 
 export { makeView };
 
@@ -230,7 +232,9 @@ export async function analyzeRepo(input, opts = {}) {
   if (sub && !inScope.length) throw new GitHubError('empty', `Nothing was found under "${sub}" in ${owner}/${repo}. Check the folder name.`);
   const picked = pickSourceFiles(inScope, sizes, maxFiles);
   if (!picked.chosen.length) throw new GitHubError('empty', 'No analysable source files were found (supported: JavaScript/TypeScript, Python, Go, Java, Rust and more, as structure only). This may be a docs-only or asset-only repository.');
-  await download([...manifests, ...(readme ? [readme] : []), ...picked.chosen], 'source files');
+  // Docker Compose files and SQL / Prisma schemas feed the infrastructure and data-model views.
+  const viewFiles = inScope.filter((p) => (COMPOSE_RE.test(p) || DATA_FILE_RE.test(p)) && p.split('/').length <= 6 && (sizes.get(p) || 0) <= MAX_FILE_BYTES).slice(0, 40);
+  await download([...new Set([...manifests, ...(readme ? [readme] : []), ...viewFiles, ...picked.chosen])], 'source files');
 
   onProgress({ stage: 'analyse' });
   const notes = [];

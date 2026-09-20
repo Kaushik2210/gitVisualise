@@ -27,7 +27,7 @@ export const isExamplePath = (p) => {
   // Only the directories in front of src/main/java can name an examples folder; the rest is a package name.
   return EXAMPLE_RE.test(root[0].replace(/src\/(?:main|test|integration-test)\/(?:java|kotlin|scala)\/$/, ''));
 };
-const KIND_ORDER =['entry', 'ui', 'api', 'service', 'data', 'util', 'config', 'module', 'external', 'test'];
+const KIND_ORDER = ['entry', 'ui', 'api', 'service', 'data', 'infra', 'entity', 'util', 'config', 'module', 'external', 'test'];
 
 function classify(paths, isEntry, langs, byPathHints) {
   if (isEntry) return 'entry';
@@ -265,6 +265,64 @@ export function generate(scan, opts = {}) {
     }
   }
 
+  // ---------- 5c. Infrastructure and data-model views ----------
+  // Services (Docker Compose) and tables / models (SQL, Prisma) become components too. Each one points at the file and lines
+  // it was read from, so the validator checks them like any other component.
+  const nodeIdIndex = new Map(nodes.map((n) => [n.id, n])); // the code components, before services and tables are added
+  const infraSvcs = [];
+  const infraList = (scan.infra && scan.infra.services) || [];
+  for (const s of infraList.slice(0, 25)) {
+    const id = uniqueId('svc-' + slug(s.name));
+    const built = s.build ? ` It is built from the ${s.build.dir || 'repository root'} folder.` : '';
+    const image = s.image ? ` It runs the image ${s.image}.` : '';
+    const ports = s.ports.length ? ` It publishes ${list(s.ports, 3)}.` : '';
+    nodes.push({
+      id, label: s.name, kind: 'infra', origin: 'auto', tech: ['Docker Compose'],
+      summary: `Docker Compose service ${s.name}.${image}${built}${ports}`.trim(),
+      sources: [{ path: s.file, lines: [s.line, s.endLine] }],
+      _files: [],
+    });
+    infraSvcs.push({ ...s, id });
+  }
+  const svcByName = (name, file) => infraSvcs.find((x) => x.name === name && x.file === file) || infraSvcs.find((x) => x.name === name);
+  for (const s of infraSvcs) {
+    for (const d of s.dependsOn) {
+      const to = svcByName(d.name, s.file);
+      if (!to || to.id === s.id) continue;
+      edges.push({ id: `d-${s.id}--${to.id}`.slice(0, 120), from: s.id, to: to.id, kind: 'depends', origin: 'auto', label: 'depends on', summary: `${s.name} waits for ${to.name} to start.`, sources: [{ path: s.file, lines: [d.line, d.line] }] });
+    }
+    if (s.build) {
+      // Link the service to the code it is built from: the components whose directory is the build context (or inside it).
+      const dir = s.build.dir;
+      const hits = [...unitToId.entries()].filter(([key]) => (dir ? key === dir || key.startsWith(dir + '/') : false)).map(([, id]) => nodeIdIndex.get(id)).filter(Boolean);
+      const rootEntry = !dir ? nodes.filter((n) => n.kind === 'entry').slice(0, 1) : [];
+      const targets = [...(hits.length ? hits : rootEntry)].sort((a, b) => (a.kind === 'entry' ? 0 : 1) - (b.kind === 'entry' ? 0 : 1)).slice(0, 3);
+      for (const t of targets) edges.push({ id: `b-${s.id}--${t.id}`.slice(0, 120), from: s.id, to: t.id, kind: 'builds', origin: 'auto', label: 'built from', summary: `${s.name} is built from ${t.label}.`, sources: [{ path: s.file, lines: [s.build.line, s.build.line] }] });
+    }
+  }
+
+  const dm = scan.dataModel || { entities: [], relations: [] };
+  const degree = new Map();
+  for (const r of dm.relations) { degree.set(r.from, (degree.get(r.from) || 0) + 1); degree.set(r.to, (degree.get(r.to) || 0) + 1); }
+  const entityPick = [...dm.entities].sort((a, b) => (degree.get(b) || 0) - (degree.get(a) || 0)).slice(0, 30);
+  const entityNodes = new Map();
+  for (const e of entityPick) {
+    const id = uniqueId('tbl-' + slug(e.name));
+    const cols = e.columns.map((c) => c.name);
+    nodes.push({
+      id, label: e.name, kind: 'entity', origin: 'auto', tech: [e.kind === 'model' ? 'Prisma' : 'SQL'],
+      summary: `${e.kind === 'model' ? 'Prisma model' : 'Table'} ${e.name} with ${cols.length} column${cols.length === 1 ? '' : 's'}${cols.length ? `: ${list(cols, 6)}` : ''}.`,
+      sources: [{ path: e.file, lines: [e.line, e.endLine] }],
+      _files: [],
+    });
+    entityNodes.set(e, id);
+  }
+  for (const r of dm.relations) {
+    const from = entityNodes.get(r.from), to = entityNodes.get(r.to);
+    if (!from || !to) continue;
+    edges.push({ id: `r-${from}--${to}`.slice(0, 120), from, to, kind: 'references', origin: 'auto', label: r.column, summary: `${r.from.name} holds a foreign key (${r.column}) to ${r.to.name}.`, sources: [{ path: r.file, lines: [r.line, r.line] }] });
+  }
+
   // ---------- 6. flows ----------
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const out = new Map(nodes.map((n) => [n.id, []]));
@@ -364,6 +422,66 @@ export function generate(scan, opts = {}) {
     });
   }
   flows.push(...requestFlows);
+
+  // Infrastructure: which services exist, in what order they start, and which code they are built from.
+  if (infraSvcs.length) {
+    const depOf = new Map(infraSvcs.map((s) => [s.id, edges.filter((e) => e.kind === 'depends' && e.from === s.id).map((e) => e.to)]));
+    const level = new Map();
+    const lvl = (id, seenIds = new Set()) => {
+      if (level.has(id)) return level.get(id);
+      if (seenIds.has(id)) return 0; // a cycle: do not loop
+      seenIds.add(id);
+      const l = Math.max(-1, ...depOf.get(id).map((d) => lvl(d, seenIds))) + 1;
+      level.set(id, l);
+      return l;
+    };
+    infraSvcs.forEach((s) => lvl(s.id));
+    const waves = [];
+    infraSvcs.forEach((s) => { (waves[level.get(s.id)] ||= []).push(s); });
+    const steps = [{
+      id: 'i1', title: `${infraSvcs.length} service${infraSvcs.length === 1 ? '' : 's'} in Docker Compose`, nodes: infraSvcs.map((s) => s.id).slice(0, 12), edges: [], origin: 'auto',
+      narration: `The compose file declares ${list(infraSvcs.map((s) => s.name), 6)}. Each is a container, and depends_on says which ones must be started before another.`,
+      sources: [{ path: infraSvcs[0].file, lines: [infraSvcs[0].line, infraSvcs[0].line] }],
+    }];
+    waves.filter(Boolean).slice(0, 4).forEach((wave, i) => {
+      const es = edges.filter((e) => e.kind === 'depends' && wave.some((s) => s.id === e.from));
+      steps.push({
+        id: `i${steps.length + 1}`, title: i === 0 ? 'Starts first' : `Then ${list(wave.map((s) => s.name), 2)}`, nodes: [...new Set([...wave.map((s) => s.id), ...es.map((e) => e.to)])].slice(0, 10), edges: es.map((e) => e.id).slice(0, 10), origin: 'auto',
+        narration: i === 0
+          ? `${list(wave.map((s) => s.name), 4)} ${wave.length > 1 ? 'have' : 'has'} no dependencies, so ${wave.length > 1 ? 'they start' : 'it starts'} first.`
+          : `${list(wave.map((s) => `${s.name} (after ${list(depOf.get(s.id).map((d) => infraSvcs.find((x) => x.id === d).name), 3)})`), 3)} start once what they depend on is up.`,
+        sources: [es[0] ? es[0].sources[0] : { path: wave[0].file, lines: [wave[0].line, wave[0].line] }],
+      });
+    });
+    const builds = edges.filter((e) => e.kind === 'builds');
+    if (builds.length) {
+      steps.push({
+        id: `i${steps.length + 1}`, title: 'Built from this repository', nodes: [...new Set(builds.flatMap((e) => [e.from, e.to]))].slice(0, 10), edges: builds.map((e) => e.id).slice(0, 10), origin: 'auto',
+        narration: `${builds.length} link${builds.length === 1 ? '' : 's'} connect a service to the code it is built from: ${list(builds.map((e) => `${nodeById.get(e.from).label} from ${nodeById.get(e.to).label}`), 3)}.`,
+        sources: [builds[0].sources[0]],
+      });
+    }
+    flows.push({ id: 'infrastructure', title: 'Infrastructure', description: 'The services Docker Compose runs, and the order they start in.', origin: 'auto', steps });
+  }
+
+  // Data model: the tables or models, then the most connected ones and what they reference.
+  if (entityNodes.size) {
+    const ents = [...entityNodes.entries()];
+    const steps = [{
+      id: 'm1', title: `${ents.length} table${ents.length === 1 ? '' : 's'} or model${ents.length === 1 ? '' : 's'}`, nodes: ents.map(([, id]) => id).slice(0, 12), edges: [], origin: 'auto',
+      narration: `The schema declares ${list(ents.map(([e]) => e.name), 6)}. Arrows point from the table that holds a foreign key to the table it refers to.`,
+      sources: [{ path: ents[0][0].file, lines: [ents[0][0].line, ents[0][0].line] }],
+    }];
+    for (const [e, id] of ents.filter(([e]) => (degree.get(e) || 0) > 0).slice(0, 3)) {
+      const es = edges.filter((x) => x.kind === 'references' && (x.from === id || x.to === id));
+      steps.push({
+        id: `m${steps.length + 1}`, title: e.name, nodes: [...new Set([id, ...es.flatMap((x) => [x.from, x.to])])].slice(0, 8), edges: es.map((x) => x.id).slice(0, 8), origin: 'auto',
+        narration: `${e.name} is connected to ${es.length} other${es.length === 1 ? '' : 's'}: ${list(es.map((x) => x.from === id ? `it refers to ${nodeById.get(x.to).label}` : `${nodeById.get(x.from).label} refers to it`), 3)}.`,
+        sources: [es[0].sources[0]],
+      });
+    }
+    flows.push({ id: 'data-model', title: 'Data model', description: 'The tables or models in the schema and how they refer to each other.', origin: 'auto', steps });
+  }
   if (tourSteps.length > 1) flows.push({ id: 'tour', title: 'Components by role', description: 'Groups the diagram by what each part does.', origin: 'auto', steps: tourSteps });
 
   const sp = scan.subPath || null; // analysing one folder (a package) of a larger repository

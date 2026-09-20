@@ -36,7 +36,7 @@ must match exact case. `node scripts/gitvisualise.mjs validate` enforces everyth
     {
       "id": "e-app--events-api",
       "from": "app", "to": "events-api",    // node ids; direction = "depends on / calls"
-      "kind": "imports",                    // imports | uses | calls | http | reads | writes | <any>
+      "kind": "imports",                    // imports | uses | calls | http | depends | builds | references | reads | writes | <any>
       "label": "fetchEvents",               // shown when active/hovered
       "summary": "Optional longer text.",
       "origin": "auto",

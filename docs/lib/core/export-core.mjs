@@ -6,7 +6,7 @@
 const KIND_STYLE = {
   entry: ['#d1fae5', '#10b981'], ui: ['#ede9fe', '#8b5cf6'], api: ['#ffedd5', '#f97316'], service: ['#dbeafe', '#3b82f6'],
   data: ['#fce7f3', '#ec4899'], util: ['#e5e7eb', '#6b7280'], config: ['#fef9c3', '#ca8a04'], module: ['#e0e7ff', '#6366f1'],
-  external: ['#f3f4f6', '#9ca3af'], test: ['#f1f5f9', '#94a3b8'], entity: ['#fae8ff', '#c026d3'], service_infra: ['#cffafe', '#0891b2'],
+  external: ['#f3f4f6', '#9ca3af'], test: ['#f1f5f9', '#94a3b8'], entity: ['#fae8ff', '#c026d3'], infra: ['#cffafe', '#0891b2'],
 };
 const DIFF_STYLE = { added: ['#dcfce7', '#16a34a'], removed: ['#fee2e2', '#dc2626'], changed: ['#fef3c7', '#d97706'] };
 

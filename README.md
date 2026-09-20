@@ -83,6 +83,7 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 | ▶️ **Guided flows** | Play, pause, next, previous, restart, speed control, progress dots, keyboard shortcuts, deep links to any step |
 | 🔌 **Request tracing** | A `fetch`/`axios` call (including through a client with a literal `baseURL`) is linked to the server route that handles it, with evidence on both sides and a "Request: GET /x" tour |
 | 🔀 **Compare two revisions** | `owner/repo@v1...v2` marks components and relationships added, removed or changed, and narrates the difference |
+| 🗄️ **Infrastructure and data model** | Docker Compose services (with `depends_on` and the code each one is built from) and SQL / Prisma tables with their foreign keys become components too, each pointing at the file and line it came from, with a tour of each |
 | 🧩 **Monorepos** | One component per workspace package, or analyse a single folder (`owner/repo:apps/web`) |
 | 🔎 **Search, swimlanes, export** | Find a component with `/`, group by folder or kind, save the diagram as SVG or PNG, copy it as Mermaid or PlantUML, or copy a README badge that links back to the tour |
 | 🔊 **Voice narration** | Uses your browser's built-in speech: pick a voice, stop, mute. No server, no keys |
@@ -287,6 +288,8 @@ viewer is a pure function of it.
 | C / C++ | ✅ | Quoted `#include`s through relative paths and CMake / Makefile include directories, `main` entry points |
 | Dart / Flutter | ✅ | `package:` imports of this repository's packages (monorepos included), relative imports, `export` and `part`, `pubspec.yaml` dependencies |
 | Everything else | ➖ | Structure, manifests and dependencies only. **[Add yours!](#-help-wanted)** |
+
+Beyond code, two extra views are read when the files exist: **infrastructure** (services, `depends_on` and build contexts from `docker-compose.yml` / `compose.yaml`) and **data model** (tables and foreign keys from `CREATE TABLE` / `ALTER TABLE … FOREIGN KEY` in `.sql` files, and models and `@relation`s from `schema.prisma`; a migration history counts as one schema). ORM models in code, Kubernetes and Terraform are not read yet.
 
 Also detected: dependencies from `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `build.gradle` and
 `Cargo.toml`; workspaces (npm, pnpm, Cargo, `go.work`); server routes (only when a real server framework is imported, with

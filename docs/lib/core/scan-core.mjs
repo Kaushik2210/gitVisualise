@@ -5,6 +5,8 @@ import { extractApiCalls, usesHttpClient } from './http-core.mjs';
 import * as posix from './posix.mjs';
 import { countLines } from './text.mjs';
 import { PLUGINS, PLUGIN_BY_EXT, PLUGIN_LANG_NAMES } from './languages.mjs';
+import { extractInfra } from './infra-core.mjs';
+import { extractDataModel } from './data-core.mjs';
 
 export const IGNORE_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'out', '.next', '.nuxt', '.cache', 'coverage', 'venv', '.venv', 'env',
@@ -642,6 +644,9 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
       return workspaces.length >= 2 ? workspaces.map(({ name, dir, kind }) => ({ name, dir, kind })).sort((a, b) => a.dir.localeCompare(b.dir)) : [];
     })(),
     entryPoints,
+    // Two extra views that are not import graphs: services in Docker Compose files, and tables / models in SQL and Prisma schemas.
+    infra: extractInfra(all.filter(inBase), read),
+    dataModel: extractDataModel(all.filter(inBase), read),
     externals: ext,
     routes,
     apiCalls,
