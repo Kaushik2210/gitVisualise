@@ -23,7 +23,7 @@ const NOOP = { enabled: false, async get() { return null; }, async set() {}, asy
 
 // Cached tours are generator output: bump this whenever the scanner or generator changes what it produces,
 // so tours written by an older release are ignored instead of shown stale.
-export const DATA_VERSION = 'v2';
+export const DATA_VERSION = 'v3';
 
 /**
  * @param store  { get, set, delete, keys } (all async) or null/undefined to disable caching
