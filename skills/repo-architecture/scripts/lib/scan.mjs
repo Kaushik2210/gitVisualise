@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { toPosix, readText, git, isGitRoot, githubUrl } from './util.mjs';
+import { PLUGIN_MANIFEST_SRC } from './core/languages.mjs';
 import { scanCore, makeIgnorer, IGNORE_DIRS } from './core/scan-core.mjs';
 
 const MAX_FILES = 20000;
@@ -45,7 +46,7 @@ export function scanRepo(root, opts = {}) {
   // With a sub-path, only source inside it is read; manifests and configs anywhere stay readable so workspaces,
   // tsconfig aliases and dependency lists still work. Imports that leave the sub-path simply stay unresolved.
   const sub = opts.subPath ? opts.subPath.replace(/^\/+|\/+$/g, '') : '';
-  const CONFIG = /(^|\/)(package\.json|tsconfig[^/]*\.json|jsconfig[^/]*\.json|pnpm-workspace\.yaml|go\.work|go\.mod|Cargo\.toml|pom\.xml|build\.gradle(\.kts)?|requirements[^/]*\.txt|pyproject\.toml|(vite|webpack)\.config\.[cm]?[jt]s|readme(\.md|\.rst|\.txt)?|\.gitignore)$/i;
+  const CONFIG = new RegExp('(^|/)(package\\.json|tsconfig[^/]*\\.json|jsconfig[^/]*\\.json|pnpm-workspace\\.yaml|go\\.work|go\\.mod|requirements[^/]*\\.txt|pyproject\\.toml|(vite|webpack)\\.config\\.[cm]?[jt]s|readme(\\.md|\\.rst|\\.txt)?|\\.gitignore|' + PLUGIN_MANIFEST_SRC + ')$', 'i');
   const read = (rel) => {
     if (sub && rel !== sub && !rel.startsWith(sub + '/') && !CONFIG.test(rel)) return null;
     try {

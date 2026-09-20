@@ -64,11 +64,14 @@ export function validateCore(arch, view) {
   };
 
   const hasBasename = (name) => view.hasBasename(name);
+  // The name of a declared third-party package is not a file, even when it ends like one (Newtonsoft.Json, System.Text.Json, chart.js).
+  const packageNames = new Set(arch.nodes.filter((n) => n && n.external && n.label).map((n) => n.label));
 
   const checkText = (where, text) => {
     if (typeof text !== 'string') return;
     for (const m of text.matchAll(/`([^`\n]+)`/g)) {
       const tok = m[1].trim().replace(/:\d+(-\d+)?$/, '').replace(/\/$/, '');
+      if (packageNames.has(m[1].trim()) || packageNames.has(tok)) continue;
       if (!tok || /\s/.test(tok) || /[*{}()<>=]/.test(tok) || /^(https?:|\/|@|\.\.?$)/.test(tok)) continue; // urls, routes, npm scopes, globs, code
       if (/^[a-z0-9-]+(\.[a-z0-9-]+)+\//i.test(tok) && !view.exists(tok.split('/')[0])) continue; // Go/Java-style module path (github.com/x/y), not a repo file
       const isPath = tok.includes('/');
@@ -125,7 +128,7 @@ export function validateCore(arch, view) {
       for (const s of e.sources || []) {
         if (s.commit) continue;
         const f = s.lines && linesOf(s.path);
-        if (f && !f.text.slice(s.lines[0] - 1, s.lines[1]).some((l) => /import|require|from|src\s*=|include|use\b|load|^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*;/i.test(l) ||/^\s*(?:[\w.]+\s+)?"[^"]+"\s*$/.test(l))) warn(`${w}: kind "imports" but ${s.path}:${s.lines[0]} does not look like an import`);
+        if (f && !f.text.slice(s.lines[0] - 1, s.lines[1]).some((l) => /import|require|from|src\s*=|include|use\b|using\b|export\b|part\b|autoload|load|^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*;/i.test(l) ||/^\s*(?:[\w.]+\s+)?"[^"]+"\s*$/.test(l))) warn(`${w}: kind "imports" but ${s.path}:${s.lines[0]} does not look like an import`);
       }
     }
     if (e.diff != null && !DIFFS.has(e.diff)) err(`${w}: diff must be added | removed | changed | same`);

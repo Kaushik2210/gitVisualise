@@ -255,6 +255,11 @@ viewer is a pure function of it.
 | Java | ✅ | Classes, nested classes, static and wildcard imports resolved to real files; Maven and Gradle dependencies; Spring Boot entry points |
 | Kotlin | ✅ | Class, wildcard and aliased imports resolve to Kotlin or Java files in the repository; `fun main` entry points |
 | Rust | ✅ | `mod`, `use crate::`/`self::`/`super::`, workspaces and `Cargo.toml` dependencies |
+| C# | ✅ | `using` directives resolved through declared namespaces and types (only to files that are really used), `.csproj` NuGet packages, `Main` and ASP.NET entry points |
+| Ruby | ✅ | `require_relative`, `require` through `lib/` and the load path, gems from `Gemfile` and gemspecs |
+| PHP | ✅ | `use` (including group use) through declared classes and PSR-4, `require` with literal paths, `composer.json` packages |
+| C / C++ | ✅ | Quoted `#include`s through relative paths and CMake / Makefile include directories, `main` entry points |
+| Dart / Flutter | ✅ | `package:` imports of this repository's packages (monorepos included), relative imports, `export` and `part`, `pubspec.yaml` dependencies |
 | Everything else | ➖ | Structure, manifests and dependencies only. **[Add yours!](#-help-wanted)** |
 
 Also detected: dependencies from `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `build.gradle` and
@@ -383,7 +388,7 @@ npm run docs      # regenerate this repo's own tour (curated content is preserve
 
 ## Limits
 
-- Dynamic dispatch is not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match (no guessing through base URLs yet).
+- Dynamic dispatch and runtime autoloading (Rails constants, PHP classmaps, reflection) are not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match (no guessing through base URLs yet).
 - A comparison matches components by id, so a moved or renamed file shows as one removal plus one addition.
 - The automatic narration is templated; the Claude Code skill is what turns it into an explanation.
 - The website analyses public repos anonymously (GitHub's 60 requests/hour per network); private repos need a token.

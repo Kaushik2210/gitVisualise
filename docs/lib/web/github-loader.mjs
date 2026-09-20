@@ -9,6 +9,7 @@ import { scanCore, makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf } from '..
 import { validateCore } from '../core/validate-core.mjs';
 import { generate, isExamplePath, TOOLING_RE } from '../generate.mjs';
 import { diffArchitectures } from '../core/diff-core.mjs';
+import { PLUGIN_MANIFEST_SRC } from '../core/languages.mjs';
 
 const API = 'https://api.github.com';
 const RAW = 'https://raw.githubusercontent.com';
@@ -147,7 +148,7 @@ export function makeView(paths, contents) {
 
 // Small files the scanner reads besides source: dependency manifests, workspace definitions, and the configs that
 // define import aliases (tsconfig/jsconfig paths, Vite and webpack aliases).
-const MANIFEST_RE = /(^|\/)(package\.json|requirements[^/]*\.txt|pyproject\.toml|go\.mod|go\.work|Cargo\.toml|pom\.xml|build\.gradle(\.kts)?|pnpm-workspace\.yaml|(tsconfig|jsconfig)[^/]*\.json|(vite|webpack)\.config\.[cm]?[jt]s)$/;
+const MANIFEST_RE = new RegExp('(^|/)(package\\.json|requirements[^/]*\\.txt|pyproject\\.toml|go\\.mod|go\\.work|pnpm-workspace\\.yaml|(tsconfig|jsconfig)[^/]*\\.json|(vite|webpack)\\.config\\.[cm]?[jt]s|' + PLUGIN_MANIFEST_SRC + ')$');
 const ENTRY_HINT = /(^|\/)(main|index|app|server|cli|__main__|manage|__init__)\.[a-z]+$/i;
 
 /** Decides which source files to download: skip tests/examples/tooling, prefer shallow + entry-like files. */

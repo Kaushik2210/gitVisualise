@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Languages:** C#, Ruby, PHP, C/C++ and Dart import graphs. Each resolves only to files that exist, and reports a third-party package only when a
+  manifest (`.csproj`, `Gemfile` / gemspec, `composer.json`, `pubspec.yaml`) declares it.
+- **Export:** `gitvisualise export --format mermaid|plantuml`, and Copy as Mermaid / PlantUML / README badge in the website's new Export menu.
+- **CLI:** `gitvisualise watch` rebuilds the tour on every change (and on hand edits of `architecture.json`).
+- **Website:** a redesigned landing page with a gallery of real tours, a feature grid and a contributor call to action.
+- **Viewer:** screen reader announcements, keyboard navigation between connected components, a skip link and forced-colors support.
+- **Docs:** a guide to publishing your own tour, a public roadmap, and a language plug-in contract for contributors.
+
+### Changed
+- Languages are now plug-ins registered in `core/languages.mjs`; behaviour for existing languages is unchanged.
+- The validator no longer mistakes a package name that ends like a file (`Newtonsoft.Json`) for a missing file.
+
+### Fixed
+- The Java resolver no longer crashes on an import that did not come from its own parser.
+
 ## [1.1.0] - 2026-09-19
 
 ### Added

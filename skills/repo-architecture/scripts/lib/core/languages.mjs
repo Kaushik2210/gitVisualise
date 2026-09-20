@@ -24,6 +24,11 @@
 import { rustImports, buildRustContext, resolveRustImport, rustDependencies } from './lang-rust.mjs';
 import { javaImports, javaPackage, javaSymbols, buildJavaIndex, resolveJavaImport, parseJavaDeps, matchJavaDependency, hasJavaMain } from './lang-java.mjs';
 import { kotlinImports, kotlinPackage, kotlinSymbols, hasKotlinMain } from './lang-kotlin.mjs';
+import { csharp } from './lang-csharp.mjs';
+import { ruby } from './lang-ruby.mjs';
+import { php } from './lang-php.mjs';
+import { c } from './lang-c.mjs';
+import { dart } from './lang-dart.mjs';
 
 const byDepth = (a, b) => a.path.split('/').length - b.path.split('/').length;
 
@@ -33,6 +38,7 @@ export const jvm = {
   exts: ['java', 'kt'],
   langNames: { java: 'Java', kt: 'Kotlin' },
   packageUnit: true,
+  manifests: ['pom\\.xml', 'build\\.gradle(?:\\.kts)?'],
   alwaysPrepare: true, // pom.xml / build.gradle dependencies are read even when no Java file was scanned
   parse(text, ext) {
     return ext === 'java'
@@ -64,6 +70,7 @@ export const rust = {
   exts: ['rs'],
   langNames: { rs: 'Rust' },
   packageUnit: false,
+  manifests: ['Cargo\\.toml'],
   alwaysPrepare: true, // Cargo workspaces are discovered from Cargo.toml files
   parse: (text) => ({ imports: rustImports(text) }),
   prepare({ allPaths, read }) {
@@ -86,9 +93,11 @@ export const rust = {
   },
 };
 
-export const PLUGINS = [jvm, rust];
+export const PLUGINS = [jvm, rust, csharp, ruby, php, c, dart];
 
 export const PLUGIN_BY_EXT = Object.fromEntries(PLUGINS.flatMap((p) => p.exts.map((e) => [e, p])));
 /** Extensions whose directory (package) is the diagram unit, for the generator. */
 export const PACKAGE_EXTS = new Set(PLUGINS.filter((p) => p.packageUnit).flatMap((p) => p.exts));
 export const PLUGIN_LANG_NAMES = Object.assign({}, ...PLUGINS.map((p) => p.langNames));
+/** File names (regex source) of the manifests plug-ins read, so the website and `--path` mode download them. */
+export const PLUGIN_MANIFEST_SRC = PLUGINS.flatMap((p) => p.manifests || []).join('|');

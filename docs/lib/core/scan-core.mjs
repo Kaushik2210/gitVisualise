@@ -22,7 +22,7 @@ const LANG = {
 // Files that become diagram units.
 export const UNIT_EXT = new Set(['js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'vue', 'svelte', 'py', 'go', 'rs', 'java', 'kt', 'rb', 'php', 'cs', 'html', ...Object.keys(PLUGIN_BY_EXT)]);
 const JS_EXT = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.vue', '.svelte', '.json'];
-export const TEST_RE = /(^|\/)(tests?|__tests__|spec|e2e)(\/|$)|\.(test|spec)(-d)?\.[a-z]+$|(^|\/)test_[^/]+\.py$|_test\.go$/i;
+export const TEST_RE = /(^|\/)(tests?|__tests__|spec|e2e)(\/|$)|\.(test|spec)(-d)?\.[a-z]+$|(^|\/)test_[^/]+\.py$|_test\.go$|(^|\/)[^/]*\.tests?(\/|$)|_(test|spec)\.(rb|dart|cc|cpp)$/i;
 
 export const KNOWN_EXTERNAL = {
   react: 'ui', 'react-dom': 'ui', vue: 'ui', svelte: 'ui', next: 'ui', angular: 'ui', '@angular/core': 'ui',
@@ -549,7 +549,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     for (const imp of f.imports) if (imp.resolved) addEntry(imp.resolved, `loaded by ${f.path} <script>`);
     if (f.imports.some((i) => i.resolved)) addEntry(f.path, 'HTML entry page');
   }
-  const conventional = /(^|\/)(main|index|app|server|cli|__main__|manage|wsgi|asgi)\.(m?js|cjs|jsx|ts|tsx|py|go|rs|java)$/;
+  const conventional = /(^|\/)(main|index|app|server|cli|__main__|manage|wsgi|asgi)\.(m?js|cjs|jsx|ts|tsx|py|go|rs|java|kt|rb|php|cs|dart|c|cc|cpp)$/;
   files.filter((f) => !f.isTest && inBase(f.path) && relBase(f.path).split('/').length <= 3 && conventional.test(f.path)).forEach((f) => addEntry(f.path, 'conventional entry filename'));
   files.filter((f) => f.path.endsWith('.go') && /^package main\b/m.test(f._text)).forEach((f) => addEntry(f.path, 'Go package main'));
   for (const pl of PLUGINS) {
