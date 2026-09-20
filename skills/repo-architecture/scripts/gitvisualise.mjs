@@ -12,6 +12,7 @@ import { mergeArchitecture } from './lib/merge.mjs';
 import { validate } from './lib/validate.mjs';
 import { build } from './lib/build.mjs';
 import { diffArchitectures } from './lib/core/diff-core.mjs';
+import { EXPORT_FORMATS } from './lib/core/export-core.mjs';
 import { parseTarget, ensureClone } from './lib/github.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -30,6 +31,7 @@ Commands
   all        generate + validate + build
   serve      Serve the output folder locally (default http://localhost:4173)
   diff       Compare two architecture.json files (older, newer): marks components and relationships added / removed / changed
+  export     Write an architecture.json as Mermaid or PlantUML text (--format mermaid|plantuml [--out file])
   install-skill   Copy this skill to ~/.claude/skills (or ./.claude/skills with --project)
 
 Options
@@ -116,6 +118,21 @@ function doBuild(ctx, flags) {
   console.log(`Built ${path.join(ctx.outDir, 'index.html')} (${b.snippets} code snippets embedded).`);
 }
 
+function doExport(positional, flags) {
+  const src = positional[0] || '.';
+  const candidates = [src, path.join(src, 'architecture.json'), path.join(src, 'docs', 'architecture', 'architecture.json')];
+  const file = candidates.find((p) => fs.existsSync(p) && fs.statSync(p).isFile());
+  if (!file) throw new Error(`No architecture.json found at ${src}. Run "generate" first, or pass the file.`);
+  const format = String(flags.format || 'mermaid').toLowerCase();
+  if (!EXPORT_FORMATS[format]) throw new Error(`Unknown format "${format}". Use mermaid or plantuml.`);
+  let arch;
+  try { arch = readJSON(file); } catch (e) { throw new Error(`${file} is not valid JSON: ${e.message}`); }
+  if (!arch || !Array.isArray(arch.nodes) || !Array.isArray(arch.edges)) throw new Error(`${file} does not look like an architecture.json`);
+  const text = EXPORT_FORMATS[format](arch, { direction: flags.direction === 'TB' ? 'TB' : 'LR' });
+  if (flags.out) { fs.mkdirSync(path.dirname(path.resolve(flags.out)), { recursive: true }); fs.writeFileSync(flags.out, text); console.log(`Wrote ${flags.out} (${arch.nodes.length} nodes, ${arch.edges.length} edges, ${format})`); }
+  else process.stdout.write(text);
+}
+
 function doDiff(positional, flags) {
   if (positional.length !== 2) throw new Error('usage: gitvisualise diff <older architecture.json> <newer architecture.json> [--out <dir>] [--root <newer checkout>]');
   const load = (p) => {
@@ -169,6 +186,7 @@ try {
   if (!cmd || cmd === 'help' || flags.help) console.log(HELP);
   else if (cmd === 'install-skill') installSkill(flags);
   else if (cmd === 'diff') doDiff(positional, flags);
+  else if (cmd === 'export') doExport(positional, flags);
   else {
     const ctx = resolveContext(positional, flags);
     if (cmd === 'scan') doScan(ctx);

@@ -190,12 +190,12 @@ node skills/repo-architecture/scripts/gitvisualise.mjs all https://github.com/tj
 
 ```
 gitvisualise <command> [repo] [options]
-  scan | generate | validate | build | all | serve | diff | install-skill
+  scan | generate | validate | build | all | serve | diff | export | install-skill
   --out <dir>   --ref <ref>   --path <dir>   --repo-url <url>   --max-nodes <n>
   --ignore a,b  --include tests,examples,tooling   --no-pin   --force   --port <n>
 ```
 
-Two more things worth knowing:
+Three more things worth knowing:
 
 ```bash
 # one package of a monorepo (paths stay repo-relative, so links and validation still work)
@@ -204,6 +204,9 @@ gitvisualise all https://github.com/owner/repo --path packages/api
 # what changed between two revisions: generate each, then compare (add --root <newer checkout> to build a page)
 gitvisualise generate . --out old && git checkout main && gitvisualise generate . --out new
 gitvisualise diff old new --out changes --root .
+
+# paste the architecture into a README or wiki: Mermaid renders natively on GitHub (PlantUML works too)
+gitvisualise export . --format mermaid --out docs/architecture.mmd
 ```
 
 ## 🧠 How it works
