@@ -35,6 +35,11 @@ const fakeGithub = `(() => {
       if (/\\/git\\/trees\\//.test(u.pathname)) return ok(JSON.stringify({ sha: SHA, truncated: false, tree: Object.keys(FILES).map((p) => ({ path: p, type: 'blob', size: FILES[p].length })) }));
       return new Response('{}', { status: 404 });
     }
+    if (u.hostname === 'api.anthropic.com') {
+      (window.__aiCalls = window.__aiCalls || []).push({ url: String(u), key: init && init.headers && init.headers['x-api-key'], body: init && init.body });
+      if (init.headers['x-api-key'] === 'bad-key-value') return new Response('{}', { status: 401 });
+      return new Response(JSON.stringify({ content: [{ type: 'text', text: 'This step shows how the main pieces of the project fit together.' }] }), { status: 200 });
+    }
     if (u.hostname === 'raw.githubusercontent.com') {
       const p = decodeURIComponent(u.pathname.split('/').slice(4).join('/'));
       return FILES[p] != null ? ok(FILES[p]) : new Response('', { status: 404 });
@@ -116,6 +121,39 @@ test('website: a pasted repository becomes a visible, working tour', { skip, tim
     assert.equal(await page.eval("document.getElementById('export-menu').open"), true);
     await page.eval("document.getElementById('cp-mermaid').click(); 1");
     await page.waitFor(() => page.eval("/Mermaid copied|Clipboard is blocked/.test(document.getElementById('toast').textContent)"), 'the Mermaid toast');
+
+    // 4b. optional AI narration: nothing is sent until the visitor confirms, the key is only ever a header, and the result is labelled
+    await page.eval("document.querySelector('#export-menu summary').click(); document.getElementById('ai-open').click(); 1");
+    await page.waitFor(() => page.eval("document.getElementById('ai-dialog').open"), 'the AI dialog');
+    assert.equal(await page.eval("document.getElementById('ai-start').disabled"), true, 'Start is disabled until a key and the confirmation are given');
+    const preview = await page.eval("document.getElementById('ai-preview').textContent");
+    assert.match(preview, /"components"/);
+    for (const code of ['res.json(listUsers())', 'return db.users', 'app.listen(3000)', 'export const db']) assert.ok(!preview.includes(code), 'the preview shows facts, not source code: ' + code);
+    await page.eval("(() => { const k = document.getElementById('ai-key'); k.value = 'sk-ant-e2e-secret-key'; k.dispatchEvent(new Event('input', { bubbles: true })); })()");
+    assert.equal(await page.eval("document.getElementById('ai-start').disabled"), true, 'a key alone is not enough');
+    await page.eval("(() => { const c = document.getElementById('ai-confirm'); c.checked = true; c.dispatchEvent(new Event('input', { bubbles: true })); })()");
+    assert.equal(await page.eval("document.getElementById('ai-start').disabled"), false);
+    assert.equal(await page.eval("(window.__aiCalls || []).length"), 0, 'nothing was sent before Start');
+    await page.eval("document.getElementById('ai-start').click(); 1");
+    await page.waitFor(() => page.eval("!document.getElementById('ai-dialog').open"), 'the dialog to close after narrating');
+    const calls = await page.eval('window.__aiCalls');
+    assert.ok(calls.length >= 1);
+    assert.ok(calls.every((c) => c.url === 'https://api.anthropic.com/v1/messages' && c.key === 'sk-ant-e2e-secret-key' && !c.body.includes('sk-ant-e2e-secret-key')), 'the key goes only in a header, to the provider');
+    for (const c of calls) for (const code of ['res.json(listUsers())', 'return db.users', 'app.listen(3000)', 'export const db']) assert.ok(!c.body.includes(code), 'no source code was sent: ' + code);
+    assert.equal(await page.eval("document.getElementById('ai-key').value"), '', 'the key is cleared afterwards');
+    await page.waitFor(() => page.eval("/narrated by AI/.test(document.getElementById('toast').textContent)"), 'the result toast');
+    // the tour was rebuilt: a step now carries the label and the model's text
+    await page.waitFor(async () => (await inTour("document.getElementById('step-count') && document.getElementById('step-count').textContent")) === 'Overview', 'the rebuilt tour');
+    await inTour("document.getElementById('btn-next').click(); 1");
+    await page.waitFor(() => inTour("!document.getElementById('ai-tag').hidden"), 'the AI-written label');
+    assert.match(await inTour("document.getElementById('step-text').textContent"), /fit together/);
+
+    // a rejected key changes nothing and says so
+    await page.eval("document.querySelector('#export-menu summary').click(); document.getElementById('ai-open').click(); 1");
+    await page.waitFor(() => page.eval("document.getElementById('ai-dialog').open"), 'the dialog again');
+    await page.eval("(() => { const k = document.getElementById('ai-key'); k.value = 'bad-key-value'; k.dispatchEvent(new Event('input', { bubbles: true })); const c = document.getElementById('ai-confirm'); c.checked = true; c.dispatchEvent(new Event('input', { bubbles: true })); document.getElementById('ai-start').click(); })()");
+    await page.waitFor(() => page.eval("/rejected that API key/.test(document.getElementById('ai-status').textContent)"), 'the key rejection message');
+    await page.eval("document.getElementById('ai-cancel').click(); 1");
 
     // 5. a deep link opens the tour at that step
     await page.send('Page.navigate', { url: url + '#/o/r/flow/startup/step/2' });

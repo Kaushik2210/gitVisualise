@@ -6,6 +6,8 @@ import { idbStore } from './lib/web/idb-store.mjs';
 import { buildSnippets, renderPage } from './lib/core/build-core.mjs';
 import { keyOf, hashOf, parseHash, stateSuffix, badgeMarkdown } from './lib/web/route.mjs';
 import { toMermaid, toPlantUml } from './lib/core/export-core.mjs';
+import { narrateChecked, stepFacts, PROVIDERS } from './lib/web/narrate-ai.mjs';
+import { validateCore } from './lib/core/validate-core.mjs';
 import { newState, authorizeUrl, readCallback, cleanUrl, exchangeCode } from './lib/web/oauth.mjs';
 import { OAUTH } from './config.js';
 
@@ -213,7 +215,7 @@ async function run(input, { push = true } = {}) {
         if (persist) diskCache.set(ck, { arch: res.arch, validation: res.validation, meta: res.meta, snippets, ts: Date.now() }).then(refreshCacheUi);
       }
       const html = renderPage({ arch: res.arch, snippets, template: a.template, inline: { css: a.css, js: a.js } });
-      entry = { res, html };
+      entry = { res, html, snippets };
       cache.set(key.toLowerCase(), entry);
     }
     if (signal.aborted || current !== key) return;
@@ -416,6 +418,65 @@ $('cp-mermaid').addEventListener('click', () => copyText(toMermaid(lastEntry.res
 $('cp-plantuml').addEventListener('click', () => copyText(toPlantUml(lastEntry.res.arch), 'PlantUML copied'));
 $('cp-badge').addEventListener('click', () => {
   try { copyText(badgeMarkdown(lastEntry.target), 'README badge copied'); } catch { toast('Could not build a badge for this link'); }
+});
+// ---------- optional AI narration (opt-in, the visitor's own key) ----------
+const ai = { dlg: $('ai-dialog'), key: $('ai-key'), model: $('ai-model'), confirm: $('ai-confirm'), start: $('ai-start'), status: $('ai-status'), ctl: null };
+if (!ai.dlg || typeof ai.dlg.showModal !== 'function') $('ai-open').hidden = true; // no <dialog>: leave the feature out
+const aiViewFor = (arch) => { // a read-only view of what the tour cites, for the validation gate (cached tours carry no download)
+  const files = new Set(), dirs = new Set();
+  const add = (arr) => (arr || []).forEach((s) => { if (s && typeof s.path === 'string') { const p = s.path.replace(/\/$/, ''); files.add(p); const seg = p.split('/'); for (let i = 1; i < seg.length; i++) dirs.add(seg.slice(0, i).join('/')); } });
+  arch.nodes.forEach((n) => add(n.sources)); arch.edges.forEach((e) => add(e.sources)); arch.flows.forEach((f) => f.steps.forEach((s) => add(s.sources)));
+  return { exists: (p) => (files.has(p) ? 'file' : dirs.has(p) ? 'dir' : null), read: () => null, list: () => [], hasBasename: (n) => [...files].some((p) => p === n || p.endsWith('/' + n)) };
+};
+const aiSyncStart = () => { ai.start.disabled = !(ai.confirm.checked && ai.key.value.trim().length > 8 && !ai.ctl); };
+$('ai-open').addEventListener('click', () => {
+  if (!lastEntry) return;
+  closeMenu();
+  const arch = lastEntry.res.arch;
+  ai.model.value = PROVIDERS.anthropic.defaultModel;
+  ai.status.textContent = '';
+  const flow = arch.flows[0], step = flow && flow.steps[0];
+  $('ai-preview').textContent = step ? JSON.stringify(stepFacts(arch, flow, step), null, 2) : '(this tour has no steps)';
+  aiSyncStart();
+  ai.dlg.showModal();
+  ai.key.focus();
+});
+[ai.key, ai.confirm].forEach((e) => e.addEventListener('input', aiSyncStart));
+$('ai-cancel').addEventListener('click', () => { if (ai.ctl) ai.ctl.abort(); ai.key.value = ''; ai.dlg.close(); });
+ai.dlg.addEventListener('close', () => { if (ai.ctl) ai.ctl.abort(); ai.key.value = ''; ai.confirm.checked = false; });
+ai.start.addEventListener('click', async () => {
+  const entry = lastEntry;
+  if (!entry || ai.ctl) return;
+  ai.ctl = new AbortController();
+  ai.start.disabled = true;
+  ai.status.textContent = 'Asking the model, step by step\u2026';
+  try {
+    const arch = entry.res.arch;
+    const view = entry.res.view || aiViewFor(arch);
+    const r = await narrateChecked(arch, view, {
+      key: ai.key.value.trim(), model: ai.model.value.trim() || undefined, signal: ai.ctl.signal,
+      onProgress: (p) => { ai.status.textContent = `Narrated ${p.rewritten} of ${p.total} steps\u2026 (${p.done} answered)`; },
+      validate: (a) => validateCore(a, view),
+    });
+    if (r.stats.stoppedBecause === 'auth') ai.status.textContent = 'The provider rejected that API key. Nothing was changed.';
+    else if (r.stats.stoppedBecause === 'rate') ai.status.textContent = 'The provider is rate-limiting this key. Try again in a minute.';
+    else if (r.stats.reverted) ai.status.textContent = 'The rewritten narration failed the tour\'s own checks, so the original was kept.';
+    else if (!r.stats.rewritten) ai.status.textContent = `No step was rewritten (${r.stats.kept} kept the automatic narration).`;
+    else {
+      const a = await loadAssets();
+      entry.res.arch = r.arch;
+      entry.html = renderPage({ arch: r.arch, snippets: entry.snippets || {}, template: a.template, inline: { css: a.css, js: a.js } });
+      mountFrame(entry.html);
+      ai.key.value = '';
+      ai.dlg.close();
+      toast(`${r.stats.rewritten} step${r.stats.rewritten === 1 ? '' : 's'} narrated by AI (${r.stats.kept} kept the automatic text)`);
+    }
+  } catch (e) {
+    ai.status.textContent = e && e.name === 'AbortError' ? 'Cancelled.' : 'Something went wrong: ' + (e && e.message ? e.message : e);
+  } finally {
+    ai.ctl = null;
+    aiSyncStart();
+  }
 });
 menu.querySelectorAll('button').forEach((b) => b.addEventListener('click', closeMenu));
 document.addEventListener('click', (e) => { if (menu.open && !menu.contains(e.target)) closeMenu(); });

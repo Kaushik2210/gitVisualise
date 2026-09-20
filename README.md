@@ -104,7 +104,7 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 
 **How it works with no server:** your browser asks GitHub's public API for the commit and file tree (2 requests),
 downloads the source files from `raw.githubusercontent.com`, and runs the *same* scanner, generator and validator the
-CLI uses. Nothing is uploaded anywhere but requests to GitHub.
+CLI uses. Nothing is uploaded anywhere but requests to GitHub, unless you turn on the optional AI narration below.
 
 | | |
 |---|---|
@@ -114,6 +114,7 @@ CLI uses. Nothing is uploaded anywhere but requests to GitHub.
 | **Safety** | The tour plays in a sandboxed frame with no access to the page or your token. Repo text is never inserted as HTML |
 | **Big repos** | Analyses the 300 shallowest source files (tests, examples and tooling skipped) and says so |
 | **Repeat visits** | Tours are cached in your browser (IndexedDB) per commit, so reopening one costs a single request. "Clear cached tours" empties it; private repos are cached only if you opt in |
+| **AI narration (optional)** | **Export → Narrate with AI…** lets a language model rewrite the plain narration, using **your own API key** (Anthropic for now). Nothing is sent until you press Start and tick a confirmation. What is sent is listed in the dialog and can be previewed: for each step its title, the names, kinds and one-line summaries of its components, how they connect, and the current narration. **Never source code or file contents.** The key stays in memory and goes only in a request header to the provider. A rewritten step is used only if it is short plain prose that names nothing outside the tour, the tour must still pass validation, and rewritten steps are labelled *AI-written*. It is tested against a fake provider (no network in the tests), so if a provider changes its API, please open an issue |
 | **Sign in with GitHub** | Optional and off by default: it needs a tiny token-exchange function that a maintainer deploys. See [`server/github-oauth`](server/github-oauth/README.md) |
 
 ## ⚙️ GitHub Action

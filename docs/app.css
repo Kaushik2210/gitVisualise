@@ -265,6 +265,18 @@ pre code { white-space: pre-wrap; }
 .menu-list small { font-size: 12.5px; color: var(--muted); }
 .notice { padding: 9px 16px; }
 
+/* AI narration dialog */
+.dlg { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); color: var(--ink); box-shadow: 0 30px 80px -20px rgba(15, 23, 42, .5); }
+.dlg::backdrop { background: rgba(8, 12, 24, .55); backdrop-filter: blur(2px); }
+.dlg h2 { font-size: 21px; margin-bottom: 8px; }
+.ai-box { margin: 14px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--code-bg); font-size: 14px; }
+.ai-box p { margin: 6px 0 0; color: var(--muted); }
+.ai-box pre { max-height: 220px; margin-top: 8px; font-size: 12px; }
+.ai-field { display: grid; gap: 4px; margin: 10px 0; font-size: 13.5px; color: var(--muted); }
+.ai-field select, .ai-field input { font: inherit; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+.ai-confirm { align-items: flex-start; margin: 12px 0; line-height: 1.4; }
+.ai-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
 @media (max-width: 800px) {
   .foot-grid { grid-template-columns: 1fr 1fr; }
   .foot-brand { grid-column: 1 / -1; }

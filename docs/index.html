@@ -152,7 +152,7 @@
         <article><svg class="ico" aria-hidden="true"><use href="#i-boxes"/></svg><h3>Monorepos</h3><p>One component per workspace package, or open a single folder such as <code>owner/repo:apps/web</code>.</p></article>
         <article><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><h3>Search, group, export</h3><p>Find components with <kbd>/</kbd>, group into swimlanes, and export SVG, PNG, Mermaid or PlantUML.</p></article>
         <article><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><h3>Narrated tours</h3><p>Captions and your browser&rsquo;s own voice, with playback controls and a shareable link to any step.</p></article>
-        <article><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg><h3>Private by design</h3><p>Analysis runs in your browser and the tour plays in a sandboxed frame. Nothing is uploaded, and no keys are needed.</p></article>
+        <article><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg><h3>Private by design</h3><p>Analysis runs in your browser and the tour plays in a sandboxed frame. Nothing is uploaded and no keys are needed, unless you choose the optional AI narration with your own key.</p></article>
       </div>
       <div class="langs" aria-label="Supported languages">
         <span>Import graphs for</span>
@@ -268,6 +268,7 @@ node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skil
           <button type="button" role="menuitem" id="cp-mermaid"><b>Copy as Mermaid</b><small>Renders natively on GitHub</small></button>
           <button type="button" role="menuitem" id="cp-plantuml"><b>Copy as PlantUML</b><small>For docs and wikis</small></button>
           <button type="button" role="menuitem" id="cp-badge"><b>Copy README badge</b><small>Links back to this tour</small></button>
+          <button type="button" role="menuitem" id="ai-open"><b>Narrate with AI&hellip;</b><small>Optional, uses your own API key</small></button>
         </div>
       </details>
       <button class="btn small ghost" id="bring-link" type="button">Add to my repo</button>
@@ -277,6 +278,31 @@ node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skil
   <!-- Sandboxed: scripts run, but with an opaque origin, so nothing in a repo can ever reach this page or the user's token. -->
   <iframe id="frame" title="Architecture tour" sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox allow-downloads"></iframe>
 </div>
+
+<dialog id="ai-dialog" class="dlg" aria-labelledby="ai-h">
+  <form method="dialog" id="ai-form" autocomplete="off">
+    <h2 id="ai-h">Narrate this tour with AI</h2>
+    <p class="muted">Optional. A language model rewrites the plain narration of each step, using <b>your own API key</b>. Nothing happens until you press Start.</p>
+    <div class="ai-box">
+      <b>What is sent to the provider</b>
+      <p>For each tour step: its title, the names, kinds and one-line summaries of the components it highlights, how they connect, and the current plain narration. <b>No source code and no file contents.</b> Names and summaries can contain file and folder names.</p>
+      <details><summary>Show exactly what step 1 would send</summary><pre id="ai-preview" tabindex="0"></pre></details>
+    </div>
+    <div class="ai-box">
+      <b>What comes back is checked</b>
+      <p>A rewritten step is used only if it is short plain prose that names nothing outside this tour. Anything else keeps the automatic narration, and the tour must still pass validation. Rewritten steps are labelled <i>AI-written</i>.</p>
+    </div>
+    <label class="ai-field"><span>Provider</span><select id="ai-provider"><option value="anthropic">Anthropic (Claude), api.anthropic.com</option></select></label>
+    <label class="ai-field"><span>Model</span><input id="ai-model" type="text" spellcheck="false" autocomplete="off"></label>
+    <label class="ai-field"><span>API key</span><input id="ai-key" type="password" spellcheck="false" autocomplete="off" placeholder="Stays in this tab's memory. Never stored, never sent anywhere but the provider."></label>
+    <label class="check ai-confirm"><input type="checkbox" id="ai-confirm"> I understand this sends the facts above to the provider from my browser, and may cost money on my account.</label>
+    <p id="ai-status" class="muted" role="status" aria-live="polite"></p>
+    <div class="ai-actions">
+      <button class="btn primary" type="button" id="ai-start" disabled>Start</button>
+      <button class="btn" type="button" id="ai-cancel">Close</button>
+    </div>
+  </form>
+</dialog>
 
 <div id="toast" role="status" aria-live="polite" hidden></div>
 

@@ -441,12 +441,14 @@
     if (!S.flow) return;
     if (S.step < 0) {
       if (!S.sel) announce('Overview of ' + arch.project.name, (S.flow.id || '') + '#overview'); // a selection announces itself
+      $('ai-tag').hidden = true;
       $('step-title').textContent = arch.project.name;
       var intro = (arch.project.description || '') + ' ' + (S.flow.description || '');
       rich($('step-text'), intro.trim() + (S.flow.steps.length ? ' Press Play to walk through “' + S.flow.title + '”, or click any component.' : ''));
       return;
     }
     var st = S.flow.steps[S.step];
+    $('ai-tag').hidden = !st.ai;
     $('step-title').textContent = st.title;
     rich($('step-text'), st.narration);
     announce('Step ' + (S.step + 1) + ' of ' + S.flow.steps.length + ': ' + st.title + '. ' + st.narration, S.flow.id + '#' + S.step);
