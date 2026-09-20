@@ -62,14 +62,16 @@ export async function launchPage() {
   // A sandboxed iframe without allow-same-origin (the tour frame) lives in its own process, so Chrome exposes it as a separate
   // target. Auto-attach to it so its document can be inspected like any other.
   const frames = []; // { sessionId, targetId, url }
+  const seenTargets = new Set(); // every target type Chrome attached us to (iframe, worker ...)
   listeners.push((m) => {
+    if (m.method === 'Target.attachedToTarget') seenTargets.add(m.params.targetInfo.type);
     if (m.method === 'Target.attachedToTarget' && m.params.targetInfo.type === 'iframe') frames.push({ sessionId: m.params.sessionId, targetId: m.params.targetInfo.targetId, url: m.params.targetInfo.url });
     if (m.method === 'Target.detachedFromTarget') { const i = frames.findIndex((f) => f.sessionId === m.params.sessionId); if (i >= 0) frames.splice(i, 1); }
   });
   await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
 
   const page = {
-    send, events,
+    send, events, seenTargets,
     on: (fn) => listeners.push(fn),
     /** The newest sandboxed iframe target, or null. */
     frame: () => frames[frames.length - 1] || null,

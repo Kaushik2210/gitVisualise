@@ -208,7 +208,7 @@ async function run(input, { push = true } = {}) {
         snippets = stored.snippets;
       } else {
         const load = target.base ? compareRepos : analyzeRepo;
-        res = await load(target, { token: token || undefined, signal, onProgress, sha, baseSha, rate });
+        res = await load(target, { token: token || undefined, signal, onProgress, sha, baseSha, rate, worker: true }); // analysis runs in a Web Worker
         snippets = buildSnippets(res.arch, res.view);
         if (persist) diskCache.set(ck, { arch: res.arch, validation: res.validation, meta: res.meta, snippets, ts: Date.now() }).then(refreshCacheUi);
       }

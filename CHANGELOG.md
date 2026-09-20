@@ -13,6 +13,7 @@ All notable changes to this project are documented here. The format follows
 - **Request tracing:** calls made through a client with a literal `baseURL` / `prefixUrl` (`axios.create`, `ky.extend`, `axios.defaults.baseURL`) in the same file are linked to their routes.
 - **GitHub Action:** `comment-diff: true` posts one pull request comment summarising how the architecture changed (off by default).
 - **Tests:** a real-browser smoke test (`npm run e2e`) that pastes a repository into the website and checks the tour is on screen, with its own CI job.
+- **Website:** the analysis (scan, generate, validate) runs in a Web Worker, so large repositories no longer freeze the page; it falls back to the main thread where workers are unavailable, and Cancel terminates it.
 - **CLI:** `gitvisualise watch` rebuilds the tour on every change (and on hand edits of `architecture.json`).
 - **Website:** a redesigned landing page with a gallery of real tours, a feature grid and a contributor call to action.
 - **Viewer:** screen reader announcements, keyboard navigation between connected components, a skip link and forced-colors support.

@@ -88,6 +88,7 @@ test('website: a pasted repository becomes a visible, working tour', { skip, tim
     assert.ok(box.w > 600 && box.h > 300, 'the frame is not collapsed: ' + JSON.stringify(box));
     const nodes = await page.waitFor(async () => { const n = await inTour("document.querySelectorAll('#diagram .node').length"); return n >= 3 ? n : 0; }, 'diagram nodes inside the tour frame');
     assert.ok(nodes >= 3, `the diagram has components (${nodes})`);
+    assert.ok(page.seenTargets.has('worker'), 'the analysis ran in a Web Worker (targets seen: ' + [...page.seenTargets] + ')');
     assert.ok((await inTour("document.querySelectorAll('#diagram .edge').length")) >= 2, 'and connections');
     assert.match(await inTour("document.getElementById('step-title').textContent"), /\S/, 'and a heading');
     const shots = process.env.GV_E2E_SHOTS;

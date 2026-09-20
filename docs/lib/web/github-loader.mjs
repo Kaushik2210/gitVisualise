@@ -5,11 +5,14 @@
 //
 // A personal access token is optional: it raises the API rate limit and unlocks private repos.
 // The heavy lifting (scan, generate, validate) is the exact same pure code the CLI uses.
-import { scanCore, makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf } from '../core/scan-core.mjs';
+import { makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf } from '../core/scan-core.mjs';
 import { validateCore } from '../core/validate-core.mjs';
-import { generate, isExamplePath, TOOLING_RE } from '../generate.mjs';
+import { isExamplePath, TOOLING_RE } from '../generate.mjs';
+import { makeView, runAnalysis } from './analyse.mjs';
 import { diffArchitectures } from '../core/diff-core.mjs';
 import { PLUGIN_MANIFEST_SRC } from '../core/languages.mjs';
+
+export { makeView };
 
 const API = 'https://api.github.com';
 const RAW = 'https://raw.githubusercontent.com';
@@ -115,35 +118,6 @@ async function pool(items, limit, worker, signal) {
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
-}
-
-/** A read-only view of the repo (the same shape the CLI validator uses), backed by the tree + downloaded files. */
-export function makeView(paths, contents) {
-  const files = new Set(paths);
-  const dirs = new Set();
-  for (const p of paths) {
-    const s = p.split('/');
-    for (let i = 1; i < s.length; i++) dirs.add(s.slice(0, i).join('/'));
-  }
-  let names = null;
-  return {
-    exists: (rel) => (files.has(rel) ? 'file' : dirs.has(rel) ? 'dir' : null),
-    read: (rel) => (contents.has(rel) ? contents.get(rel) : null),
-    list: (rel) => {
-      const prefix = rel ? rel.replace(/\/$/, '') + '/' : '';
-      const out = new Set();
-      for (const p of paths) {
-        if (!p.startsWith(prefix)) continue;
-        const rest = p.slice(prefix.length).split('/');
-        out.add(rest.length > 1 ? rest[0] + '/' : rest[0]);
-      }
-      return [...out].sort();
-    },
-    hasBasename: (name) => {
-      if (!names) names = new Set(paths.map((p) => p.slice(p.lastIndexOf('/') + 1)));
-      return names.has(name);
-    },
-  };
 }
 
 // Small files the scanner reads besides source: dependency manifests, workspace definitions, and the configs that
@@ -259,17 +233,17 @@ export async function analyzeRepo(input, opts = {}) {
   await download([...manifests, ...(readme ? [readme] : []), ...picked.chosen], 'source files');
 
   onProgress({ stage: 'analyse' });
-  const scan = scanCore({ paths, read: (p) => (contents.has(p) ? contents.get(p) : null), repo: { name: repo, url: repoUrl, branch: ref || null, commit: sha }, root: '', subPath: sub });
   const notes = [];
   if (picked.total > picked.chosen.length) notes.push(`Analysed the ${picked.chosen.length} shallowest of ${picked.total} source files.`);
   if (tree.truncated) notes.push('GitHub truncated the file listing for this very large repository, so the picture is partial.');
-  const arch = generate(scan, { alreadySkipped: picked.skipped, extraNotes: notes, noIncludeHint: true, layout: opts.layout });
-  arch.project.repoUrl = repoUrl;
-  arch.project.generatedBy = 'heuristic';
-
+  // Scanning, generating and validating is the CPU-heavy part: the website runs it in a Web Worker (opts.worker).
+  const { arch, validation, workspaces, depth } = await runAnalysis(
+    { paths, allPaths, contents, repo: { name: repo, url: repoUrl, branch: ref || null, commit: sha }, sub, alreadySkipped: picked.skipped, notes, layout: opts.layout },
+    { worker: !!opts.worker, signal },
+  );
+  if (opts.layout && depth !== undefined) opts.layout.depth = depth; // in/out: a comparison reuses the head's node granularity
   const view = makeView(allPaths, contents);
-  const validation = validateCore(arch, view);
-  return { arch, view, validation, meta: { ...meta, analysed: picked.chosen.length, sourceTotal: picked.total, skipped: picked.skipped, workspaces: scan.workspaces } };
+  return { arch, view, validation, meta: { ...meta, analysed: picked.chosen.length, sourceTotal: picked.total, skipped: picked.skipped, workspaces } };
 }
 
 /**
