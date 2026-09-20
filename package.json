@@ -1,6 +1,6 @@
 {
   "name": "gitvisualise",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Turn any GitHub repository into an interactive, animated, narrated architecture tour. Website, CLI, Claude Code skill and GitHub Action. Zero dependencies, no API keys.",
   "homepage": "https://kaushik2210.github.io/gitVisualise/",
   "repository": {

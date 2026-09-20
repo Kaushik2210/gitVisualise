@@ -4,9 +4,10 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.2.0] - 2026-09-20
 
 ### Added
+- **Kotlin** import graph (class, wildcard and aliased imports, `fun main` entry points), the project's first community contribution (#20, thanks @Voyagerroc-Lab).
 - **Languages:** C#, Ruby, PHP, C/C++ and Dart import graphs. Each resolves only to files that exist, and reports a third-party package only when a
   manifest (`.csproj`, `Gemfile` / gemspec, `composer.json`, `pubspec.yaml`) declares it.
 - **Export:** `gitvisualise export --format mermaid|plantuml`, and Copy as Mermaid / PlantUML / README badge in the website's new Export menu.
@@ -29,6 +30,8 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 - The Java resolver no longer crashes on an import that did not come from its own parser.
+- `gitvisualise watch` no longer mistakes its own output for a hand edit when it has to poll (Node 18 on Linux).
+- Cached tours are versioned, so tours analysed before the new languages and views are refreshed instead of shown stale.
 
 ## [1.1.0] - 2026-09-19
 
@@ -87,6 +90,7 @@ First public release.
   keyboard shortcuts, dark mode, a phone layout, reduced-motion support and a no-JavaScript fallback.
 - A self-documenting architecture tour of this repository in `docs/architecture/`.
 
+[1.2.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.1.0
 [1.0.1]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.0.1
 [1.0.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.0.0
