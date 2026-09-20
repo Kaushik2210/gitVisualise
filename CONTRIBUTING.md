@@ -85,6 +85,9 @@ automatic labels based on the files you changed, Dependabot updates for GitHub A
 check that only touches quiet issues and pull requests (anything labelled `good first issue`, `help wanted`, `ambitious`,
 `security` or `bug` is exempt). `main` is protected: changes arrive through pull requests with passing checks and one review.
 
+Documentation lives in `guides/` (long-form walkthroughs), the README and `skills/repo-architecture/reference/`. Run every command you write in a
+guide on a throwaway repository first, and give every image alt text.
+
 ## Reporting bugs and ideas
 
 Use the issue templates. The most helpful bug report includes the repo you ran it on (a link is perfect), the

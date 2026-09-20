@@ -151,6 +151,7 @@ jobs:
 Inputs: `path` (default `.`), `out` (default `docs/architecture`), `include` (`tests,examples,tooling`),
 `ignore` (comma-separated paths), `force` (build even if a curated tour has stale references).
 In your repo's **Settings → Pages**, set the source to **GitHub Actions**.
+A step-by-step walkthrough, including hosting from a branch and curating the narration, is in the [publishing guide](guides/publish-your-tour.md).
 
 ## 🤖 Use it with Claude Code
 
