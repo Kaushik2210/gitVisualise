@@ -270,6 +270,9 @@ Express router mounts and Flask `methods=[...]` resolved); the HTTP calls that r
 | Follow the action | "Zoom to step" (on by default on small screens) |
 | Inspect a component | Click it: summary, dependencies, code, Open Source |
 | Close details | `Esc` |
+| Search components | `/`, then type; `Enter` cycles through matches |
+| Move between components (keyboard) | `Tab`, then `→` / `←` follow a connection out / in, `↑` / `↓` move within a column, `Enter` opens details |
+| Screen readers | Steps, selections and search results are announced; a skip link jumps to the narration and controls |
 
 ## 🙋 Help wanted
 

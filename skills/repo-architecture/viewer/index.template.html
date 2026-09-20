@@ -9,6 +9,8 @@
 <link rel="stylesheet" href="viewer.css">
 </head>
 <body>
+<a class="skip" href="#narration">Skip to narration and controls</a>
+<div id="sr-status" class="sr" role="status" aria-live="polite" aria-atomic="true"></div>
 <div id="static" class="static">{{STATIC}}</div>
 
 <div id="app" class="app" hidden>
@@ -28,7 +30,8 @@
   <main class="layout">
     <section class="stage" aria-label="Architecture diagram">
       <div class="canvas" id="canvas">
-        <svg id="diagram" role="img" aria-label="Architecture diagram" tabindex="-1"></svg>
+        <svg id="diagram" role="group" aria-label="Architecture diagram" aria-describedby="diagram-help" tabindex="-1"></svg>
+        <p id="diagram-help" class="sr">Tab moves between components. With a component focused, the arrow keys follow its connections and Enter shows its details.</p>
         <div class="search"><input id="search" type="search" placeholder="Search components (press /)" aria-label="Search components" autocomplete="off" spellcheck="false"><span id="search-count" class="hint" aria-live="polite"></span></div>
         <div class="zoom" role="group" aria-label="Zoom">
           <button id="zoom-in" class="btn icon" aria-label="Zoom in" title="Zoom in">+</button>
@@ -68,9 +71,9 @@
     </section>
 
     <aside class="side">
-      <section class="card" id="narration" aria-label="Narration">
+      <section class="card" id="narration" aria-label="Narration" tabindex="-1">
         <h2 id="step-title">Overview</h2>
-        <p id="step-text" class="caption" aria-live="polite"></p>
+        <p id="step-text" class="caption"></p>
         <div id="step-chips" class="chips"></div>
       </section>
       <section class="card" id="detail" aria-label="Component details">

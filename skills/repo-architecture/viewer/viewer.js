@@ -204,10 +204,17 @@
       var sub = (DIFF_MARK[n.diff] ? DIFF_MARK[n.diff] + ' ' : '') + n.kind + (n.tech && n.tech.length ? ' · ' + n.tech[0] : '');
       g.appendChild(s('text', { class: 'sub', x: 18, y: 44 }, trunc(sub, 30)));
       g.addEventListener('click', function (ev) { ev.stopPropagation(); selectNode(n.id, false); });
-      g.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); selectNode(n.id, false); } });
+      g.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); selectNode(n.id, false); return; }
+        var to = neighbourFor(n.id, ev.key);
+        if (to === undefined) return;            // not a navigation key: let the global shortcuts run
+        ev.preventDefault(); ev.stopPropagation();
+        if (to && nodeEls[to]) { reveal([to]); nodeEls[to].focus(); }
+      });
       gN.appendChild(g); nodeEls[n.id] = g;
     });
     svg.appendChild(gE); svg.appendChild(gN);
+    svg.setAttribute('aria-label', 'Architecture diagram: ' + nodes.length + ' components and ' + edges.length + ' connections');
 
     var seen = {};
     var legend = $('legend'); legend.replaceChildren();
@@ -258,6 +265,26 @@
     })(performance.now());
   }
   // Zoom to the active step's nodes at a readable scale (never smaller than the fit-all scale).
+  // Arrow keys on a focused component: Right / Left follow a connection out / in, Up / Down move within the column.
+  // Returns a node id, null when there is nowhere to go, or undefined when the key is not a navigation key.
+  function neighbourFor(id, key) {
+    var dirs = { ArrowRight: 'out', ArrowLeft: 'in', ArrowDown: 1, ArrowUp: -1 };
+    if (!(key in dirs)) return undefined;
+    var d = dirs[key], here = boxes[id];
+    if (d === 'out' || d === 'in') {
+      var hits = [];
+      edges.forEach(function (e) {
+        var other = d === 'out' ? (e.from === id ? e.to : null) : (e.to === id ? e.from : null);
+        if (other && boxes[other] && hits.indexOf(other) < 0) hits.push(other);
+      });
+      hits.sort(function (a, b) { return Math.abs(boxes[a].y - here.y) - Math.abs(boxes[b].y - here.y); });
+      return hits[0] || null;
+    }
+    var col = nodes.filter(function (m) { return boxes[m.id] && Math.abs(boxes[m.id].x - here.x) < 4; }).sort(function (a, b) { return boxes[a.id].y - boxes[b.id].y; });
+    var i = col.findIndex(function (m) { return m.id === id; }), next = col[i + d];
+    return next ? next.id : null;
+  }
+
   function focusIds(ids) {
     var bb = bbox(ids); if (!bb) return;
     var cw = canvas.clientWidth || 800, ch = canvas.clientHeight || 500, m = 60;
@@ -331,6 +358,8 @@
       c.toggle('visited', started && !sets.an[id] && !!sets.vn[id]);
       c.toggle('dim', started && !sets.an[id] && !sets.vn[id]);
       c.toggle('selected', S.sel === id);
+      if (sets.an[id]) nodeEls[id].setAttribute('aria-current', 'step'); else nodeEls[id].removeAttribute('aria-current');
+      nodeEls[id].setAttribute('aria-pressed', S.sel === id ? 'true' : 'false');
     });
     Object.keys(edgeEls).forEach(function (id) {
       var c = edgeEls[id].classList, line = edgeEls[id].querySelector('.line');
@@ -350,11 +379,23 @@
     if (S.follow) focusIds(ids); else reveal(ids);
   }
 
+  // ---------- screen-reader announcements ----------
+  // One polite live region for everything that changes without focus moving (a new step, a selection, search results).
+  var announced = '';
+  function announce(text, key) {
+    var el = $('sr-status'); if (!el) return;
+    if (key !== undefined) { if (key === announced) return; announced = key; }
+    el.textContent = '';
+    // a change of text is what triggers the announcement; setting it on the next tick lets repeats be read again
+    setTimeout(function () { el.textContent = text; }, 30);
+  }
+
   // ---------- narration panel & progress ----------
   function renderNarration() {
     var chips = $('step-chips'); chips.replaceChildren();
     if (!S.flow) return;
     if (S.step < 0) {
+      if (!S.sel) announce('Overview of ' + arch.project.name, (S.flow.id || '') + '#overview'); // a selection announces itself
       $('step-title').textContent = arch.project.name;
       var intro = (arch.project.description || '') + ' ' + (S.flow.description || '');
       rich($('step-text'), intro.trim() + (S.flow.steps.length ? ' Press Play to walk through “' + S.flow.title + '”, or click any component.' : ''));
@@ -363,6 +404,7 @@
     var st = S.flow.steps[S.step];
     $('step-title').textContent = st.title;
     rich($('step-text'), st.narration);
+    announce('Step ' + (S.step + 1) + ' of ' + S.flow.steps.length + ': ' + st.title + '. ' + st.narration, S.flow.id + '#' + S.step);
     var seen = {};
     (st.nodes || []).concat((st.edges || []).flatMap(function (id) { var e = edgeById[id]; return e ? [e.from, e.to] : []; })).forEach(function (id) {
       if (seen[id] || !byId[id]) return; seen[id] = 1;
@@ -446,6 +488,7 @@
     S.sel = id;
     var uses = [], usedBy = [];
     edges.forEach(function (e) { if (e.from === id && byId[e.to]) uses.push(e.to); if (e.to === id && byId[e.from]) usedBy.push(e.from); });
+    announce(n.label + ', ' + n.kind + '. ' + (uses.length ? 'Depends on ' + uses.length + '. ' : '') + (usedBy.length ? 'Used by ' + usedBy.length + '. ' : '') + 'Details are shown below.', 'sel:' + id);
     showDetail({ title: n.label, kind: n.kind, summary: n.summary, tech: n.tech, sources: n.sources, origin: n.origin, diff: n.diff, diffNote: n.diffNote, lists: [{ title: 'Depends on / calls', ids: uses }, { title: 'Used by', ids: usedBy }] });
     applyState();
     if (pan) reveal([id]);
@@ -613,6 +656,7 @@
     return matches;
   }
   $('search').addEventListener('input', function () { searchIdx = -1; runSearch(); });
+  new MutationObserver(function () { var c = $('search-count'); if (c && c.textContent) announce(c.textContent, 'search:' + c.textContent); }).observe($('search-count'), { childList: true, characterData: true, subtree: true });
   $('search').addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); $('search').value = ''; searchIdx = -1; runSearch(); $('search').blur(); }
     else if (e.key === 'Enter') {
