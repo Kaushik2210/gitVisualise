@@ -99,6 +99,18 @@ test('website: a pasted repository becomes a visible, working tour', { skip, tim
     await page.waitFor(() => inTour("document.querySelectorAll('#diagram .node.active').length > 0"), 'an active component after Next');
     assert.match(await inTour("document.getElementById('step-count').textContent"), /Step 1/);
 
+    // 3b. swimlanes: group by kind, fold a lane into a chip and unfold everything again
+    await inTour("(() => { const g = document.getElementById('group-by'); g.value = 'kind'; g.dispatchEvent(new Event('change')); return 1; })()");
+    const lanes = await page.waitFor(() => inTour("document.querySelectorAll('#diagram .lane-head').length"), 'swimlanes');
+    assert.ok(lanes >= 2, 'the kinds become lanes');
+    await inTour("document.querySelector('#diagram .lane-head').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1");
+    await page.waitFor(() => inTour("document.querySelectorAll('#diagram .lane-chip').length === 1"), 'a chip for the collapsed lane');
+    assert.ok((await inTour("document.querySelectorAll('#diagram .node.lane-hidden').length")) >= 1, 'its components are folded away');
+    await inTour("document.getElementById('lanes-toggle').click(); 1"); // collapse the rest
+    await page.waitFor(() => inTour("document.querySelectorAll('#diagram .lane-chip').length === document.querySelectorAll('#diagram .lane-head').length"), 'every lane folded');
+    await inTour("document.getElementById('lanes-toggle').click(); 1"); // and expand all
+    await page.waitFor(() => inTour("document.querySelectorAll('#diagram .lane-chip').length === 0"), 'every lane unfolded');
+
     // 4. the Export menu opens and Copy as Mermaid answers (copied, or saved when the clipboard is blocked)
     await page.eval("document.querySelector('#export-menu summary').click(); 1");
     assert.equal(await page.eval("document.getElementById('export-menu').open"), true);

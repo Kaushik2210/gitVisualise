@@ -53,6 +53,12 @@
   // ---------- layout (layered, left to right; manual `position` wins) ----------
   var LANE_HEAD = 30, KIND_ORDER = ['entry', 'ui', 'api', 'service', 'data', 'util', 'config', 'module', 'external', 'test'];
   var laneRects = [], groupMode = 'none';
+  // Swimlanes can be folded: a collapsed lane shows one chip instead of its components, and every component in it shares that
+  // chip's position, so edges to and from the lane simply meet at the chip.
+  var collapsed = {}, laneChips = {};
+  function laneKeyOf(nd) { return groupMode === 'kind' ? (nd.kind || 'module') : (nd.group || 'Other'); }
+  function isHidden(id) { return groupMode !== 'none' && !!byId[id] && !!collapsed[laneKeyOf(byId[id])]; }
+  function laneMembers(key) { return nodes.filter(function (nd) { return laneKeyOf(nd) === key; }); }
   var W = 196, H = 60, GX = 58, GY = 22, PAD = 30;
   function computeLayout(mode) {
     var idx = {}, n = nodes.length;
@@ -106,6 +112,14 @@
       if (mode === 'kind') order.sort(function (a, b) { var ia = KIND_ORDER.indexOf(a), ib = KIND_ORDER.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
       var top = PAD, laneW = cols.length * (W + GX) - GX;
       order.forEach(function (key) {
+        if (collapsed[key]) {
+          var members = nodes.filter(function (nd) { return laneOf(nd) === key; });
+          members.forEach(function (nd) { boxes[nd.id] = { x: PAD, y: top + LANE_HEAD, w: W, h: H }; });
+          var chipH = LANE_HEAD + H + 16;
+          laneRects.push({ key: key, x: PAD - 16, y: top - 6, w: laneW + 32, h: chipH + 6, collapsed: true, count: members.length });
+          top += chipH + 26;
+          return;
+        }
         var perCol = {}, rowsMax = 1;
         nodes.forEach(function (nd, i) { if (laneOf(nd) === key) (perCol[layerIndex[i]] = perCol[layerIndex[i]] || []).push(i); });
         Object.keys(perCol).forEach(function (ci) {
@@ -118,7 +132,7 @@
           });
         });
         var laneH = LANE_HEAD + rowsMax * (H + GY) - GY + 16;
-        laneRects.push({ key: key, x: PAD - 16, y: top - 6, w: laneW + 32, h: laneH + 6 });
+        laneRects.push({ key: key, x: PAD - 16, y: top - 6, w: laneW + 32, h: laneH + 6, count: null });
         top += laneH + 26;
       });
       return boxes;
@@ -175,10 +189,20 @@
     });
     svg.appendChild(defs);
     var gL = s('g', { class: 'lanes' });
+    laneChips = {};
     laneRects.forEach(function (lr) {
-      var g = s('g', { style: '--kc:' + kindColor(lr.key) });
+      var name = String(lr.key);
+      var g = s('g', { style: '--kc:' + kindColor(lr.key), class: 'lane-group' + (lr.collapsed ? ' collapsed' : '') });
       g.appendChild(s('rect', { class: 'lane', x: lr.x, y: lr.y, width: lr.w, height: lr.h, rx: 14 }));
-      g.appendChild(s('text', { class: 'lane-label', x: lr.x + 14, y: lr.y + 22 }, trunc(String(lr.key).toUpperCase(), 40)));
+      var head = s('g', { class: 'lane-head', tabindex: 0, role: 'button', 'aria-expanded': lr.collapsed ? 'false' : 'true', 'aria-label': (lr.collapsed ? 'Expand group ' : 'Collapse group ') + name });
+      head.appendChild(s('rect', { class: 'lane-hit', x: lr.x + 6, y: lr.y + 4, width: Math.min(lr.w - 12, 24 + trunc(name, 40).length * 8.4 + (lr.collapsed ? 70 : 0)), height: 26, rx: 8 }));
+      head.appendChild(s('text', { class: 'lane-caret', x: lr.x + 16, y: lr.y + 22 }, lr.collapsed ? '\u25B8' : '\u25BE'));
+      head.appendChild(s('text', { class: 'lane-label', x: lr.x + 32, y: lr.y + 22 }, trunc(name.toUpperCase(), 40) + (lr.collapsed ? '  \u00B7  ' + lr.count : '')));
+      head.title = (lr.collapsed ? 'Expand ' : 'Collapse ') + name;
+      var toggle = function (ev) { ev.stopPropagation(); toggleLane(lr.key, head); };
+      head.addEventListener('click', toggle);
+      head.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggle(ev); } });
+      g.appendChild(head);
       gL.appendChild(g);
     });
     svg.appendChild(gL);
@@ -187,7 +211,7 @@
       var a = boxes[e.from], b = boxes[e.to];
       if (!a || !b) return;
       var geo = edgeGeom(a, b);
-      var g = s('g', { class: (e.kind === 'http' ? 'edge k-http' : 'edge') + diffClass(e), 'data-id': e.id });
+      var g = s('g', { class: (e.kind === 'http' ? 'edge k-http' : 'edge') + diffClass(e) + (isHidden(e.from) && isHidden(e.to) && laneKeyOf(byId[e.from]) === laneKeyOf(byId[e.to]) ? ' lane-hidden' : ''), 'data-id': e.id });
       g.appendChild(s('title', {}, e.label ? (byId[e.from].label + ' → ' + byId[e.to].label + ': ' + e.label) : ''));
       g.appendChild(s('path', { d: geo.d, class: 'hit' }));
       g.appendChild(s('path', { d: geo.d, class: 'line' }));
@@ -196,7 +220,7 @@
     });
     nodes.forEach(function (n) {
       var b = boxes[n.id];
-      var g = s('g', { class: 'node' + diffClass(n), transform: 'translate(' + b.x + ',' + b.y + ')', tabindex: 0, role: 'button', 'aria-label': n.label + ', ' + n.kind + '. ' + (n.summary || ''), 'data-id': n.id, style: '--kc:' + kindColor(n.kind) });
+      var g = s('g', { class: 'node' + diffClass(n) + (isHidden(n.id) ? ' lane-hidden' : ''), transform: 'translate(' + b.x + ',' + b.y + ')', tabindex: isHidden(n.id) ? -1 : 0, role: 'button', 'aria-label': n.label + ', ' + n.kind + '. ' + (n.summary || ''), 'data-id': n.id, style: '--kc:' + kindColor(n.kind) });
       g.appendChild(s('title', {}, n.summary || n.label));
       g.appendChild(s('rect', { class: 'box', width: b.w, height: b.h, rx: 10 }));
       g.appendChild(s('rect', { class: 'bar', x: 0, y: 12, width: 5, height: b.h - 24, rx: 2.5 }));
@@ -212,6 +236,20 @@
         if (to && nodeEls[to]) { reveal([to]); nodeEls[to].focus(); }
       });
       gN.appendChild(g); nodeEls[n.id] = g;
+    });
+    laneRects.filter(function (lr) { return lr.collapsed; }).forEach(function (lr) {
+      var b = boxes[laneMembers(lr.key)[0].id], name = String(lr.key);
+      var chip = s('g', { class: 'node lane-chip', transform: 'translate(' + b.x + ',' + b.y + ')', tabindex: 0, role: 'button', 'aria-label': 'Group ' + name + ', ' + lr.count + ' components, collapsed. Press Enter to expand.', style: '--kc:' + kindColor(lr.key) });
+      chip.appendChild(s('rect', { class: 'stack', x: 10, y: 10, width: b.w, height: b.h, rx: 10 }));
+      chip.appendChild(s('rect', { class: 'stack', x: 5, y: 5, width: b.w, height: b.h, rx: 10 }));
+      chip.appendChild(s('rect', { class: 'box', width: b.w, height: b.h, rx: 10 }));
+      chip.appendChild(s('rect', { class: 'bar', x: 0, y: 12, width: 5, height: b.h - 24, rx: 2.5 }));
+      chip.appendChild(s('text', { class: 'lbl', x: 18, y: 26 }, trunc(name, 23)));
+      chip.appendChild(s('text', { class: 'sub', x: 18, y: 44 }, lr.count + ' components \u00B7 click to expand'));
+      var open = function (ev) { ev.stopPropagation(); toggleLane(lr.key); };
+      chip.addEventListener('click', open);
+      chip.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); open(ev); } });
+      gN.appendChild(chip); laneChips[lr.key] = { el: chip, ids: laneMembers(lr.key).map(function (m) { return m.id; }) };
     });
     svg.appendChild(gE); svg.appendChild(gN);
     svg.setAttribute('aria-label', 'Architecture diagram: ' + nodes.length + ' components and ' + edges.length + ' connections');
@@ -275,12 +313,12 @@
       var hits = [];
       edges.forEach(function (e) {
         var other = d === 'out' ? (e.from === id ? e.to : null) : (e.to === id ? e.from : null);
-        if (other && boxes[other] && hits.indexOf(other) < 0) hits.push(other);
+        if (other && boxes[other] && !isHidden(other) && hits.indexOf(other) < 0) hits.push(other);
       });
       hits.sort(function (a, b) { return Math.abs(boxes[a].y - here.y) - Math.abs(boxes[b].y - here.y); });
       return hits[0] || null;
     }
-    var col = nodes.filter(function (m) { return boxes[m.id] && Math.abs(boxes[m.id].x - here.x) < 4; }).sort(function (a, b) { return boxes[a.id].y - boxes[b.id].y; });
+    var col = nodes.filter(function (m) { return boxes[m.id] && !isHidden(m.id) && Math.abs(boxes[m.id].x - here.x) < 4; }).sort(function (a, b) { return boxes[a.id].y - boxes[b.id].y; });
     var i = col.findIndex(function (m) { return m.id === id; }), next = col[i + d];
     return next ? next.id : null;
   }
@@ -360,6 +398,13 @@
       c.toggle('selected', S.sel === id);
       if (sets.an[id]) nodeEls[id].setAttribute('aria-current', 'step'); else nodeEls[id].removeAttribute('aria-current');
       nodeEls[id].setAttribute('aria-pressed', S.sel === id ? 'true' : 'false');
+    });
+    Object.keys(laneChips).forEach(function (key) {
+      var ids = laneChips[key].ids, c = laneChips[key].el.classList;
+      var act = ids.some(function (id) { return sets.an[id]; }), vis = started && !act && ids.some(function (id) { return sets.vn[id]; });
+      c.toggle('active', act); c.toggle('visited', vis); c.toggle('dim', started && !act && !vis);
+      c.toggle('selected', ids.indexOf(S.sel) >= 0);
+      if (act) laneChips[key].el.setAttribute('aria-current', 'step'); else laneChips[key].el.removeAttribute('aria-current');
     });
     Object.keys(edgeEls).forEach(function (id) {
       var c = edgeEls[id].classList, line = edgeEls[id].querySelector('.line');
@@ -484,6 +529,7 @@
   }
   function selectNode(id, pan) {
     var n = byId[id]; if (!n) return;
+    expandFor(id);
     pausePlayback();
     S.sel = id;
     var uses = [], usedBy = [];
@@ -682,6 +728,7 @@
       dst[i].setAttribute('style', st);
       if (dst[i].hasAttribute('tabindex')) dst[i].removeAttribute('tabindex');
     }
+    Array.prototype.slice.call(clone.querySelectorAll('.lane-hidden')).forEach(function (el) { el.parentNode.removeChild(el); });
     ['id', 'class', 'tabindex', 'style'].forEach(function (a) { clone.removeAttribute(a); });
     clone.setAttribute('xmlns', NS);
     clone.setAttribute('viewBox', [x, y, w, hgt].join(' '));
@@ -756,6 +803,34 @@
   }
 
   // ---------- grouping (swimlanes) ----------
+  function relayout(focusEl) {
+    render(); applyState(); runSearch();
+    if (!userMoved) fit();
+    var key = focusEl && focusEl.getAttribute && focusEl.getAttribute('aria-label');
+    if (key) { var again = svg.querySelector('.lane-head[aria-label="' + key.replace('Collapse', 'Expand') + '"], .lane-head[aria-label="' + key.replace('Expand', 'Collapse') + '"]'); if (again) again.focus(); }
+    syncLaneButton();
+  }
+  function toggleLane(key, from) {
+    collapsed[key] = !collapsed[key];
+    announce(String(key) + (collapsed[key] ? ' collapsed, ' + laneMembers(key).length + ' components hidden.' : ' expanded.'));
+    relayout(from);
+  }
+  function expandFor(id) { // a component that must be shown (selected, or a search hit) opens its lane
+    if (!isHidden(id)) return false;
+    collapsed[laneKeyOf(byId[id])] = false;
+    render(); applyState(); runSearch(); syncLaneButton();
+    return true;
+  }
+  function syncLaneButton() {
+    var b = $('lanes-toggle');
+    if (!b) return;
+    var grouped = groupMode !== 'none' && laneRects.length > 1;
+    b.hidden = !grouped;
+    if (!grouped) return;
+    var allCollapsed = laneRects.every(function (lr) { return lr.collapsed; });
+    b.textContent = allCollapsed ? 'Expand all' : 'Collapse all';
+    b.setAttribute('aria-label', allCollapsed ? 'Expand all groups' : 'Collapse all groups');
+  }
   var hasGroups = nodes.some(function (n) { return typeof n.group === 'string' && n.group; });
   (function () {
     var sel = $('group-by');
@@ -763,8 +838,16 @@
     groupMode = hasGroups ? 'group' : 'none';
     sel.value = groupMode;
     sel.addEventListener('change', function () {
-      groupMode = sel.value; render(); applyState(); runSearch(); fit();
+      groupMode = sel.value; collapsed = {}; render(); applyState(); runSearch(); fit(); syncLaneButton();
     });
+    var lt = $('lanes-toggle');
+    if (lt) lt.addEventListener('click', function () {
+      var collapseAll = !laneRects.every(function (lr) { return lr.collapsed; });
+      laneRects.forEach(function (lr) { collapsed[lr.key] = collapseAll; });
+      announce(collapseAll ? 'All groups collapsed.' : 'All groups expanded.');
+      relayout();
+    });
+    syncLaneButton();
   })();
 
   // ---------- boot ----------

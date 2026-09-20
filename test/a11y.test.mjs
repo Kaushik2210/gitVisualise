@@ -55,3 +55,14 @@ for (const [name, sel] of [['light', ':root {'], ['dark', ':root[data-theme="dar
     }
   });
 }
+
+test('lanes: collapsible swimlanes are keyboard-operable buttons with state, and folded content is left out of exports', () => {
+  assert.match(html, /id="lanes-toggle"/);
+  assert.match(js, /'aria-expanded': lr\.collapsed \? 'false' : 'true'/);
+  assert.match(js, /function toggleLane\(/);
+  assert.match(js, /function expandFor\(/, 'selecting or searching a hidden component opens its lane');
+  assert.match(js, /querySelectorAll\('\.lane-hidden'\)/, 'the SVG export drops hidden nodes');
+  assert.match(js, /!isHidden\(other\)/, 'arrow-key navigation skips hidden components');
+  assert.match(css, /\.lane-hidden \{ display: none; \}/);
+  assert.match(css, /\.lane-chip\.active rect\.box/);
+});

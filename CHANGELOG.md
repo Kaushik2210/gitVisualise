@@ -17,6 +17,7 @@ All notable changes to this project are documented here. The format follows
 - **Infrastructure and data-model views:** Docker Compose services (dependencies, start order, and the code each is built from) and SQL / Prisma tables with foreign keys, each with the file and lines it came from, and a tour for each. Works in the CLI and on the website.
 - **CLI:** `gitvisualise watch` rebuilds the tour on every change (and on hand edits of `architecture.json`).
 - **Website:** a redesigned landing page with a gallery of real tours, a feature grid and a contributor call to action.
+- **Viewer:** swimlanes can be collapsed into a single chip and expanded again (per lane or all at once), keyboard-operable, with playback highlighting the chip and selection or search opening the lane.
 - **Viewer:** screen reader announcements, keyboard navigation between connected components, a skip link and forced-colors support.
 - **Docs:** a guide to publishing your own tour, a public roadmap, and a language plug-in contract for contributors.
 

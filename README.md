@@ -308,6 +308,7 @@ Express router mounts and Flask `methods=[...]` resolved); the HTTP calls that r
 | Follow the action | "Zoom to step" (on by default on small screens) |
 | Inspect a component | Click it: summary, dependencies, code, Open Source |
 | Close details | `Esc` |
+| Fold a group | With "By kind" or "By group", click a lane header (or focus it and press `Enter`) to collapse it into one chip and again to expand; "Collapse all" / "Expand all" does every lane. Playback, search and selection open or light up the chip as needed |
 | Search components | `/`, then type; `Enter` cycles through matches |
 | Move between components (keyboard) | `Tab`, then `→` / `←` follow a connection out / in, `↑` / `↓` move within a column, `Enter` opens details |
 | Screen readers | Steps, selections and search results are announced; a skip link jumps to the narration and controls |

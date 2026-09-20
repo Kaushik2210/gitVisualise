@@ -182,3 +182,29 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
   .edge path.line { stroke: GrayText; }
   .edge.active path.line, .edge.selected path.line { stroke: Highlight; }
 }
+
+/* collapsible swimlanes */
+.lane-hidden { display: none; }
+.lane-head { cursor: pointer; outline: none; }
+.lane-head .lane-hit { fill: transparent; transition: fill .15s; }
+.lane-head:hover .lane-hit, .lane-head:focus-visible .lane-hit { fill: color-mix(in srgb, var(--kc) 16%, transparent); }
+.lane-head:focus-visible .lane-hit { stroke: var(--focus); stroke-width: 2; }
+.lane-caret { font-size: 12px; fill: var(--muted); pointer-events: none; }
+.lane-head .lane-label { pointer-events: none; }
+.lane-group.collapsed .lane { stroke-dasharray: 2 4; }
+.lane-chip rect.box { fill: var(--node-bg); stroke: var(--kc); stroke-width: 1.8; }
+.lane-chip rect.stack { fill: var(--node-bg); stroke: color-mix(in srgb, var(--kc) 55%, var(--line)); stroke-width: 1.2; }
+.lane-chip rect.bar { fill: var(--kc); }
+.lane-chip text { fill: var(--node-ink); pointer-events: none; }
+.lane-chip .lbl { font-size: 14px; font-weight: 600; }
+.lane-chip .sub { font-size: 11.5px; fill: var(--muted); }
+.lane-chip.visited rect.box { fill: color-mix(in srgb, var(--kc) 10%, var(--node-bg)); }
+.lane-chip.active rect.box { stroke-width: 3.5; fill: color-mix(in srgb, var(--kc) 18%, var(--node-bg)); filter: drop-shadow(0 0 7px color-mix(in srgb, var(--kc) 60%, transparent)); }
+.lane-chip.dim { opacity: .35; }
+.lane-chip:hover rect.box, .lane-chip:focus-visible rect.box { stroke-width: 2.8; }
+.lane-chip:focus { outline: none; }
+.lane-chip:focus-visible rect.box { stroke: var(--focus); stroke-width: 4; }
+@media (forced-colors: active) {
+  .lane-chip rect.box, .lane-chip rect.stack { stroke: CanvasText; fill: Canvas; }
+  .lane-chip.active rect.box, .lane-chip:focus-visible rect.box { stroke: Highlight; stroke-width: 4; }
+}
