@@ -10,7 +10,9 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="gitvisualise">
 <meta property="og:url" content="https://kaushik2210.github.io/gitVisualise/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://kaushik2210.github.io/gitVisualise/assets/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://kaushik2210.github.io/gitVisualise/assets/social-preview.png">
 <meta name="twitter:title" content="gitvisualise: see how any GitHub repo works">
 <meta name="twitter:description" content="Paste a GitHub link. Get an interactive, narrated architecture tour. Free and open source.">
 <meta name="theme-color" content="#0b1020">
@@ -19,15 +21,26 @@
 <link rel="stylesheet" href="app.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-compare" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5v5a3 3 0 0 0 3 3h6.5M18 15.5v-5a3 3 0 0 0-3-3H8.5"/><path d="m11 4.5-2.5 3L11 10.5M13 13.5l2.5 3L13 19.5"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="6" rx="1.6"/><rect x="14" y="14" width="7" height="6" rx="1.6"/><path d="M10 7h3.5a3 3 0 0 1 3 3v4M13.5 17H7a2 2 0 0 1-2-2v-1"/></symbol>
+    <symbol id="i-boxes" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="1.8"/><rect x="13" y="3" width="8" height="8" rx="1.8"/><rect x="8" y="13" width="8" height="8" rx="1.8"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2M8.5 11h5M11 8.5v5"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 5 6v5.5c0 4.2 2.8 7.7 7 9.5 4.2-1.8 7-5.3 7-9.5V6z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
+  </defs>
+</svg>
 
 <!-- ============ landing ============ -->
 <div id="landing">
   <header class="nav">
     <a class="brand" href="./" aria-label="gitvisualise home"><span class="logo" aria-hidden="true"></span>gitvisualise</a>
     <nav aria-label="Main">
+      <a href="#gallery">Gallery</a>
+      <a href="#features">Features</a>
       <a href="#how">How it works</a>
       <a href="#bring">Add to your repo</a>
-      <a href="architecture/">Self-tour</a>
       <button id="theme" class="btn small" type="button" title="Change theme">◐ Auto</button>
       <a class="btn small" href="https://github.com/Kaushik2210/gitVisualise" target="_blank" rel="noopener">&#9733; Star on GitHub</a>
     </nav>
@@ -54,6 +67,18 @@
         <button class="chip" data-repo="Kaushik2210/gitVisualise">Kaushik2210/gitVisualise</button>
       </div>
       <div id="recent" class="examples" hidden aria-label="Recent"></div>
+
+      <ul class="trust" aria-label="Highlights">
+        <li><b>0</b> dependencies</li>
+        <li><b>6</b> languages</li>
+        <li><b>MIT</b> licensed</li>
+        <li><b>100%</b> in your browser</li>
+      </ul>
+
+      <figure class="frame">
+        <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i><span>kaushik2210.github.io/gitVisualise/#/tj/commander.js</span></div>
+        <img src="assets/tour-steps.gif" width="900" height="563" alt="Animation of a gitvisualise tour of tj/commander.js: the diagram lights up one import at a time while the narration on the right explains each step" fetchpriority="high">
+      </figure>
     </section>
 
     <section class="picker" aria-labelledby="pick-h">
@@ -83,6 +108,57 @@
       </div>
       <p id="repo-meta" class="muted" role="status" aria-live="polite"></p>
       <div id="repos" class="cards" aria-live="polite"></div>
+    </section>
+
+    <section id="gallery" class="gallery" aria-labelledby="gal-h">
+      <p class="kicker">Real tours, one click</p>
+      <h2 id="gal-h">Try it on repositories you know</h2>
+      <p class="sub">Each one is generated live in your browser from the code on GitHub. Nothing here is a mock-up.</p>
+      <div class="gcards">
+        <button class="gcard" type="button" data-repo="tj/commander.js">
+          <span class="shot"><img class="theme-light" src="assets/gallery/tj_commander_js-light.jpg" width="960" height="540" loading="lazy" alt=""><img class="theme-dark" src="assets/gallery/tj_commander_js-dark.jpg" width="960" height="540" loading="lazy" alt=""></span>
+          <span class="gmeta"><b>tj/commander.js</b><span class="tag">JavaScript</span></span>
+          <span class="gdesc">The Node.js command-line framework, and how its parser reaches the rest of the code.</span>
+          <span class="go-link">Open the tour &rarr;</span>
+        </button>
+        <button class="gcard" type="button" data-repo="junegunn/fzf">
+          <span class="shot"><img class="theme-light" src="assets/gallery/junegunn_fzf-light.jpg" width="960" height="540" loading="lazy" alt=""><img class="theme-dark" src="assets/gallery/junegunn_fzf-dark.jpg" width="960" height="540" loading="lazy" alt=""></span>
+          <span class="gmeta"><b>junegunn/fzf</b><span class="tag">Go</span></span>
+          <span class="gdesc">The fuzzy finder: Go packages as components, plus the libraries each one leans on.</span>
+          <span class="go-link">Open the tour &rarr;</span>
+        </button>
+        <button class="gcard" type="button" data-repo="psf/requests">
+          <span class="shot"><img class="theme-light" src="assets/gallery/psf_requests-light.jpg" width="960" height="540" loading="lazy" alt=""><img class="theme-dark" src="assets/gallery/psf_requests-dark.jpg" width="960" height="540" loading="lazy" alt=""></span>
+          <span class="gmeta"><b>psf/requests</b><span class="tag">Python</span></span>
+          <span class="gdesc">HTTP for Humans: its modules and how they import each other, resolved with Python rules.</span>
+          <span class="go-link">Open the tour &rarr;</span>
+        </button>
+        <button class="gcard" type="button" data-repo="gin-gonic/gin">
+          <span class="shot"><img class="theme-light" src="assets/gallery/gin-gonic_gin-light.jpg" width="960" height="540" loading="lazy" alt=""><img class="theme-dark" src="assets/gallery/gin-gonic_gin-dark.jpg" width="960" height="540" loading="lazy" alt=""></span>
+          <span class="gmeta"><b>gin-gonic/gin</b><span class="tag">Go</span></span>
+          <span class="gdesc">A web framework: routing, binding and rendering packages and how they connect.</span>
+          <span class="go-link">Open the tour &rarr;</span>
+        </button>
+      </div>
+      <p class="center muted small-print">Or compare two versions: <button class="linkbtn" type="button" data-repo="tj/commander.js@v5.0.0...v11.0.0">commander v5 &rarr; v11</button> highlights what was added, removed and changed.</p>
+    </section>
+
+    <section id="features" class="features" aria-labelledby="feat-h">
+      <p class="kicker">What you get</p>
+      <h2 id="feat-h">More than a diagram</h2>
+      <div class="fgrid">
+        <article><svg class="ico" aria-hidden="true"><use href="#i-compare"/></svg><h3>Compare two revisions</h3><p>See what changed between two tags or branches: added, removed and changed components, with a narrated tour of the difference.</p></article>
+        <article><svg class="ico" aria-hidden="true"><use href="#i-route"/></svg><h3>Request tracing</h3><p>Follow a <code>fetch</code> call from the frontend to the server route that handles it. Linked only on an exact method and path match.</p></article>
+        <article><svg class="ico" aria-hidden="true"><use href="#i-boxes"/></svg><h3>Monorepos</h3><p>One component per workspace package, or open a single folder such as <code>owner/repo:apps/web</code>.</p></article>
+        <article><svg class="ico" aria-hidden="true"><use href="#i-search"/></svg><h3>Search, group, export</h3><p>Find components with <kbd>/</kbd>, group into swimlanes, and export SVG, PNG, Mermaid or PlantUML.</p></article>
+        <article><svg class="ico" aria-hidden="true"><use href="#i-play"/></svg><h3>Narrated tours</h3><p>Captions and your browser&rsquo;s own voice, with playback controls and a shareable link to any step.</p></article>
+        <article><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg><h3>Private by design</h3><p>Analysis runs in your browser and the tour plays in a sandboxed frame. Nothing is uploaded, and no keys are needed.</p></article>
+      </div>
+      <div class="langs" aria-label="Supported languages">
+        <span>Import graphs for</span>
+        <b>JavaScript / TypeScript</b><b>Python</b><b>Go</b><b>Java</b><b>Kotlin</b><b>Rust</b>
+        <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/ROADMAP.md" target="_blank" rel="noopener">more on the roadmap &rarr;</a>
+      </div>
     </section>
 
     <section id="how" class="how">
@@ -127,10 +203,33 @@ node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skil
     </section>
   </main>
 
-  <footer>
-    <p>gitvisualise is open source under the <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a>. Contributions welcome:
-      <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">how to contribute</a>.</p>
-    <p class="muted">Public repos are read anonymously through GitHub&rsquo;s API from your browser (60 requests per hour per network; a token lifts that). Analysed tours are cached in your own browser only (IndexedDB), never on a server. <button id="cache-clear" class="linkbtn" type="button" hidden>Clear cached tours</button></p>
+  <section class="cta" aria-labelledby="cta-h">
+    <h2 id="cta-h">Build it with us</h2>
+    <p>gitvisualise is open source and young. There is a public roadmap, and every task is a scoped issue with pointers to the exact files. Pick one, or tell us which repo it draws badly.</p>
+    <p class="cta-actions">
+      <a class="btn primary" href="https://github.com/Kaushik2210/gitVisualise/labels/good%20first%20issue" target="_blank" rel="noopener">Find a good first issue</a>
+      <a class="btn" href="https://github.com/Kaushik2210/gitVisualise/blob/main/ROADMAP.md" target="_blank" rel="noopener">Read the roadmap</a>
+      <a class="btn ghost" href="https://github.com/Kaushik2210/gitVisualise/discussions" target="_blank" rel="noopener">Join the discussion</a>
+    </p>
+  </section>
+
+  <footer class="foot">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="./" aria-label="gitvisualise home"><span class="logo" aria-hidden="true"></span>gitvisualise</a>
+        <p class="muted">See how any GitHub repo works. Free, open source, and it runs in your browser.</p>
+      </div>
+      <nav aria-label="Product"><h3>Product</h3>
+        <a href="#gallery">Gallery</a><a href="#features">Features</a><a href="#how">How it works</a><a href="architecture/">Self-tour</a>
+      </nav>
+      <nav aria-label="Project"><h3>Project</h3>
+        <a href="https://github.com/Kaushik2210/gitVisualise" target="_blank" rel="noopener">GitHub</a><a href="https://github.com/Kaushik2210/gitVisualise/releases" target="_blank" rel="noopener">Releases</a><a href="https://github.com/Kaushik2210/gitVisualise/blob/main/CHANGELOG.md" target="_blank" rel="noopener">Changelog</a><a href="https://github.com/Kaushik2210/gitVisualise/blob/main/LICENSE" target="_blank" rel="noopener">MIT license</a>
+      </nav>
+      <nav aria-label="Community"><h3>Community</h3>
+        <a href="https://github.com/Kaushik2210/gitVisualise/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a><a href="https://github.com/Kaushik2210/gitVisualise/blob/main/ROADMAP.md" target="_blank" rel="noopener">Roadmap</a><a href="https://github.com/Kaushik2210/gitVisualise/discussions" target="_blank" rel="noopener">Discussions</a><a href="https://github.com/Kaushik2210/gitVisualise/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noopener">Code of conduct</a>
+      </nav>
+    </div>
+    <p class="muted fine">Public repos are read anonymously through GitHub&rsquo;s API from your browser (60 requests per hour per network; a token lifts that). Analysed tours are cached in your own browser only (IndexedDB), never on a server. <button id="cache-clear" class="linkbtn" type="button" hidden>Clear cached tours</button></p>
   </footer>
 </div>
 
@@ -161,8 +260,16 @@ node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skil
     <div class="acts">
       <button class="btn small" id="compare" type="button" title="See what changed between two branches, tags or commits">Compare&hellip;</button>
       <button class="btn small" id="share" type="button">Copy share link</button>
-      <button class="btn small" id="dl-html" type="button">Download page</button>
-      <button class="btn small" id="dl-json" type="button">Download JSON</button>
+      <details class="menu" id="export-menu">
+        <summary class="btn small" aria-haspopup="menu">Export <span aria-hidden="true">&#9662;</span></summary>
+        <div class="menu-list" role="menu" aria-label="Export">
+          <button type="button" role="menuitem" id="dl-html"><b>Download page</b><small>One self-contained HTML file</small></button>
+          <button type="button" role="menuitem" id="dl-json"><b>Download JSON</b><small>architecture.json</small></button>
+          <button type="button" role="menuitem" id="cp-mermaid"><b>Copy as Mermaid</b><small>Renders natively on GitHub</small></button>
+          <button type="button" role="menuitem" id="cp-plantuml"><b>Copy as PlantUML</b><small>For docs and wikis</small></button>
+          <button type="button" role="menuitem" id="cp-badge"><b>Copy README badge</b><small>Links back to this tour</small></button>
+        </div>
+      </details>
       <button class="btn small ghost" id="bring-link" type="button">Add to my repo</button>
     </div>
   </header>

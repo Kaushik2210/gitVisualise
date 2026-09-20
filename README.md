@@ -84,7 +84,7 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 | 🔌 **Request tracing** | A `fetch`/`axios` call is linked to the server route that handles it, with evidence on both sides and a "Request: GET /x" tour |
 | 🔀 **Compare two revisions** | `owner/repo@v1...v2` marks components and relationships added, removed or changed, and narrates the difference |
 | 🧩 **Monorepos** | One component per workspace package, or analyse a single folder (`owner/repo:apps/web`) |
-| 🔎 **Search, swimlanes, export** | Find a component with `/`, group by folder or kind, save the diagram as SVG or PNG |
+| 🔎 **Search, swimlanes, export** | Find a component with `/`, group by folder or kind, save the diagram as SVG or PNG, copy it as Mermaid or PlantUML, or copy a README badge that links back to the tour |
 | 🔊 **Voice narration** | Uses your browser's built-in speech: pick a voice, stop, mute. No server, no keys |
 | 🔗 **Click through to source** | Every component shows its code and an **Open Source** link to the exact lines on GitHub |
 | ✅ **Grounded by construction** | Validator rejects nonexistent files, out-of-range lines, and fake paths in narration |

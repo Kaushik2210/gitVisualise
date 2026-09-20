@@ -4,7 +4,8 @@ import { analyzeRepo, compareRepos, resolveCommit, parseRepoInput, listRepos, Gi
 import { createCache, cacheKey } from './lib/web/cache.mjs';
 import { idbStore } from './lib/web/idb-store.mjs';
 import { buildSnippets, renderPage } from './lib/core/build-core.mjs';
-import { keyOf, hashOf, parseHash, stateSuffix } from './lib/web/route.mjs';
+import { keyOf, hashOf, parseHash, stateSuffix, badgeMarkdown } from './lib/web/route.mjs';
+import { toMermaid, toPlantUml } from './lib/core/export-core.mjs';
 import { newState, authorizeUrl, readCallback, cleanUrl, exchangeCode } from './lib/web/oauth.mjs';
 import { OAUTH } from './config.js';
 
@@ -385,7 +386,7 @@ function download(name, mime, text) {
 
 // ---------- wiring ----------
 $('go').addEventListener('submit', (e) => { e.preventDefault(); run($('repo').value); });
-document.querySelectorAll('.examples .chip[data-repo]').forEach((b) => b.addEventListener('click', () => { $('repo').value = b.dataset.repo; run(b.dataset.repo); }));
+document.querySelectorAll('[data-repo]').forEach((b) => b.addEventListener('click', () => { $('repo').value = b.dataset.repo; window.scrollTo({ top: 0, behavior: 'smooth' }); run(b.dataset.repo); }));
 $('browse').addEventListener('submit', (e) => { e.preventDefault(); const u = $('user').value.trim(); if (u) browse(u); else if (token) browse(''); else showError(new GitHubError('bad_input', 'Enter a GitHub username, or add a token to list your own repositories.')); });
 $('mine').addEventListener('click', () => browse(''));
 $('filter').addEventListener('input', renderRepos);
@@ -404,6 +405,21 @@ $('share').addEventListener('click', async () => {
 });
 $('dl-html').addEventListener('click', () => download(`${lastEntry.res.meta.repo}-architecture.html`, 'text/html', lastEntry.html));
 $('dl-json').addEventListener('click', () => download(`${lastEntry.res.meta.repo}-architecture.json`, 'application/json', JSON.stringify(lastEntry.res.arch, null, 2) + '\n'));
+
+// ---------- export menu ----------
+const copyText = async (text, done) => {
+  try { await navigator.clipboard.writeText(text); toast(done); } catch { download('copy.txt', 'text/plain', text); toast('Clipboard is blocked, so it was saved as a file'); }
+};
+const menu = $('export-menu');
+const closeMenu = () => { menu.open = false; };
+$('cp-mermaid').addEventListener('click', () => copyText(toMermaid(lastEntry.res.arch), 'Mermaid copied: paste it into a README or an issue'));
+$('cp-plantuml').addEventListener('click', () => copyText(toPlantUml(lastEntry.res.arch), 'PlantUML copied'));
+$('cp-badge').addEventListener('click', () => {
+  try { copyText(badgeMarkdown(lastEntry.target), 'README badge copied'); } catch { toast('Could not build a badge for this link'); }
+});
+menu.querySelectorAll('button').forEach((b) => b.addEventListener('click', closeMenu));
+document.addEventListener('click', (e) => { if (menu.open && !menu.contains(e.target)) closeMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && menu.open) { closeMenu(); menu.querySelector('summary').focus(); } });
 document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', async () => {
   try { await navigator.clipboard.writeText($(b.dataset.copy).textContent); toast('Copied'); } catch { toast('Select the text and copy it'); }
 }));

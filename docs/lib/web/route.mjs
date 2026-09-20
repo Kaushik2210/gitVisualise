@@ -23,3 +23,14 @@ export function parseHash(hash) {
 
 /** The "/flow/x/step/n" suffix for a reported position, or "" for the overview. */
 export const stateSuffix = (st) => (st && st.step > 0 && st.flow ? '/flow/' + encodeURIComponent(st.flow) + '/step/' + st.step : '');
+
+export const SITE_URL = 'https://kaushik2210.github.io/gitVisualise/';
+
+/** The link to a tour on the website; parentheses and spaces are encoded so it is safe inside Markdown. */
+export const tourUrl = (t, site = SITE_URL) => site + encodeURI(hashOf(t)).replace(/\(/g, '%28').replace(/\)/g, '%29');
+
+/** Markdown for a README badge that links to the tour of a repository, folder or comparison. */
+export function badgeMarkdown(t, site = SITE_URL) {
+  if (!t || !parseRepoInput(keyOf(t))) throw new Error('Not a GitHub repository');
+  return `[![Architecture tour](https://img.shields.io/badge/architecture-tour-8db3ff?logo=github&logoColor=white)](${tourUrl(t, site)})`;
+}
