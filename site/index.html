@@ -283,6 +283,7 @@ node gitvisualise/skills/repo-architecture/scripts/gitvisualise.mjs install-skil
   <form method="dialog" id="ai-form" autocomplete="off">
     <h2 id="ai-h">Narrate this tour with AI</h2>
     <p class="muted">Optional. A language model rewrites the plain narration of each step, using <b>your own API key</b>. Nothing happens until you press Start.</p>
+    <p class="muted ai-exp"><b>Experimental.</b> This has been tested against a stand-in provider, not yet against the live API. If it fails, nothing is changed.</p>
     <div class="ai-box">
       <b>What is sent to the provider</b>
       <p>For each tour step: its title, the names, kinds and one-line summaries of the components it highlights, how they connect, and the current plain narration. <b>No source code and no file contents.</b> Names and summaries can contain file and folder names.</p>
