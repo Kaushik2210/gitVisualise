@@ -29,6 +29,6 @@
   },
   "scripts": {
     "prepare": "node scripts/bundle-skill.mjs",
-    "test": "node scripts/integration-test.mjs"
+    "test": "node scripts/run-in-vscode.mjs"
   }
 }

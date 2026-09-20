@@ -79,3 +79,11 @@ test('extension manifest: two commands, no activation on startup, no network per
   assert.ok(!pkg.dependencies, 'zero runtime dependencies, like the rest of the project');
   assert.match(pkg.repository.url, /Kaushik2210\/gitVisualise/);
 });
+
+test('extension: the desktop-only VS Code runner is not something `node --test` discovers by default', () => {
+  // node's default globs include *-test.mjs, *.test.mjs, test-*.mjs and anything under a test/ folder: the runner that opens a real VS Code must match none.
+  const runner = 'vscode-extension/scripts/run-in-vscode.mjs';
+  assert.ok(fs.existsSync(new URL('../' + runner, import.meta.url)));
+  assert.ok(!/(-test|_test|\.test)\.m?js$|(^|\/)test-[^/]*\.m?js$|(^|\/)test\/|(^|\/)test\.m?js$/.test(runner), runner);
+  assert.ok(!/(-test|_test|\.test)\.m?js$|(^|\/)test-[^/]*\.m?js$|(^|\/)test\//.test('vscode-extension/e2e/suite.js'));
+});

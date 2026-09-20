@@ -1,5 +1,5 @@
 'use strict';
-// Runs inside VS Code's Extension Host (see scripts/integration-test.mjs). Exits non-zero through a rejected promise.
+// Runs inside VS Code's Extension Host (see scripts/run-in-vscode.mjs). Exits non-zero through a rejected promise.
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const vscode = require('vscode');
