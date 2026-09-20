@@ -44,7 +44,8 @@ node skills/repo-architecture/scripts/gitvisualise.mjs serve <some-repo> --out .
 | Change what the site looks like or how it plays | `viewer/viewer.js`, `viewer/viewer.css`, `viewer/index.template.html` |
 | Change the website (landing page, picker, progress) | `site/` (top level), then `npm run site` |
 | Change how a GitHub repo is fetched in the browser | `scripts/lib/web/github-loader.mjs` (test with the fake GitHub in `test/web.test.mjs`) |
-| Change the GitHub Action | `action.yml` (repo root) |
+| Change the GitHub Action | `action.yml` (repo root), `scripts/pr-comment.mjs` |
+| Change the VS Code extension | `vscode-extension/` (see its README for how to run it) |
 | Change how Claude Code uses the tool | `SKILL.md` |
 | Change the data format | `reference/schema.md` + `validate.mjs` (bump `schemaVersion` if breaking) |
 

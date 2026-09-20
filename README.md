@@ -180,6 +180,10 @@ GitHub gives the workflow a read-only token, so there the step reports a notice 
 In your repo's **Settings → Pages**, set the source to **GitHub Actions**.
 A step-by-step walkthrough, including hosting from a branch and curating the narration, is in the [publishing guide](guides/publish-your-tour.md).
 
+## 🧩 VS Code
+
+The [`vscode-extension`](vscode-extension/README.md) opens the tour of the workspace beside your code and turns every **Open Source** link into a jump to that file and line in the editor. It analyses locally, writes nothing into your repository, and runs the tour under a strict Content-Security-Policy. It is version 0.1 and not on the Marketplace yet; the README explains how to run or package it.
+
 ## 🤖 Use it with Claude Code
 
 The website and CLI give you an automatic picture (imports, entry points, dependencies) with **no AI and no API key**.

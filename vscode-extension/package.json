@@ -1,0 +1,34 @@
+{
+  "name": "gitvisualise",
+  "displayName": "gitvisualise: architecture tour",
+  "description": "See how your workspace works: an animated, narrated architecture tour beside your code, with one click from any component to the exact file and line.",
+  "version": "0.1.0",
+  "publisher": "kaushik2210",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/Kaushik2210/gitVisualise.git", "directory": "vscode-extension" },
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Visualization", "Education", "Other"],
+  "keywords": ["architecture", "diagram", "visualization", "onboarding", "dependency graph"],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      { "command": "gitvisualise.openTour", "title": "Open architecture tour", "category": "gitvisualise" },
+      { "command": "gitvisualise.refreshTour", "title": "Refresh architecture tour", "category": "gitvisualise" }
+    ],
+    "configuration": {
+      "title": "gitvisualise",
+      "properties": {
+        "gitvisualise.ignore": {
+          "type": "string",
+          "default": "",
+          "description": "Comma-separated paths to leave out of the analysis (for example: vendor,generated)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "prepare": "node scripts/bundle-skill.mjs",
+    "test": "node scripts/integration-test.mjs"
+  }
+}

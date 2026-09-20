@@ -1,0 +1,3 @@
+skill/
+*.vsix
+node_modules/

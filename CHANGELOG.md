@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 - **Tests:** a real-browser smoke test (`npm run e2e`) that pastes a repository into the website and checks the tour is on screen, with its own CI job.
 - **Website:** the analysis (scan, generate, validate) runs in a Web Worker, so large repositories no longer freeze the page; it falls back to the main thread where workers are unavailable, and Cancel terminates it.
 - **Infrastructure and data-model views:** Docker Compose services (dependencies, start order, and the code each is built from) and SQL / Prisma tables with foreign keys, each with the file and lines it came from, and a tour for each. Works in the CLI and on the website.
+- **VS Code extension** (0.1, in `vscode-extension/`): open the tour beside your code and jump from any component to its file and line. Analyses locally, writes nothing into the workspace, and treats the webview as untrusted.
 - **CLI:** `gitvisualise watch` rebuilds the tour on every change (and on hand edits of `architecture.json`).
 - **Website:** a redesigned landing page with a gallery of real tours, a feature grid and a contributor call to action.
 - **Viewer:** swimlanes can be collapsed into a single chip and expanded again (per lane or all at once), keyboard-operable, with playback highlighting the chip and selection or search opening the lane.

@@ -24,7 +24,7 @@
     "docs": "node skills/repo-architecture/scripts/gitvisualise.mjs all . --ignore examples,test --max-nodes 40 --no-pin",
     "serve": "node skills/repo-architecture/scripts/gitvisualise.mjs serve . --out docs --port 4173",
     "site": "node tools/build-site.mjs",
-    "e2e": "node --test e2e/site.e2e.mjs",
+    "e2e": "node --test e2e/site.e2e.mjs e2e/webview.e2e.mjs",
     "serve:tour": "node skills/repo-architecture/scripts/gitvisualise.mjs serve . --port 4174"
   },
   "files": [

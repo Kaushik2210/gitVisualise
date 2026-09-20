@@ -495,6 +495,9 @@
     var path = src.path.replace(/\/$/, '').split('/').map(encodeURIComponent).join('/');
     return p.repoUrl.replace(/\/$/, '') + '/' + (sn && sn.type === 'dir' ? 'tree' : 'blob') + '/' + encodeURIComponent(ref) + '/' + path + (src.lines ? '#L' + src.lines[0] + '-L' + src.lines[1] : '');
   }
+  // Inside a VS Code webview the page can ask its host to open a file at a line (acquireVsCodeApi exists only there).
+  var vscodeApi = null;
+  try { if (typeof acquireVsCodeApi === 'function') vscodeApi = acquireVsCodeApi(); } catch (e) { vscodeApi = null; }
   function sourceBlock(src, open) {
     var sn = src.commit ? null : snippets[srcKey(src)], url = srcUrl(src);
     var pre = sn ? h('pre', { hidden: open ? null : '' }) : null;
@@ -503,7 +506,8 @@
     if (url) action = h('a', { class: 'btn small', href: url, target: '_blank', rel: 'noopener noreferrer', text: 'Open Source' });
     else action = h('button', { class: 'btn small', type: 'button', title: 'No GitHub remote known: shows the embedded code instead', text: sn ? 'Open Source' : 'No preview', onclick: function () { if (pre) pre.hidden = !pre.hidden; } });
     if (!sn) action.disabled = !url;
-    var kids = [h('div', { class: 'src-row' }, [h('code', { text: srcLabel(src) }), action])];
+    var edit = vscodeApi && !src.commit ? h('button', { class: 'btn small', type: 'button', text: 'Open in editor', title: 'Open ' + srcLabel(src) + ' in VS Code', onclick: function () { vscodeApi.postMessage({ type: 'open', path: src.path, lines: src.lines || null }); } }) : null;
+    var kids = [h('div', { class: 'src-row' }, [h('code', { text: srcLabel(src) }), edit, action].filter(Boolean))];
     if (src.note) kids.push(h('p', { class: 'note', text: src.note }));
     if (pre) kids.push(pre);
     return h('div', { class: 'src' }, kids);
