@@ -3,6 +3,7 @@
 import * as posix from './core/posix.mjs';
 import { slug } from './core/text.mjs';
 import { matchRequests } from './core/http-core.mjs';
+import { PACKAGE_EXTS } from './core/languages.mjs';
 
 const KIND_RULES = [
   ['test', /(^|\/)(tests?|__tests__|spec)(\/|$)/i],
@@ -72,7 +73,7 @@ export function generate(scan, opts = {}) {
   }
   // In Go, Java and Kotlin the unit of architecture is the package (a directory): files in one package reference each
   // other without imports, so per-file nodes would look disconnected.
-  const isPackageLang = (p) => p.endsWith('.go') || /\.(java|kt)$/.test(p);
+  const isPackageLang = (p) => p.endsWith('.go') || PACKAGE_EXTS.has(p.slice(p.lastIndexOf('.') + 1).toLowerCase());
   // In a monorepo each workspace package is one unit, so imports between packages become edges between them.
   const wsDirs = (scan.workspaces || []).slice().sort((a, b) => b.dir.length - a.dir.length);
   const wsOf = (p) => wsDirs.find((w) => p.startsWith(w.dir + '/'));

@@ -4,9 +4,7 @@
 import { extractApiCalls, usesHttpClient } from './http-core.mjs';
 import * as posix from './posix.mjs';
 import { countLines } from './text.mjs';
-import { rustImports, buildRustContext, resolveRustImport, rustDependencies } from './lang-rust.mjs';
-import { javaImports, javaPackage, javaSymbols, buildJavaIndex, resolveJavaImport, parseJavaDeps, matchJavaDependency, hasJavaMain } from './lang-java.mjs';
-import { kotlinImports, kotlinPackage, kotlinSymbols, hasKotlinMain } from './lang-kotlin.mjs';
+import { PLUGINS, PLUGIN_BY_EXT, PLUGIN_LANG_NAMES } from './languages.mjs';
 
 export const IGNORE_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', 'out', '.next', '.nuxt', '.cache', 'coverage', 'venv', '.venv', 'env',
@@ -19,9 +17,10 @@ const LANG = {
   vue: 'Vue', svelte: 'Svelte', py: 'Python', go: 'Go', rs: 'Rust', java: 'Java', kt: 'Kotlin', rb: 'Ruby',
   php: 'PHP', cs: 'C#', c: 'C', h: 'C', cpp: 'C++', swift: 'Swift', html: 'HTML', css: 'CSS', scss: 'SCSS',
   json: 'JSON', md: 'Markdown', yml: 'YAML', yaml: 'YAML', sh: 'Shell', sql: 'SQL',
+  ...PLUGIN_LANG_NAMES,
 };
 // Files that become diagram units.
-export const UNIT_EXT = new Set(['js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'vue', 'svelte', 'py', 'go', 'rs', 'java', 'kt', 'rb', 'php', 'cs', 'html']);
+export const UNIT_EXT = new Set(['js', 'mjs', 'cjs', 'jsx', 'ts', 'tsx', 'vue', 'svelte', 'py', 'go', 'rs', 'java', 'kt', 'rb', 'php', 'cs', 'html', ...Object.keys(PLUGIN_BY_EXT)]);
 const JS_EXT = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.vue', '.svelte', '.json'];
 export const TEST_RE = /(^|\/)(tests?|__tests__|spec|e2e)(\/|$)|\.(test|spec)(-d)?\.[a-z]+$|(^|\/)test_[^/]+\.py$|_test\.go$/i;
 
@@ -147,10 +146,6 @@ function symbolsOf(text, ext) {
   } else if (ext === 'go') {
     re = /^func\s+(?:\([^)]*\)\s*)?([A-Z]\w*)/gm;
     while ((m = re.exec(text))) push(m[1], m.index);
-  } else if (ext === 'java') {
-    return javaSymbols(text);
-  } else if (ext === 'kt') {
-    return kotlinSymbols(text);
   } else if (ext === 'rs') {
     re = /^pub(?:\([^)]*\))?\s+(?:async\s+)?(?:fn|struct|enum|trait)\s+(\w+)/gm;
     while ((m = re.exec(text))) push(m[1], m.index);
@@ -318,14 +313,14 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     const raw = read(rel);
     if (raw == null) continue;
     const text = raw.replace(/\r\n/g, '\n');
+    const plugin = PLUGIN_BY_EXT[ext];
+    const parsed = plugin ? plugin.parse(text, ext) : null;
     let imports = [];
-    if (ext === 'py') imports = pyImports(text);
+    if (parsed) imports = parsed.imports;
+    else if (ext === 'py') imports = pyImports(text);
     else if (ext === 'go') imports = goImports(text);
-    else if (ext === 'java') imports = javaImports(text);
-    else if (ext === 'kt') imports = kotlinImports(text);
-    else if (ext === 'rs') imports = rustImports(text);
     else if (['js', 'jsx', 'ts', 'tsx', 'mjs', 'cjs', 'vue', 'svelte', 'html'].includes(ext)) imports = jsImports(text, ext);
-    files.push({ path: rel, lang, lines: countLines(text), isTest: TEST_RE.test(rel), doc: firstDoc(text, ext), symbols: symbolsOf(text, ext), imports, ...(['java', 'kt'].includes(ext) ? { package: ext === 'java' ? javaPackage(text) : kotlinPackage(text) } : {}), _text: text });
+    files.push({ path: rel, lang, lines: countLines(text), isTest: TEST_RE.test(rel), doc: firstDoc(text, ext), symbols: parsed && parsed.symbols ? parsed.symbols : symbolsOf(text, ext), imports, ...(parsed && parsed.package !== undefined ? { package: parsed.package } : {}), _text: text });
   }
   const fileSet = new Set(files.map((f) => f.path));
 
@@ -473,15 +468,17 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     if (!goDirs.has(d)) goDirs.set(d, f.path);
   }
 
-  // Java: an index of the repository's own types, plus dependencies declared in pom.xml / build.gradle.
-  const javaIndex = buildJavaIndex(files);
-  const javaDeps = parseJavaDeps(read, all);
-  for (const d of javaDeps) { versions[d.name] = d.version; if (!depLine[d.name]) depLine[d.name] = { file: d.file, line: d.line }; }
-  for (const file of new Set(javaDeps.map((d) => d.file))) manifests.push({ file, type: file.endsWith('pom.xml') ? 'maven' : 'gradle', dependencies: javaDeps.filter((d) => d.file === file).map((d) => d.name) });
-
-  // Rust: the crates in the repository (workspaces included) and their declared dependencies.
-  const rustCtx = buildRustContext(all, read);
-  for (const d of rustDependencies(rustCtx)) { if (d.version) versions[d.name] = d.version; if (!depLine[d.name]) depLine[d.name] = { file: d.file, line: d.line }; }
+  // Language plug-ins: each builds its index once (types, crates, packages ...) and reports the dependencies it found.
+  const langState = new Map();
+  const pluginWorkspaces = [];
+  for (const pl of PLUGINS) {
+    if (!files.some((f) => PLUGIN_BY_EXT[extOf(f.path)] === pl) && !pl.alwaysPrepare) { langState.set(pl.name, null); continue; }
+    const p = pl.prepare({ files, allPaths: all, read }) || {};
+    langState.set(pl.name, p.state);
+    for (const d of p.deps || []) { if (d.version) versions[d.name] = d.version; if (!depLine[d.name]) depLine[d.name] = { file: d.file, line: d.line }; }
+    manifests.push(...(p.manifests || []));
+    pluginWorkspaces.push(...(p.workspaces || []));
+  }
 
   const externals = {};
   const noteExternal = (name, file, line) => {
@@ -501,19 +498,15 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
           const top = imp.spec.split('.')[0].toLowerCase();
           if (top && depNames.has(top)) noteExternal(top, f.path, imp.line);
         }
-      } else if (ext === 'rs') {
-        const r = resolveRustImport(imp, rustCtx, f.path);
-        if (r.file) resolved = r.file;
-        else if (r.external) noteExternal(r.external, f.path, imp.line);
-      } else if (ext === 'java' || ext === 'kt') {
-        const hits = resolveJavaImport(imp, javaIndex, f.path);
+      } else if (PLUGIN_BY_EXT[ext]) {
+        const pl = PLUGIN_BY_EXT[ext];
+        const r = pl.resolve(imp, langState.get(pl.name), f) || {};
+        const hits = (r.files || []).filter((p) => fileSet.has(p));
         if (hits.length) {
           resolved = hits[0];
+          // a package or wildcard import can resolve to several files
           extraImports.push(...hits.slice(1).map((p) => ({ spec: imp.spec, line: imp.line, names: [], resolved: p })));
-        } else {
-          const dep = matchJavaDependency(imp.spec, javaDeps);
-          if (dep) noteExternal(dep.name, f.path, imp.line);
-        }
+        } else if (r.external) noteExternal(r.external, f.path, imp.line);
       } else if (ext === 'go') {
         if (goModule && imp.spec.startsWith(goModule)) {
           const d = imp.spec.slice(goModule.length).replace(/^\//, '');
@@ -531,7 +524,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
       }
       imp.resolved = resolved;
       imp.spec = String(imp.spec);
-      delete imp.py; delete imp.go; delete imp.java; delete imp.rust;
+      delete imp.py; delete imp.go; delete imp.java; delete imp.rust; delete imp._;
     }
     f.imports.push(...extraImports);
   }
@@ -559,9 +552,10 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
   const conventional = /(^|\/)(main|index|app|server|cli|__main__|manage|wsgi|asgi)\.(m?js|cjs|jsx|ts|tsx|py|go|rs|java)$/;
   files.filter((f) => !f.isTest && inBase(f.path) && relBase(f.path).split('/').length <= 3 && conventional.test(f.path)).forEach((f) => addEntry(f.path, 'conventional entry filename'));
   files.filter((f) => f.path.endsWith('.go') && /^package main\b/m.test(f._text)).forEach((f) => addEntry(f.path, 'Go package main'));
-  files.filter((f) => /(^|\/)src\/main\.rs$/.test(f.path) && !f.isTest).forEach((f) => addEntry(f.path, 'Rust binary crate (main.rs)'));
-  files.filter((f) => f.path.endsWith('.java') && !f.isTest && hasJavaMain(f._text)).forEach((f) => addEntry(f.path, 'Java main method or Spring Boot application'));
-  files.filter((f) => f.path.endsWith('.kt') && !f.isTest && hasKotlinMain(f._text)).forEach((f) => addEntry(f.path, 'Kotlin main function'));
+  for (const pl of PLUGINS) {
+    if (!pl.entry || langState.get(pl.name) === null) continue; // null: no file of this language in the scan
+    for (const f of files) if (PLUGIN_BY_EXT[extOf(f.path)] === pl && !f.isTest) { const why = pl.entry(f, langState.get(pl.name)); if (why) addEntry(f.path, why); }
+  }
   if (!entryPoints.length) {
     // Libraries have no main(): use the package's public entry (shallowest __init__.py, most imports).
     const init = files
@@ -570,8 +564,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     if (init) addEntry(init.path, 'Python package __init__.py (public API)');
   }
   if (!entryPoints.length) {
-    const lib = files.filter((f) => /(^|\/)src\/lib\.rs$/.test(f.path) && !f.isTest).sort((a, b) => a.path.split('/').length - b.path.split('/').length)[0];
-    if (lib) addEntry(lib.path, 'Rust library crate root (lib.rs)');
+    for (const pl of PLUGINS) for (const e of (pl.entryFallback ? pl.entryFallback(files, langState.get(pl.name)) : [])) addEntry(e.path, e.reason);
   }
 
   // ---- routes & api calls ----
@@ -645,7 +638,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     stats: { files: all.length, sourceFiles: files.length, languages: langCount, topDirs },
     manifests,
     workspaces: (() => {
-      for (const c of rustCtx.crates) if (c.dir && !workspaces.some((w) => w.dir === c.dir)) workspaces.push({ name: c.name, dir: c.dir, kind: 'cargo', manifest: c.file });
+      for (const w of pluginWorkspaces) if (!workspaces.some((x) => x.dir === w.dir)) workspaces.push(w);
       return workspaces.length >= 2 ? workspaces.map(({ name, dir, kind }) => ({ name, dir, kind })).sort((a, b) => a.dir.localeCompare(b.dir)) : [];
     })(),
     entryPoints,

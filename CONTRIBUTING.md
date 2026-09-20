@@ -38,7 +38,7 @@ node skills/repo-architecture/scripts/gitvisualise.mjs serve <some-repo> --out .
 
 | I want to... | Edit |
 |---|---|
-| Support a new language's imports | `scripts/lib/core/scan-core.mjs` (parser + resolver) |
+| Support a new language's imports | a new `scripts/lib/core/lang-xxx.mjs` plug-in, registered in `scripts/lib/core/languages.mjs` |
 | Change how the baseline diagram is drawn up | `scripts/lib/generate.mjs` |
 | Add a validation rule | `scripts/lib/core/validate-core.mjs` (+ a test) |
 | Change what the site looks like or how it plays | `viewer/viewer.js`, `viewer/viewer.css`, `viewer/index.template.html` |
@@ -52,12 +52,28 @@ node skills/repo-architecture/scripts/gitvisualise.mjs serve <some-repo> --out .
 
 ### Adding a language (the most useful contribution)
 
-1. In `core/scan-core.mjs`, add the extension to `UNIT_EXT` and `LANG`.
-2. Write `xxxImports(text)` returning `[{ spec, line, names }]`, using the same shape as `jsImports`/`pyImports`.
-3. Resolve each `spec` to a file that exists in the repo (see `resolveJs` / `resolvePy`); set `imp.resolved` or note an
-   external dependency with `noteExternal`. **Unresolvable imports must be dropped, not guessed.**
-4. Add a test in `test/gitvisualise.test.mjs` with a tiny fixture repo.
-5. Try it on a couple of real public repos.
+A language is one plug-in: a plain object in its own file, registered with one line. The scanner does not know anything else about it.
+Read the contract at the top of [`core/languages.mjs`](skills/repo-architecture/scripts/lib/core/languages.mjs); the short version:
+
+```js
+export const swift = {
+  name: 'swift',
+  exts: ['swift'],
+  langNames: { swift: 'Swift' },
+  packageUnit: false,                     // true when a directory/package is the natural diagram unit (Go, Java, C#)
+  parse(text, ext) { return { imports: [{ spec, line, names }], package, symbols }; },
+  prepare({ files, allPaths, read }) { return { state, deps, manifests, workspaces }; },   // build an index ONCE
+  resolve(imp, state, file) { return { files: ['path/that/exists.swift'] }; },            // or { external: 'name' } or {}
+  entry(file, state) { return file.path.endsWith('main.swift') ? 'Swift entry file' : null; },
+};
+```
+
+1. Write `lang-xxx.mjs` exporting the plug-in (copy `lang-rust.mjs` or `lang-java.mjs` as a starting point). Keep it free of Node APIs: the website runs it in the browser.
+2. Add it to `PLUGINS` in `core/languages.mjs`. The extension, language name and package grouping are picked up automatically.
+3. **Unresolvable imports must be dropped, not guessed.** `resolve` may only return files that exist in the repository, and an `external` only when a manifest declares that dependency.
+4. Add fixture tests to `test/languages.test.mjs` (a tiny throwaway repo per case, including one import that must stay unresolved). `test/plugins.test.mjs` already checks the contract for every registered plug-in.
+5. If the language has a manifest (`Gemfile`, `pubspec.yaml`, ...), add its name to `MANIFEST_RE` in `scripts/lib/web/github-loader.mjs` so the website downloads it.
+6. Try it on a couple of real public repositories, and add a row to the README's language table.
 
 ## Tests
 
