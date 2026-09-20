@@ -21,6 +21,20 @@ jobs:
           node-version: ${{ matrix.node }}
       - run: npm test
 
+  # A real browser: the website analyses a (fake) GitHub repository and the tour must actually be on screen. Unit tests cannot
+  # see this class of bug (1.0.0 shipped a blank frame). Needs Node 22 for the global WebSocket and the runner's Chrome.
+  browser-smoke:
+    name: Browser smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm run e2e
+        env:
+          GV_REQUIRE_CHROME: '1'
+
   # The website in docs/ is assembled from site/ and the shared core. It must be rebuilt and committed
   # whenever those change (run `npm run site`), otherwise the live site would lag behind the code.
   site-in-sync:

@@ -80,6 +80,9 @@ export const swift = {
 `npm test` uses the built-in `node:test`. New behavior needs a test; bug fixes need a regression test. Fixtures are
 created in a temp directory inside the test, not committed.
 
+`npm run e2e` is a real-browser smoke test of the website (headless Chrome, a fake GitHub, no dependencies; needs Node 22 and Chrome or
+Chromium, and `npm run site` first). CI runs it as its own job. It skips itself when Chrome is missing unless `GV_REQUIRE_CHROME=1`.
+
 For viewer changes, please also check by hand in a browser: desktop and phone width, play/pause/next/prev/restart,
 keyboard, dark mode, and `prefers-reduced-motion`. Mention what you checked in the PR.
 
