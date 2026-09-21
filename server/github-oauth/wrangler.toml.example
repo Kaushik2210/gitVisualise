@@ -1,10 +1,7 @@
-# Copy to wrangler.toml, then: npx wrangler secret put GITHUB_CLIENT_SECRET && npx wrangler deploy
 name = "gitvisualise-oauth"
 main = "worker.mjs"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-09-21"
 
 [vars]
 GITHUB_CLIENT_ID = "Iv1.replace-me"
-# Comma-separated origins allowed to call this function (and to be used as redirect targets).
 ALLOWED_ORIGINS = "https://kaushik2210.github.io"
-# GITHUB_CLIENT_SECRET is a secret, not a var: set it with `wrangler secret put`.
