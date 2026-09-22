@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-09-22T10:22:57.475Z",
+    "generatedAt": "2026-09-22T18:02:40.729Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -3183,7 +3183,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 101 lines.",
+          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 102 lines.",
           "sources": [
             {
               "path": "site/index.html"

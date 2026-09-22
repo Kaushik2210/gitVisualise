@@ -66,3 +66,44 @@ test('lanes: collapsible swimlanes are keyboard-operable buttons with state, and
   assert.match(css, /\.lane-hidden \{ display: none; \}/);
   assert.match(css, /\.lane-chip\.active rect\.box/);
 });
+
+// ---- colour-blind-safe palette (#45) ----
+test('palette: a toggle exists, is remembered, and drives kindColor away from the hash-of-hue default', () => {
+  assert.match(html, /id="palette-btn"/);
+  assert.match(js, /var SAFE_COLORS = \[/);
+  assert.match(js, /var PALETTES = \['default', 'cb'\]/);
+  assert.match(js, /store\('palette'\)/);
+  assert.match(js, /document\.documentElement\.classList\.toggle\('cb-palette'/);
+  assert.match(js, /if \(palette === 'cb'\) \{/, 'kindColor branches on the active palette');
+});
+
+test('palette: the safe palette is the real Okabe-Ito set, and every colour is a distinct hex value', () => {
+  const m = /var SAFE_COLORS = \[([^\]]+)\]/.exec(js);
+  assert.ok(m, 'SAFE_COLORS not found');
+  const colors = [...m[1].matchAll(/#[0-9a-fA-F]{6}/g)].map((x) => x[0].toUpperCase());
+  assert.ok(colors.length >= 6, 'expected a real categorical palette, not two or three colours');
+  assert.equal(new Set(colors).size, colors.length, 'two kinds sharing a colour defeats the point');
+});
+
+test('palette: diff states get their own dash pattern too, not just a colour, so they read in greyscale', () => {
+  assert.match(css, /\.node\.d-added rect\.box \{ stroke: var\(--d-added\); stroke-width: 3; \}/, 'added stays solid');
+  assert.match(css, /\.node\.d-changed rect\.box \{[^}]*stroke-dasharray: 2 3;/, 'changed is dotted');
+  assert.match(css, /\.node\.d-removed rect\.box \{[^}]*stroke-dasharray: 6 4;/, 'removed is dashed');
+  assert.match(css, /\.edge\.d-changed:not\(\.active\):not\(\.selected\) path\.line \{[^}]*stroke-dasharray: 2 4;/);
+  assert.match(js, /var k = h\('i', \{ class: 'diff-key d-' \+ d, text: DIFF_MARK\[d\] \}\)/, 'the legend swatch also carries the +/−/~ mark');
+});
+
+test('palette: cb-palette diff colours meet 3:1 (WCAG non-text contrast) against every panel/background token in both themes', () => {
+  const cb = tokens(':root.cb-palette {');
+  assert.ok(cb['d-added'] && cb['d-removed'] && cb['d-changed'], 'cb-palette overrides all three diff tokens');
+  assert.equal(new Set(Object.values(cb)).size, 3, 'added/removed/changed must be three different colours');
+  const light = tokens(':root {'), dark = tokens(':root[data-theme="dark"] {');
+  for (const [theme, t] of [['light', light], ['dark', dark]]) {
+    for (const bg of ['panel', 'bg', 'node-bg']) {
+      for (const key of ['d-added', 'd-removed', 'd-changed']) {
+        const r = ratio(cb[key], t[bg]);
+        assert.ok(r >= 3, `${theme}: ${key} ${cb[key]} on ${bg} ${t[bg]} is ${r.toFixed(2)}:1, needs 3:1`);
+      }
+    }
+  }
+});

@@ -151,20 +151,24 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
   .step-count { flex-basis: 100%; order: 9; }
 }
 
-/* architecture diff: components and relationships marked added / removed / changed */
+/* architecture diff: components and relationships marked added / removed / changed.
+   Each state also gets its own dash pattern (solid / dotted / dashed) and, on nodes, the
+   +/−/~ mark already in the sub-label — so the three stay distinguishable in greyscale
+   or for anyone who can't tell the colours apart, not only by hue. */
 :root { --d-added: #2ea043; --d-removed: #f85149; --d-changed: #d29922; }
+:root.cb-palette { --d-added: #0072B2; --d-removed: #D55E00; --d-changed: #009E73; }
 .node.d-added rect.box { stroke: var(--d-added); stroke-width: 3; }
-.node.d-changed rect.box { stroke: var(--d-changed); stroke-width: 3; }
+.node.d-changed rect.box { stroke: var(--d-changed); stroke-width: 3; stroke-dasharray: 2 3; }
 .node.d-removed rect.box { stroke: var(--d-removed); stroke-width: 2.5; stroke-dasharray: 6 4; }
 .node.d-removed .lbl { text-decoration: line-through; }
 .node.d-removed rect.bar { fill: var(--d-removed); }
 .edge.d-added:not(.active):not(.selected) path.line { stroke: var(--d-added); stroke-width: 2.5; stroke-dasharray: none; }
-.edge.d-changed:not(.active):not(.selected) path.line { stroke: var(--d-changed); stroke-width: 2.5; stroke-dasharray: none; }
+.edge.d-changed:not(.active):not(.selected) path.line { stroke: var(--d-changed); stroke-width: 2.5; stroke-dasharray: 2 4; }
 .edge.d-removed:not(.active):not(.selected) path.line { stroke: var(--d-removed); stroke-dasharray: 6 4; }
-.legend .diff-key { background: none; border: 2px solid var(--kc); width: 10px; height: 10px; box-sizing: border-box; }
+.legend .diff-key { background: none; border: 2px solid var(--kc); width: 10px; height: 10px; box-sizing: border-box; font-size: 8px; line-height: 8px; text-align: center; font-weight: 800; color: var(--kc); }
 .legend .diff-key.d-added { --kc: var(--d-added); }
 .legend .diff-key.d-removed { --kc: var(--d-removed); border-style: dashed; }
-.legend .diff-key.d-changed { --kc: var(--d-changed); }
+.legend .diff-key.d-changed { --kc: var(--d-changed); border-style: dotted; }
 .diff-note b { color: var(--kc); }
 .diff-note.d-added { --kc: var(--d-added); }
 .diff-note.d-removed { --kc: var(--d-removed); }

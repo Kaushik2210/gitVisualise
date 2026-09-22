@@ -43,8 +43,20 @@
 
   // ---------- kinds -> colours ----------
   var HUES = { entry: 152, ui: 265, api: 24, service: 200, data: 340, util: 175, config: 45, module: 215, test: 95 };
+  // The Okabe-Ito categorical palette: chosen so every pair stays distinguishable under protanopia,
+  // deuteranopia and tritanopia (unlike the hash-of-hue default, which can put two kinds at hues that
+  // read as the same colour to red-green colour blindness).
+  var SAFE_COLORS = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#D55E00', '#56B4E9', '#F0E442', '#8C8C8C'];
+  var SAFE_ORDER = ['entry', 'ui', 'api', 'service', 'data', 'util', 'config', 'module', 'test'];
+  var PALETTES = ['default', 'cb'];
+  var palette = PALETTES.indexOf(store('palette')) >= 0 ? store('palette') : 'default';
   function kindColor(kind) {
-    if (kind === 'external') return 'hsl(220 10% 52%)';
+    if (kind === 'external') return 'hsl(220 10% 52%)'; // achromatic grey reads the same in every palette
+    if (palette === 'cb') {
+      var idx = SAFE_ORDER.indexOf(kind);
+      if (idx < 0) { idx = 0; for (var j = 0; j < kind.length; j++) idx = (idx * 31 + kind.charCodeAt(j)) % SAFE_COLORS.length; }
+      return SAFE_COLORS[idx % SAFE_COLORS.length];
+    }
     var hue = HUES[kind];
     if (hue == null) { hue = 0; for (var i = 0; i < kind.length; i++) hue = (hue * 31 + kind.charCodeAt(i)) % 360; }
     return 'hsl(' + hue + ' var(--ks) var(--kl))';
@@ -263,7 +275,7 @@
     });
     ['added', 'removed', 'changed'].forEach(function (d) {
       if (!nodes.some(function (n) { return n.diff === d; }) && !edges.some(function (e) { return e.diff === d; })) return;
-      var k = h('i', { class: 'diff-key d-' + d });
+      var k = h('i', { class: 'diff-key d-' + d, text: DIFF_MARK[d] });
       legend.appendChild(h('span', {}, [k, document.createTextNode(d)]));
     });
     if (edges.some(function (e) { return e.kind === 'http'; })) {
@@ -791,6 +803,21 @@
     if (e.data.gvGoto && typeof e.data.gvGoto === 'object') gotoState(e.data.gvGoto);
   });
   applyTheme(store('theme') || 'auto', true);
+
+  // ---------- colour-blind-safe palette ----------
+  var PALETTE_LABEL = { default: '● Colours', cb: '● Colours: CB-safe' };
+  function applyPalette(p, initial) {
+    if (PALETTES.indexOf(p) < 0) return;
+    palette = p;
+    document.documentElement.classList.toggle('cb-palette', p === 'cb');
+    var b = $('palette-btn');
+    b.textContent = PALETTE_LABEL[p];
+    b.setAttribute('aria-pressed', p === 'cb' ? 'true' : 'false');
+    b.setAttribute('aria-label', 'Colour palette: ' + (p === 'cb' ? 'colour-blind safe' : 'default') + '. Click to change.');
+    if (!initial) { store('palette', p); render(); applyState(); runSearch(); }
+  }
+  $('palette-btn').addEventListener('click', function () { applyPalette(palette === 'cb' ? 'default' : 'cb'); });
+  applyPalette(palette, true);
 
   // ---------- keyboard shortcuts overlay ----------
   // The single source of truth for what the global key handler below actually does.
