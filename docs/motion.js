@@ -32,6 +32,11 @@ async function init() {
   languageMarquee(gsap);
   scrollProgress(gsap, stMod.ScrollTrigger);
   starCount(anime);
+  customCursor(gsap);
+  typewriterPlaceholder(gsap);
+  decryptKickers(stMod.ScrollTrigger);
+  gradientBlobs(gsap);
+  stepsProgress(gsap, stMod.ScrollTrigger);
   heroGraph(); // three.js; independent so a WebGL failure here doesn't cancel the rest
 }
 
@@ -277,6 +282,109 @@ function formatStars(n) {
   return n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(n);
 }
 
+// ---------- trailing ring cursor (desktop / mouse only) ----------
+function customCursor(gsap) {
+  if (matchMedia('(pointer: coarse)').matches) return;
+  const ring = document.createElement('div');
+  ring.className = 'cursor-ring';
+  ring.setAttribute('aria-hidden', 'true');
+  document.body.append(ring);
+  const x = gsap.quickTo(ring, 'x', { duration: 0.35, ease: 'power3.out' });
+  const y = gsap.quickTo(ring, 'y', { duration: 0.35, ease: 'power3.out' });
+  window.addEventListener('mousemove', (e) => {
+    x(e.clientX);
+    y(e.clientY);
+    gsap.to(ring, { opacity: 1, duration: 0.2 });
+  });
+  document.addEventListener('mouseleave', () => gsap.to(ring, { opacity: 0, duration: 0.3 }));
+  const big = 'a, button, .chip, .gcard, input, textarea, summary';
+  document.addEventListener('mouseover', (e) => { if (e.target.closest(big)) ring.classList.add('big'); });
+  document.addEventListener('mouseout', (e) => { if (e.target.closest(big)) ring.classList.remove('big'); });
+}
+
+// ---------- typewriter placeholder cycling through example repos ----------
+function typewriterPlaceholder(gsap) {
+  const input = document.getElementById('repo');
+  if (!input) return;
+  const words = ['github.com/tj/commander.js', 'github.com/psf/requests', 'github.com/expressjs/express', 'owner/repo — try your own'];
+  let stopped = false;
+  const stop = () => { stopped = true; input.placeholder = 'github.com/owner/repo  or  owner/repo'; };
+  input.addEventListener('focus', stop, { once: true });
+  input.addEventListener('input', stop, { once: true });
+
+  let w = 0;
+  const type = async () => {
+    if (stopped) return;
+    const word = words[w % words.length];
+    for (let i = 1; i <= word.length && !stopped; i++) { input.placeholder = word.slice(0, i); await wait(28); }
+    await wait(1300);
+    for (let i = word.length; i >= 0 && !stopped; i--) { input.placeholder = word.slice(0, i); await wait(16); }
+    await wait(300);
+    w++;
+    if (!stopped) type();
+  };
+  setTimeout(type, 1800);
+}
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// ---------- decrypt/scramble-in effect for section kickers ----------
+function decryptKickers(ScrollTrigger) {
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  for (const el of document.querySelectorAll('.kicker')) {
+    const final = el.textContent;
+    ScrollTrigger.create({
+      trigger: el,
+      start: 'top 92%',
+      once: true,
+      onEnter: () => scramble(el, final, CHARS),
+    });
+  }
+}
+function scramble(el, final, CHARS) {
+  let frame = 0;
+  const totalFrames = 18;
+  const timer = setInterval(() => {
+    frame++;
+    const reveal = Math.floor((frame / totalFrames) * final.length);
+    let out = final.slice(0, reveal);
+    for (let i = reveal; i < final.length; i++) out += final[i] === ' ' ? ' ' : CHARS[(Math.random() * CHARS.length) | 0];
+    el.textContent = out;
+    if (frame >= totalFrames) { el.textContent = final; clearInterval(timer); }
+  }, 28);
+}
+
+// ---------- drifting gradient mesh blobs behind the CTA ----------
+function gradientBlobs(gsap) {
+  const cta = document.querySelector('.cta');
+  if (!cta) return;
+  cta.style.position = 'relative';
+  cta.style.overflow = 'hidden';
+  const specs = [
+    { cls: 'blob blob-a', from: { x: '-10%', y: '-20%' }, to: { x: '18%', y: '10%' } },
+    { cls: 'blob blob-b', from: { x: '70%', y: '60%' }, to: { x: '50%', y: '20%' } },
+  ];
+  for (const s of specs) {
+    const b = document.createElement('div');
+    b.className = s.cls;
+    cta.prepend(b);
+    gsap.fromTo(b, s.from, { ...s.to, duration: 14, ease: 'sine.inOut', repeat: -1, yoyo: true });
+  }
+}
+
+// ---------- scroll-linked progress line under "How it works" ----------
+function stepsProgress(gsap, ScrollTrigger) {
+  const list = document.querySelector('.steps3');
+  if (!list) return;
+  const fill = document.createElement('div');
+  fill.className = 'steps-fill';
+  list.prepend(fill);
+  gsap.fromTo(fill, { scaleX: 0 }, {
+    scaleX: 1,
+    ease: 'none',
+    scrollTrigger: { trigger: list, start: 'top 75%', end: 'bottom 60%', scrub: 0.4 },
+  });
+}
+
 // ---------- nav bar tightens on scroll ----------
 function navShrink(ScrollTrigger) {
   const nav = document.querySelector('.nav');
@@ -299,7 +407,7 @@ async function heroGraph() {
   canvas.setAttribute('aria-hidden', 'true');
   hero.prepend(canvas);
 
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
@@ -356,6 +464,21 @@ async function heroGraph() {
   let visible = true;
   new IntersectionObserver((entries) => { visible = entries[0]?.isIntersecting !== false; }, { threshold: 0 }).observe(hero);
 
+  // The cursor is tracked in the same world plane as the nodes (z=0) so it can repel them and
+  // join the line network, without needing a real raycast against the (invisible) points mesh.
+  const mouseWorld = new THREE.Vector3(9999, 9999, 0);
+  let mouseActive = false;
+  hero.addEventListener('mousemove', (e) => {
+    const r = hero.getBoundingClientRect();
+    const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
+    const ny = -(((e.clientY - r.top) / r.height) * 2 - 1);
+    mouseWorld.set(nx * 17, ny * 8, 0);
+    mouseActive = true;
+  });
+  hero.addEventListener('mouseleave', () => { mouseActive = false; mouseWorld.set(9999, 9999, 0); });
+
+  const REPEL_RADIUS = 6.5;
+  const tmp = new THREE.Vector3();
   function tick() {
     raf = requestAnimationFrame(tick);
     if (!visible) return;
@@ -364,6 +487,11 @@ async function heroGraph() {
       if (Math.abs(n.pos.x) > 17) n.vel.x *= -1;
       if (Math.abs(n.pos.y) > 8) n.vel.y *= -1;
       if (Math.abs(n.pos.z) > 5) n.vel.z *= -1;
+      if (mouseActive) {
+        tmp.copy(n.pos).sub(mouseWorld);
+        const d = tmp.length();
+        if (d < REPEL_RADIUS && d > 0.001) n.pos.addScaledVector(tmp, ((REPEL_RADIUS - d) / d) * 0.05);
+      }
     }
     const posAttr = pointGeo.getAttribute('position');
     nodes.forEach((n, i) => posAttr.setXYZ(i, n.pos.x, n.pos.y, n.pos.z));
@@ -378,6 +506,12 @@ async function heroGraph() {
           lp.setXYZ(seg * 2 + 1, nodes[j].pos.x, nodes[j].pos.y, nodes[j].pos.z);
           seg++;
         }
+      }
+      if (mouseActive && seg < MAX_LINES && nodes[i].pos.distanceTo(mouseWorld) < LINK_DIST) {
+        const lp = lineGeo.getAttribute('position');
+        lp.setXYZ(seg * 2, nodes[i].pos.x, nodes[i].pos.y, nodes[i].pos.z);
+        lp.setXYZ(seg * 2 + 1, mouseWorld.x, mouseWorld.y, mouseWorld.z);
+        seg++;
       }
     }
     lineGeo.setDrawRange(0, seg * 2);

@@ -331,7 +331,22 @@ pre code { white-space: pre-wrap; }
 /* live star count badge */
 .star-count { margin-left: 6px; padding: 1px 7px; border-radius: 99px; font-size: 11.5px; font-weight: 700; background: color-mix(in srgb, var(--accent) 18%, transparent); }
 
+/* trailing ring cursor */
+.cursor-ring { position: fixed; top: 0; left: 0; width: 26px; height: 26px; margin: -13px; border-radius: 50%; border: 1.5px solid var(--accent); opacity: 0; pointer-events: none; z-index: 9999; transition: width .2s, height .2s, margin .2s, background-color .2s; }
+.cursor-ring.big { width: 50px; height: 50px; margin: -25px; background: color-mix(in srgb, var(--accent) 14%, transparent); }
+@media (pointer: coarse) { .cursor-ring { display: none; } }
+
+/* gradient mesh blobs behind the CTA */
+.blob { position: absolute; width: 46%; padding-top: 46%; border-radius: 50%; filter: blur(60px); pointer-events: none; z-index: 0; }
+.blob-a { background: var(--glow-a); }
+.blob-b { background: var(--glow-b); }
+.cta > :not(.blob) { position: relative; z-index: 1; }
+
+/* "How it works" scroll-linked progress line */
+.steps3 { padding-top: 10px; }
+.steps-fill { position: absolute; top: 0; left: 0; right: 0; height: 3px; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, var(--g1), var(--g2), var(--g3)); border-radius: 3px; }
+
 @media (prefers-reduced-motion: reduce) {
-  .hero-graph, .cursor-glow, .scroll-progress { display: none; }
+  .hero-graph, .cursor-glow, .scroll-progress, .cursor-ring, .blob { display: none; }
   .grad { animation: none; }
 }
