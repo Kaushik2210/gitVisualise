@@ -221,11 +221,19 @@ node skills/repo-architecture/scripts/gitvisualise.mjs all https://github.com/tj
 > [!TIP]
 > Run `npm link` once and use `gitvisualise all .` from anywhere.
 
+Publishing one to your own repo is normally generate, commit, add a workflow, add a badge — four steps across the
+[publishing guide](guides/publish-your-tour.md). `init` does all four in one command: it never overwrites a file that
+already exists, and `--dry-run` shows exactly what it would write first.
+
+```bash
+gitvisualise init /path/to/your/repo   # tour + .github/workflows/architecture.yml (if missing) + README badge
+```
+
 ```
 gitvisualise <command> [repo] [options]
-  scan | generate | validate | build | all | serve | watch | diff | export | install-skill
+  scan | generate | validate | build | all | init | serve | watch | diff | export | install-skill
   --out <dir>   --ref <ref>   --path <dir>   --repo-url <url>   --max-nodes <n>
-  --ignore a,b  --include tests,examples,tooling   --no-pin   --force   --port <n>
+  --ignore a,b  --include tests,examples,tooling   --no-pin   --force   --port <n>   --dry-run
 ```
 
 Four more things worth knowing:

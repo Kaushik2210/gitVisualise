@@ -5,7 +5,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs, readJSON, writeJSON, toPosix } from './lib/util.mjs';
+import { parseArgs, readJSON, writeJSON, toPosix, git, githubUrl } from './lib/util.mjs';
 import { scanRepo } from './lib/scan.mjs';
 import { generate } from './lib/generate.mjs';
 import { mergeArchitecture } from './lib/merge.mjs';
@@ -15,6 +15,8 @@ import { diffArchitectures } from './lib/core/diff-core.mjs';
 import { EXPORT_FORMATS } from './lib/core/export-core.mjs';
 import { classifyChange, debounce } from './lib/watch.mjs';
 import { parseTarget, ensureClone } from './lib/github.mjs';
+import { parseRepoInput } from './lib/web/github-loader.mjs';
+import { badgeMarkdown } from './lib/web/route.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.resolve(HERE, '..');
@@ -30,6 +32,7 @@ Commands
   validate   Check architecture.json against the real repo (sources exist, lines in range, flows reference real nodes)
   build      Validate, then write index.html + viewer files next to architecture.json
   all        generate + validate + build
+  init       all, plus a GitHub Action workflow (if missing) and the README badge Markdown — the fastest way to publish a tour
   serve      Serve the output folder locally (default http://localhost:4173)
   diff       Compare two architecture.json files (older, newer): marks components and relationships added / removed / changed
   watch      generate + build once, then again whenever a source file changes (add --serve to preview it)
@@ -52,6 +55,7 @@ Options
   --port <n>         Port for serve
   --serve            watch: also serve the output folder
   --debounce <ms>    watch: wait this long after the last change before rebuilding (default 400)
+  --dry-run          init: print what would happen without writing anything
 `;
 
 function resolveContext(positional, flags) {
@@ -120,6 +124,73 @@ function doBuild(ctx, flags) {
   if (p.repoUrl && p.commit) console.log(`note: "Open Source" links point at GitHub commit ${p.commit.slice(0, 7)}. Push that commit, or they will 404.` + (p.dirty ? ' The working tree had uncommitted changes when scanned, so line numbers may not match GitHub.' : ''));
   const b = build({ arch: r.arch, root: ctx.root, outDir: ctx.outDir, viewerDir: VIEWER_DIR });
   console.log(`Built ${path.join(ctx.outDir, 'index.html')} (${b.snippets} code snippets embedded).`);
+}
+
+// Exactly the snippet in guides/publish-your-tour.md, so the two never drift apart (test/init.test.mjs checks that literally).
+const WORKFLOW_YAML = `name: Architecture tour
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kaushik2210/gitVisualise@main
+        with:
+          out: docs/architecture
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/architecture
+      - id: deployment
+        uses: actions/deploy-pages@v4
+`;
+
+/** The GitHub target for the badge: the URL passed in, or (for a local folder) its "origin" remote. */
+function repoTarget(ctx) {
+  const url = ctx.repoUrl || githubUrl(git(ctx.root, ['remote', 'get-url', 'origin']));
+  if (!url) return null;
+  const t = parseRepoInput(url);
+  if (!t) return null;
+  if (ctx.subPath) t.path = ctx.subPath;
+  return t;
+}
+
+function doInit(ctx, flags) {
+  const dryRun = !!flags['dry-run'];
+  console.log(`Setting up gitvisualise for ${ctx.root}${dryRun ? ' (dry run: nothing will be written)' : ''}\n`);
+
+  console.log(dryRun ? `Would generate and build the tour at ${archFile(ctx)}.` : '1. Generating the tour...');
+  if (!dryRun) { doGenerate(ctx, flags); doBuild(ctx, flags); }
+
+  const wfPath = path.join(ctx.root, '.github', 'workflows', 'architecture.yml');
+  const wfRel = toPosix(path.relative(ctx.root, wfPath));
+  console.log(`\n2. GitHub Action (${wfRel})`);
+  if (fs.existsSync(wfPath)) {
+    console.log(`   Already exists — left untouched. Delete it first if you want the current template.`);
+  } else if (dryRun) {
+    console.log(`   Would write it (regenerates the tour and publishes it to GitHub Pages on every push to main).`);
+  } else {
+    fs.mkdirSync(path.dirname(wfPath), { recursive: true });
+    fs.writeFileSync(wfPath, WORKFLOW_YAML);
+    console.log(`   Wrote it. Enable Settings → Pages → Source: GitHub Actions, then push.`);
+  }
+
+  console.log(`\n3. README badge`);
+  const t = repoTarget(ctx);
+  if (t) console.log(`   ${badgeMarkdown(t)}`);
+  else console.log(`   Could not tell which GitHub repository this is (no "origin" remote and no --repo-url). Pass --repo-url to get a badge.`);
+
+  if (dryRun) console.log(`\nNext: run without --dry-run, then commit, push, and (if you added the Action) enable Settings → Pages → Source: GitHub Actions.`);
+  else console.log(`\nNext: commit ${toPosix(path.relative(ctx.root, ctx.outDir))}${fs.existsSync(wfPath) ? ' and .github/workflows/architecture.yml' : ''}, push, and enable GitHub Pages if you added the Action.`);
 }
 
 function doExport(positional, flags) {
@@ -271,6 +342,7 @@ try {
     else if (cmd === 'validate') { if (doValidate(ctx).errors.length) process.exitCode = 1; }
     else if (cmd === 'build') doBuild(ctx, flags);
     else if (cmd === 'all') { doGenerate(ctx, flags); doBuild(ctx, flags); }
+    else if (cmd === 'init') doInit(ctx, flags);
     else if (cmd === 'serve') serve(ctx.outDir, Number(flags.port) || 4173);
     else if (cmd === 'watch') doWatch(ctx, flags);
     else { console.log(`Unknown command "${cmd}"\n`); console.log(HELP); process.exitCode = 1; }

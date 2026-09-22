@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-09-22T10:11:48.544Z",
+    "generatedAt": "2026-09-22T10:22:57.475Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -1116,8 +1116,8 @@
       "to": "util-mjs",
       "kind": "imports",
       "origin": "auto",
-      "label": "parseArgs, readJSON, writeJSON and 1 more",
-      "summary": "1 import (parseArgs, readJSON, writeJSON, toPosix).",
+      "label": "parseArgs, readJSON, writeJSON and 3 more",
+      "summary": "1 import (parseArgs, readJSON, writeJSON, toPosix, git, githubUrl).",
       "sources": [
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
@@ -2517,6 +2517,42 @@
           "lines": [
             10,
             10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-gitvisualise-mjs--github-loader-mjs",
+      "from": "gitvisualise-mjs",
+      "to": "github-loader-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "parseRepoInput",
+      "summary": "1 import (parseRepoInput).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
+          "lines": [
+            18,
+            18
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-gitvisualise-mjs--route-mjs",
+      "from": "gitvisualise-mjs",
+      "to": "route-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "badgeMarkdown",
+      "summary": "1 import (badgeMarkdown).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
+          "lines": [
+            19,
+            19
           ]
         }
       ]
