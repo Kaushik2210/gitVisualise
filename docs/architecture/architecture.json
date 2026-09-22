@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-09-20T11:00:04.720Z",
+    "generatedAt": "2026-09-22T10:11:48.544Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 4 tests files, 34 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 4 tests files, 35 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -533,7 +533,7 @@
       "label": "exchange.mjs",
       "kind": "module",
       "origin": "auto",
-      "summary": "JavaScript file, 65 lines. Defines allowedOrigins, handle.",
+      "summary": "JavaScript file, 180 lines. Defines allowedOrigins, handle.",
       "tech": [
         "JavaScript"
       ],
@@ -541,8 +541,8 @@
         {
           "path": "server/github-oauth/exchange.mjs",
           "lines": [
-            17,
-            37
+            14,
+            34
           ]
         }
       ]
@@ -552,7 +552,7 @@
       "label": "worker.mjs",
       "kind": "module",
       "origin": "auto",
-      "summary": "Cloudflare Worker entry point.",
+      "summary": "JavaScript file, 7 lines.",
       "tech": [
         "JavaScript"
       ],
@@ -1090,6 +1090,21 @@
       "sources": [
         {
           "path": "vscode-extension/scripts/run-in-vscode.mjs"
+        }
+      ]
+    },
+    {
+      "id": "motion-js",
+      "label": "motion.js",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "JavaScript file, 551 lines.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "site/motion.js"
         }
       ]
     }
@@ -1780,8 +1795,8 @@
         {
           "path": "server/github-oauth/worker.mjs",
           "lines": [
-            2,
-            2
+            1,
+            1
           ]
         }
       ]
@@ -3080,21 +3095,21 @@
             "exchange-mjs",
             "worker-mjs",
             "index-html",
+            "motion-js",
             "gitvisualise-mjs",
             "build-mjs",
             "build-core-mjs",
-            "data-core-mjs",
-            "diff-core-mjs"
+            "data-core-mjs"
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, gitvisualise.mjs, build.mjs, build-core.mjs and 42 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 43 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
               "lines": [
-                17,
-                37
+                14,
+                34
               ]
             }
           ]
@@ -3132,7 +3147,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 94 lines.",
+          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 101 lines.",
           "sources": [
             {
               "path": "site/index.html"
@@ -3195,11 +3210,12 @@
         },
         {
           "id": "t4",
-          "title": "Module (10)",
+          "title": "Module (11)",
           "nodes": [
             "exchange-mjs",
             "worker-mjs",
             "config-js",
+            "motion-js",
             "pr-comment-mjs",
             "viewer-js",
             "build-site-mjs",
@@ -3210,13 +3226,13 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "10 general parts: exchange.mjs — JavaScript file, 65 lines; worker.mjs — Cloudflare Worker entry point; config.js — JavaScript file, 10 lines; pr-comment.mjs — JavaScript file, 110 lines; and more.",
+          "narration": "11 general parts: exchange.mjs — JavaScript file, 180 lines; worker.mjs — JavaScript file, 7 lines; config.js — JavaScript file, 10 lines; motion.js — JavaScript file, 551 lines; and more.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
               "lines": [
-                17,
-                37
+                14,
+                34
               ]
             }
           ]

@@ -37,7 +37,7 @@ async function init() {
   decryptKickers(stMod.ScrollTrigger);
   gradientBlobs(gsap);
   stepsProgress(gsap, stMod.ScrollTrigger);
-  heroGraph(); // three.js; independent so a WebGL failure here doesn't cancel the rest
+  heroGraph(gsap, stMod.ScrollTrigger); // three.js; independent so a WebGL failure here doesn't cancel the rest
 }
 
 // ---------- hero headline: split into characters and fly in ----------
@@ -396,16 +396,19 @@ function navShrink(ScrollTrigger) {
   });
 }
 
-// ---------- three.js node-graph background ----------
-async function heroGraph() {
-  const hero = document.querySelector('.hero');
-  if (!hero || !window.WebGLRenderingContext) return;
+// ---------- three.js node-graph background, fixed behind the whole page ----------
+// Was once sized to just the hero's own box, so the graph vanished the moment you scrolled
+// past it. It now lives on a viewport-fixed canvas that never moves, with its intensity and
+// depth tied to scroll position so each section feels like a distinct beat of the same scene
+// rather than a static backdrop.
+async function heroGraph(gsap, ScrollTrigger) {
+  if (!window.WebGLRenderingContext) return;
   const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/+esm');
 
   const canvas = document.createElement('canvas');
   canvas.className = 'hero-graph';
   canvas.setAttribute('aria-hidden', 'true');
-  hero.prepend(canvas);
+  document.body.prepend(canvas);
 
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
@@ -413,10 +416,11 @@ async function heroGraph() {
   const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
   camera.position.z = 20;
 
-  const COUNT = 46;
+  const COUNT = 90;
+  const EXTENT = { x: 26, y: 40, z: 8 }; // y stretches well past one viewport so the field feels continuous down the page
   const nodes = Array.from({ length: COUNT }, () => ({
-    pos: new THREE.Vector3((Math.random() - 0.5) * 34, (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 10),
-    vel: new THREE.Vector3((Math.random() - 0.5) * 0.006, (Math.random() - 0.5) * 0.006, (Math.random() - 0.5) * 0.004),
+    pos: new THREE.Vector3((Math.random() - 0.5) * EXTENT.x * 2, (Math.random() - 0.5) * EXTENT.y * 2, (Math.random() - 0.5) * EXTENT.z * 2),
+    vel: new THREE.Vector3((Math.random() - 0.5) * 0.006, (Math.random() - 0.5) * 0.004, (Math.random() - 0.5) * 0.004),
   }));
 
   const colorOf = () => {
@@ -450,43 +454,61 @@ async function heroGraph() {
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyColors);
 
   function resize() {
-    const w = hero.clientWidth, h = hero.clientHeight;
-    if (!w || !h) return;
+    const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
   }
   resize();
-  new ResizeObserver(resize).observe(hero);
+  addEventListener('resize', resize);
 
   const LINK_DIST = 8.5;
   let raf = 0;
-  let visible = true;
-  new IntersectionObserver((entries) => { visible = entries[0]?.isIntersecting !== false; }, { threshold: 0 }).observe(hero);
+  let hidden = document.hidden;
+  document.addEventListener('visibilitychange', () => {
+    hidden = document.hidden;
+    if (!hidden) tick();
+  });
 
-  // The cursor is tracked in the same world plane as the nodes (z=0) so it can repel them and
-  // join the line network, without needing a real raycast against the (invisible) points mesh.
+  // Scroll ties into the scene two ways: the camera drifts through the node field (so different
+  // clusters of it are on screen at different sections, instead of one static composition looping
+  // forever) and the whole canvas dims a little over very text-heavy stretches so it never fights
+  // for attention with body copy — both driven by one scrub tween, not by hand-rolled scroll math.
+  const scrollState = { camY: 0, dim: 0 };
+  ScrollTrigger.create({
+    start: 0,
+    end: () => document.documentElement.scrollHeight - innerHeight,
+    scrub: 0.8,
+    onUpdate: (self) => {
+      scrollState.camY = self.progress * (EXTENT.y * 1.6);
+      scrollState.dim = self.progress > 0.12 && self.progress < 0.92 ? 0.35 : 0;
+    },
+  });
+  gsap.ticker.add(() => { canvas.style.opacity = String(0.8 - scrollState.dim); });
+
+  // The cursor is tracked in the same world plane as the nodes (z=0, offset by the current scroll
+  // depth) so it can repel them and join the line network, without a real raycast against the
+  // (invisible) points mesh.
   const mouseWorld = new THREE.Vector3(9999, 9999, 0);
   let mouseActive = false;
-  hero.addEventListener('mousemove', (e) => {
-    const r = hero.getBoundingClientRect();
-    const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
-    const ny = -(((e.clientY - r.top) / r.height) * 2 - 1);
-    mouseWorld.set(nx * 17, ny * 8, 0);
+  addEventListener('mousemove', (e) => {
+    const nx = (e.clientX / innerWidth) * 2 - 1;
+    const ny = -((e.clientY / innerHeight) * 2 - 1);
+    mouseWorld.set(nx * EXTENT.x * 0.7, ny * 8 + scrollState.camY, 0);
     mouseActive = true;
   });
-  hero.addEventListener('mouseleave', () => { mouseActive = false; mouseWorld.set(9999, 9999, 0); });
+  document.addEventListener('mouseleave', () => { mouseActive = false; mouseWorld.set(9999, 9999, 0); });
 
   const REPEL_RADIUS = 6.5;
   const tmp = new THREE.Vector3();
   function tick() {
+    if (hidden) return;
     raf = requestAnimationFrame(tick);
-    if (!visible) return;
     for (const n of nodes) {
       n.pos.add(n.vel);
-      if (Math.abs(n.pos.x) > 17) n.vel.x *= -1;
-      if (Math.abs(n.pos.y) > 8) n.vel.y *= -1;
-      if (Math.abs(n.pos.z) > 5) n.vel.z *= -1;
+      if (Math.abs(n.pos.x) > EXTENT.x) n.vel.x *= -1;
+      if (Math.abs(n.pos.y - scrollState.camY) > EXTENT.y) n.vel.y *= -1;
+      if (Math.abs(n.pos.z) > EXTENT.z / 2) n.vel.z *= -1;
       if (mouseActive) {
         tmp.copy(n.pos).sub(mouseWorld);
         const d = tmp.length();
@@ -517,7 +539,8 @@ async function heroGraph() {
     lineGeo.setDrawRange(0, seg * 2);
     lineGeo.getAttribute('position').needsUpdate = true;
 
-    scene.rotation.y += 0.0009;
+    camera.position.y += (scrollState.camY - camera.position.y) * 0.08;
+    scene.rotation.y += 0.0006;
     renderer.render(scene, camera);
   }
   tick();

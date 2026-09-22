@@ -638,6 +638,8 @@
   });
   document.addEventListener('keydown', function (e) {
     var t = e.target, tag = t && t.tagName;
+    if (shortcutsDlg.open) return; // Esc closes it via the native 'cancel' event above; nothing else should act underneath
+    if (e.key === '?' && tag !== 'INPUT' && tag !== 'TEXTAREA') { e.preventDefault(); openShortcuts(); return; }
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.key === ' ' && tag !== 'BUTTON' && tag !== 'A') { e.preventDefault(); S.playing ? pausePlayback() : play(); }
     else if (e.key === 'ArrowRight') { pausePlayback(); goto(S.step + 1); }
@@ -789,6 +791,44 @@
     if (e.data.gvGoto && typeof e.data.gvGoto === 'object') gotoState(e.data.gvGoto);
   });
   applyTheme(store('theme') || 'auto', true);
+
+  // ---------- keyboard shortcuts overlay ----------
+  // The single source of truth for what the global key handler below actually does.
+  // test/shortcuts.test.mjs extracts the literal keys checked there and asserts every one is listed here.
+  var KEYBOARD_SHORTCUTS = [
+    { keys: ['Space'], desc: 'Play or pause the tour' },
+    { keys: ['→'], desc: 'Next step, or (with a component focused) jump to what it depends on' },
+    { keys: ['←'], desc: 'Previous step, or (with a component focused) jump to what depends on it' },
+    { keys: ['↑', '↓'], desc: 'With a component focused, move to the next or previous one in its group' },
+    { keys: ['Tab'], desc: 'Move between components and controls' },
+    { keys: ['Enter', 'Space'], desc: 'With a component or group focused, select or expand it' },
+    { keys: ['R'], desc: 'Restart the tour' },
+    { keys: ['/'], desc: 'Jump to search' },
+    { keys: ['Esc'], desc: 'Clear the current selection, or close this dialog' },
+    { keys: ['?'], desc: 'Show this list' },
+  ];
+  var shortcutsDlg = $('shortcuts-dialog'), shortcutsOpener = null;
+  var list = $('shortcuts-list');
+  KEYBOARD_SHORTCUTS.forEach(function (row) {
+    var dt = h('dt', {});
+    row.keys.forEach(function (k, i) { if (i) dt.appendChild(document.createTextNode(' or ')); dt.appendChild(h('kbd', { text: k })); });
+    list.appendChild(dt);
+    list.appendChild(h('dd', { text: row.desc }));
+  });
+  function openShortcuts() {
+    shortcutsOpener = document.activeElement;
+    shortcutsDlg.showModal();
+    $('shortcuts-close').focus();
+    announce('Keyboard shortcuts dialog opened.');
+  }
+  function closeShortcuts() {
+    shortcutsDlg.close();
+    if (shortcutsOpener && shortcutsOpener.focus) shortcutsOpener.focus();
+  }
+  $('keys-btn').addEventListener('click', openShortcuts);
+  $('shortcuts-close').addEventListener('click', closeShortcuts);
+  shortcutsDlg.addEventListener('cancel', function (e) { e.preventDefault(); closeShortcuts(); }); // keep our own focus-return on Esc
+  shortcutsDlg.addEventListener('click', function (e) { if (e.target === shortcutsDlg) closeShortcuts(); }); // backdrop click
 
   // Deep links: report where the tour is, and jump to a reported position. Steps are 1-based in links; 0 or missing means the overview.
   function reportState() {

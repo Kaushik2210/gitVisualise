@@ -61,6 +61,17 @@ test('vscode webview: the tour runs under the extension\'s CSP and asks the host
     await page.eval("document.getElementById('btn-next').click(); 1");
     await page.waitFor(() => page.eval("document.querySelectorAll('#diagram .node.active').length > 0"), 'an active component');
     assert.deepEqual(await page.eval('window.__violations'), [], 'the Content-Security-Policy blocked nothing the tour needs');
+
+    // the "?" shortcuts dialog: opens, is a real modal <dialog>, and Esc returns focus to the opener
+    await page.eval("document.getElementById('keys-btn').focus(); 1");
+    await page.eval("document.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true })); 1");
+    const open = await page.waitFor(() => page.eval("document.getElementById('shortcuts-dialog').open"), 'the shortcuts dialog to open');
+    assert.equal(open, true);
+    const rows = await page.eval("document.querySelectorAll('#shortcuts-list dt').length");
+    assert.ok(rows >= 5, 'expected several shortcuts listed, got ' + rows);
+    await page.eval("document.getElementById('shortcuts-dialog').dispatchEvent(new Event('cancel', { cancelable: true })); 1");
+    const closedAndRefocused = await page.waitFor(() => page.eval("!document.getElementById('shortcuts-dialog').open && document.activeElement.id === 'keys-btn'"), 'the dialog to close and focus to return to Keys');
+    assert.equal(closedAndRefocused, true);
   } finally {
     await close();
     for (const d of [repo, out]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* a lock on Windows */ } }

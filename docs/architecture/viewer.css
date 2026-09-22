@@ -210,3 +210,12 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
   .lane-chip rect.box, .lane-chip rect.stack { stroke: CanvasText; fill: Canvas; }
   .lane-chip.active rect.box, .lane-chip:focus-visible rect.box { stroke: Highlight; stroke-width: 4; }
 }
+
+/* ---------- keyboard shortcuts dialog ---------- */
+.dlg { width: min(420px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; padding: 20px 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--ink); box-shadow: var(--shadow); }
+.dlg::backdrop { background: rgba(8, 12, 24, .5); }
+.dlg h2 { font-size: 18px; margin: 0 0 14px; }
+#shortcuts-list { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; margin: 0 0 16px; align-items: center; }
+#shortcuts-list dt { display: flex; gap: 4px; align-items: center; font-weight: normal; }
+#shortcuts-list dd { margin: 0; font-size: 13.5px; color: var(--muted); }
+#shortcuts-list kbd { font: inherit; font-size: 12px; padding: 2px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--bg); min-width: 1.6em; text-align: center; }

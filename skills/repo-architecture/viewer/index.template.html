@@ -24,6 +24,7 @@
       <label class="field" id="group-field"><span>Group</span><select id="group-by" aria-label="Group components into lanes"></select></label>
       <button id="lanes-toggle" class="btn small" type="button" hidden>Collapse all</button>
       <button id="theme-btn" class="btn small" type="button" title="Change theme">◐ Auto</button>
+      <button id="keys-btn" class="btn icon small" type="button" aria-haspopup="dialog" aria-controls="shortcuts-dialog" title="Keyboard shortcuts (?)">?</button>
       <a id="repo-link" class="btn ghost" target="_blank" rel="noopener noreferrer" hidden>Repository</a>
     </div>
   </header>
@@ -86,6 +87,12 @@
     </aside>
   </main>
 </div>
+
+<dialog id="shortcuts-dialog" class="dlg" aria-labelledby="shortcuts-h">
+  <h2 id="shortcuts-h">Keyboard shortcuts</h2>
+  <dl id="shortcuts-list"></dl>
+  <button id="shortcuts-close" class="btn" type="button">Close</button>
+</dialog>
 
 <noscript><style>.static{display:block !important}</style></noscript>
 <script id="arch-data" type="application/json">{{DATA}}</script>
