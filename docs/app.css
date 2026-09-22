@@ -288,3 +288,50 @@ pre code { white-space: pre-wrap; }
   .frame-bar span { display: none; }
   .trust { gap: 6px 18px; }
 }
+
+/* =====================================================================
+   Motion layer (motion.js): hero node-graph canvas, nav shrink on scroll,
+   split-text headline, tilt cards, cursor spotlight, marquee, ripple,
+   scroll-progress bar, live star count. The reveal/entrance animations
+   set inline opacity/transform themselves; this block only styles what
+   CSS alone needs to. Everything degrades to the static layout above if
+   motion.js never loads (no canvas, no bars, no split spans — plain text).
+   ===================================================================== */
+.hero { position: relative; overflow: clip; }
+.hero-graph { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; opacity: .8; }
+.nav { transition: padding .25s ease, box-shadow .25s ease; position: relative; }
+.nav.is-scrolled { padding-top: 10px; padding-bottom: 10px; box-shadow: 0 1px 0 var(--line); }
+.grad { background-size: 200% auto; animation: grad-shift 5s ease-in-out infinite; }
+@keyframes grad-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+/* nav underline */
+.nav-underline { position: absolute; bottom: -7px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--g2), var(--g3)); opacity: 0; pointer-events: none; }
+
+/* cursor spotlight */
+.cursor-glow { position: absolute; top: 0; left: 0; width: 420px; height: 420px; margin: -210px; border-radius: 50%; background: radial-gradient(circle, var(--glow-a), transparent 70%); opacity: 0; pointer-events: none; z-index: -1; filter: blur(6px); }
+
+/* 3D tilt cards */
+.gcards, .fgrid, .three, .steps3 { perspective: 1200px; }
+.tilt { transform-style: preserve-3d; will-change: transform; }
+
+/* button / chip / card click ripple */
+.btn, .chip, .gcard { position: relative; }
+.ripple { position: absolute; border-radius: 50%; background: currentColor; opacity: .28; transform: scale(0); animation: ripple .55s ease-out; pointer-events: none; }
+@keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+/* language marquee */
+.langs { overflow: hidden; }
+.lang-track { flex: 1 1 100%; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.lang-row { display: flex; gap: 10px; width: max-content; }
+.lang-row b { white-space: nowrap; }
+
+/* scroll progress bar */
+.scroll-progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; transform-origin: 0 50%; transform: scaleX(0); background: linear-gradient(90deg, var(--g1), var(--g2), var(--g3)); z-index: 50; }
+
+/* live star count badge */
+.star-count { margin-left: 6px; padding: 1px 7px; border-radius: 99px; font-size: 11.5px; font-weight: 700; background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-graph, .cursor-glow, .scroll-progress { display: none; }
+  .grad { animation: none; }
+}

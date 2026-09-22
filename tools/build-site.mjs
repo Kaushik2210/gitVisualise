@@ -16,6 +16,7 @@ const copies = [
   ['site/index.html', 'index.html'],
   ['site/app.css', 'app.css'],
   ['site/app.js', 'app.js'],
+  ['site/motion.js', 'motion.js'],
   ['site/config.js', 'config.js'],
 ];
 const addDir = (srcDir, destDir, filter = () => true) => {

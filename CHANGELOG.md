@@ -4,6 +4,11 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Website:** a motion layer (`site/motion.js`) built on GSAP, ScrollTrigger, anime.js and three.js — a drifting node-graph canvas behind the hero, a character-split headline entrance, scroll-triggered reveals for every section, 3D tilt on cards, a cursor-reactive spotlight, an infinite language marquee, a scroll-progress bar, magnetic/ripple buttons, and a live GitHub star count. All of it loads from a CDN as an optional enhancement: with no network, no WebGL, or `prefers-reduced-motion`, the page is exactly the static layout it was before.
+
 ## [1.2.0] - 2026-09-20
 
 ### Added
