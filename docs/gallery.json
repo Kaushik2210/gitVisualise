@@ -1,0 +1,6 @@
+[
+  { "repo": "tj/commander.js", "lang": "JavaScript", "desc": "The Node.js command-line framework, and how its parser reaches the rest of the code." },
+  { "repo": "junegunn/fzf", "lang": "Go", "desc": "The fuzzy finder: Go packages as components, plus the libraries each one leans on." },
+  { "repo": "psf/requests", "lang": "Python", "desc": "HTTP for Humans: its modules and how they import each other, resolved with Python rules." },
+  { "repo": "gin-gonic/gin", "lang": "Go", "desc": "A web framework: routing, binding and rendering packages and how they connect." }
+]

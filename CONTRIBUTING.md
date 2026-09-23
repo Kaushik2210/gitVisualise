@@ -43,6 +43,7 @@ node skills/repo-architecture/scripts/gitvisualise.mjs serve <some-repo> --out .
 | Add a validation rule | `scripts/lib/core/validate-core.mjs` (+ a test) |
 | Change what the site looks like or how it plays | `viewer/viewer.js`, `viewer/viewer.css`, `viewer/index.template.html` |
 | Change the website (landing page, picker, progress) | `site/` (top level), then `npm run site` |
+| Add a repository to the website's gallery | `site/gallery.json` (+ a screenshot) — see below |
 | Change how a GitHub repo is fetched in the browser | `scripts/lib/web/github-loader.mjs` (test with the fake GitHub in `test/web.test.mjs`) |
 | Change the GitHub Action | `action.yml` (repo root), `scripts/pr-comment.mjs` |
 | Change the VS Code extension | `vscode-extension/` (see its README for how to run it) |
@@ -75,6 +76,17 @@ export const swift = {
 4. Add fixture tests to `test/languages.test.mjs` (a tiny throwaway repo per case, including one import that must stay unresolved). `test/plugins.test.mjs` already checks the contract for every registered plug-in.
 5. If the language has a manifest (`Gemfile`, `pubspec.yaml`, ...), add its name to `MANIFEST_RE` in `scripts/lib/web/github-loader.mjs` so the website downloads it.
 6. Try it on a couple of real public repositories, and add a row to the README's language table.
+
+### Adding a repository to the gallery
+
+The landing page's gallery (`site/gallery.json`) is real tours of repositories people know, and it takes no HTML edit to add one:
+
+1. Add an entry to `site/gallery.json`: `{ "repo": "owner/repo", "lang": "Language", "desc": "One sentence, under 160 characters." }`.
+2. Generate its screenshots (light and dark) with the CLI and save them as `docs/assets/gallery/<owner>_<repo>-light.jpg` and
+   `...-dark.jpg` (dots and slashes in the repo name become underscores, e.g. `tj/commander.js` -> `tj_commander_js-light.jpg`).
+   `gitvisualise serve owner/repo` and a screenshot tool, or the browser's own "Save as image", both work; keep it near 960x540.
+3. Run `npm test` — `test/gallery.test.mjs` rejects a malformed `owner/repo`, a duplicate, a missing `lang`/`desc`, or a missing screenshot.
+4. Check the gallery by hand at phone width and in both themes (see below), then open a pull request.
 
 ## Tests
 

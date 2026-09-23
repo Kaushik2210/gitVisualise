@@ -9,6 +9,7 @@ import { toMermaid, toPlantUml } from './lib/core/export-core.mjs';
 import { narrateChecked, stepFacts, PROVIDERS } from './lib/web/narrate-ai.mjs';
 import { validateCore } from './lib/core/validate-core.mjs';
 import { newState, authorizeUrl, readCallback, cleanUrl, exchangeCode } from './lib/web/oauth.mjs';
+import { galleryImage, validateGallery } from './lib/web/gallery.mjs';
 import { OAUTH } from './config.js';
 
 const $ = (id) => document.getElementById(id);
@@ -386,9 +387,40 @@ function download(name, mime, text) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+// ---------- gallery ----------
+// Real tours anyone can add to by pull request: an entry in gallery.json plus a screenshot,
+// no HTML edit needed (see CONTRIBUTING.md). Malformed or duplicate entries are caught by
+// test/gallery.test.mjs, so a bad pull request fails CI instead of breaking the page.
+async function renderGallery() {
+  const holder = $('gcards');
+  if (!holder) return;
+  let entries;
+  try {
+    entries = await fetch('gallery.json').then((r) => r.json());
+  } catch { return; } // the rest of the page works fine without the gallery
+  if (validateGallery(entries).length) return; // built and validated together; a bad file never ships
+  for (const g of entries) {
+    holder.append(el('button', { class: 'gcard', type: 'button', 'data-repo': g.repo }, [
+      el('span', { class: 'shot' }, [
+        el('img', { class: 'theme-light', src: galleryImage(g.repo, 'light'), width: 960, height: 540, loading: 'lazy', alt: '' }),
+        el('img', { class: 'theme-dark', src: galleryImage(g.repo, 'dark'), width: 960, height: 540, loading: 'lazy', alt: '' }),
+      ]),
+      el('span', { class: 'gmeta' }, [el('b', { text: g.repo }), el('span', { class: 'tag', text: g.lang })]),
+      el('span', { class: 'gdesc', text: g.desc }),
+      el('span', { class: 'go-link', text: 'Open the tour →' }),
+    ]));
+  }
+}
+renderGallery();
+
 // ---------- wiring ----------
 $('go').addEventListener('submit', (e) => { e.preventDefault(); run($('repo').value); });
-document.querySelectorAll('[data-repo]').forEach((b) => b.addEventListener('click', () => { $('repo').value = b.dataset.repo; window.scrollTo({ top: 0, behavior: 'smooth' }); run(b.dataset.repo); }));
+// Delegated so it also covers the gallery cards, rendered later from gallery.json (see renderGallery below).
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-repo]');
+  if (!b) return;
+  $('repo').value = b.dataset.repo; window.scrollTo({ top: 0, behavior: 'smooth' }); run(b.dataset.repo);
+});
 $('browse').addEventListener('submit', (e) => { e.preventDefault(); const u = $('user').value.trim(); if (u) browse(u); else if (token) browse(''); else showError(new GitHubError('bad_input', 'Enter a GitHub username, or add a token to list your own repositories.')); });
 $('mine').addEventListener('click', () => browse(''));
 $('filter').addEventListener('input', renderRepos);

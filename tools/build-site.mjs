@@ -18,6 +18,7 @@ const copies = [
   ['site/app.js', 'app.js'],
   ['site/motion.js', 'motion.js'],
   ['site/config.js', 'config.js'],
+  ['site/gallery.json', 'gallery.json'],
 ];
 const addDir = (srcDir, destDir, filter = () => true) => {
   for (const f of fs.readdirSync(path.join(ROOT, srcDir))) if (filter(f)) copies.push([`${srcDir}/${f}`, `${destDir}/${f}`]);

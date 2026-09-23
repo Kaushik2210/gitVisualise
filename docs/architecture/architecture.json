@@ -6,18 +6,18 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-09-22T18:02:40.729Z",
+    "generatedAt": "2026-09-23T03:53:31.745Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
       "Markdown",
       "YAML",
-      "CSS",
-      "HTML"
+      "JSON",
+      "CSS"
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 4 tests files, 35 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 4 tests files, 36 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -1107,6 +1107,25 @@
           "path": "site/motion.js"
         }
       ]
+    },
+    {
+      "id": "gallery-mjs",
+      "label": "gallery.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "JavaScript file, 34 lines. Defines gallerySlug, galleryImage, validateGallery.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/gallery.mjs",
+          "lines": [
+            6,
+            26
+          ]
+        }
+      ]
     }
   ],
   "edges": [
@@ -1813,8 +1832,8 @@
         {
           "path": "site/app.js",
           "lines": [
-            12,
-            12
+            13,
+            13
           ]
         }
       ]
@@ -3118,8 +3137,8 @@
             {
               "path": "site/app.js",
               "lines": [
-                12,
-                12
+                13,
+                13
               ]
             }
           ]
@@ -3139,7 +3158,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 43 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 44 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
@@ -3192,7 +3211,7 @@
         },
         {
           "id": "t3",
-          "title": "Service (36)",
+          "title": "Service (37)",
           "nodes": [
             "build-mjs",
             "build-core-mjs",
@@ -3225,6 +3244,7 @@
             "analyse-mjs",
             "analysis-worker-mjs",
             "cache-mjs",
+            "gallery-mjs",
             "github-loader-mjs",
             "idb-store-mjs",
             "narrate-ai-mjs",
@@ -3233,7 +3253,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "36 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
+          "narration": "37 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",
