@@ -418,7 +418,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
           if (!best || len > best.len) best = { len, targets, mid: star < 0 ? '' : spec.slice(star, spec.length - (pattern.length - star - 1)) };
         }
       }
-      if (best) for (const t of [].concat(best.targets)) out.push(posix.normalize(posix.join(cfg.pathsDir, String(t).replace('*', best.mid))));
+      if (best) for (const t of [].concat(best.targets)) out.push(posix.normalize(posix.join(cfg.pathsDir, String(t).replace(/\*/g, best.mid))));
     }
     if (cfg && cfg.baseUrl) out.push(posix.normalize(posix.join(cfg.baseUrl, spec)));
     const bundler = nearestFile(from, ['vite.config.js', 'vite.config.ts', 'vite.config.mjs', 'vite.config.mts', 'webpack.config.js', 'webpack.config.cjs', 'webpack.config.mjs', 'webpack.config.ts']);
@@ -608,7 +608,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     const use = /\.use\(\s*['"`](\/[^'"`]*)['"`]\s*,\s*(?:[\w$.()]+\s*,\s*)*([A-Za-z_$][\w$]*)\s*\)/g;
     let m;
     while ((m = use.exec(f._text))) {
-      const id = m[2].replace(/[$]/g, '\\$&');
+      const id = m[2].replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
       const bind = new RegExp('import\\s+' + id + '\\s+from\\s+[\'"]([^\'"]+)[\'"]|\\b' + id + '\\s*=\\s*require\\(\\s*[\'"]([^\'"]+)[\'"]\\s*\\)').exec(f._text);
       const spec = bind && (bind[1] || bind[2]);
       const target = spec && f.imports.find((i) => i.spec === spec)?.resolved;
