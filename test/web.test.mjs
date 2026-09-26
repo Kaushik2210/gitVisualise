@@ -10,6 +10,8 @@ import { renderPage, buildSnippets } from '../skills/repo-architecture/scripts/l
 
 const SHA = 'a'.repeat(40);
 
+const hostOf = (u) => { try { return new URL(u).hostname; } catch { return ''; } };
+
 function fixture(extra = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'gvweb-'));
   const w = (rel, txt) => {
@@ -108,7 +110,7 @@ test('analyzeRepo: analyses a GitHub repo with no server, pins the commit, skips
   // never downloads ignored/test/example files
   assert.ok(!gh.calls.some((c) => /dist\/bundle|tests\/users|examples\/demo/.test(c.url)));
   // exactly two API calls (commit + tree); everything else is raw.githubusercontent.com
-  assert.equal(gh.calls.filter((c) => c.url.startsWith('https://api.github.com')).length, 2);
+  assert.equal(gh.calls.filter((c) => hostOf(c.url) === 'api.github.com').length, 2);
 });
 
 test('analyzeRepo: matches the CLI scanner on the same repo (one implementation, two front ends)', async () => {
@@ -154,9 +156,9 @@ test('analyzeRepo: with a token it authenticates and reads files through the con
   const root = fixture();
   const gh = fakeGithub(root);
   await analyzeRepo('o/r', { fetchImpl: gh.impl, token: 'ghp_test' });
-  assert.ok(gh.calls.every((c) => !c.url.includes('raw.githubusercontent.com')), 'no raw host when a token is used');
+  assert.ok(gh.calls.every((c) => hostOf(c.url) !== 'raw.githubusercontent.com'), 'no raw host when a token is used');
   assert.ok(gh.calls.filter((c) => c.url.includes('/contents/')).length > 0);
-  assert.ok(gh.calls.filter((c) => c.url.startsWith('https://api.github.com')).every((c) => c.headers.Authorization === 'Bearer ghp_test'));
+  assert.ok(gh.calls.filter((c) => hostOf(c.url) === 'api.github.com').every((c) => c.headers.Authorization === 'Bearer ghp_test'));
 });
 
 test('listRepos: needs a user or a token, and maps the API shape', async () => {
@@ -293,11 +295,11 @@ test('analyzeRepo: a pre-resolved commit skips the resolve request (cache hits s
   const gh = fakeGithub(root);
   const { sha, rate } = await resolveCommit({ owner: 'o', repo: 'r', ref: null }, { fetchImpl: gh.impl });
   assert.equal(sha, SHA);
-  const apiBefore = gh.calls.filter((c) => c.url.startsWith('https://api.github.com')).length;
+  const apiBefore = gh.calls.filter((c) => hostOf(c.url) === 'api.github.com').length;
   assert.equal(apiBefore, 1);
   const res = await analyzeRepo('o/r', { fetchImpl: gh.impl, sha, rate });
   assert.equal(res.meta.sha, SHA);
-  const apiAfter = gh.calls.filter((c) => c.url.startsWith('https://api.github.com')).length;
+  const apiAfter = gh.calls.filter((c) => hostOf(c.url) === 'api.github.com').length;
   assert.equal(apiAfter - apiBefore, 1, 'only the tree request remains');
   await assert.rejects(resolveCommit({ owner: 'o', repo: 'r', ref: null }, { fetchImpl: fakeGithub(root, { missing: true }).impl }), (e) => e.kind === 'not_found');
 });
