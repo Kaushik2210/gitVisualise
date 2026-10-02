@@ -253,7 +253,7 @@ function showResult(entry, target) {
   }
   if (m.compare) {
     const s = m.compare.summary;
-    parts.push(s.empty ? 'No structural differences between these two revisions.' : `${s.nodes.added} component(s) added, ${s.nodes.removed} removed, ${s.nodes.changed} changed; ${s.edges.added} relationship(s) added, ${s.edges.removed} removed.`);
+    parts.push(s.empty ? 'No structural differences between these two revisions.' : `${s.nodes.added} component(s) added, ${s.nodes.removed} removed, ${s.nodes.changed} changed${s.nodes.moved ? `, ${s.nodes.moved} moved` : ''}; ${s.edges.added} relationship(s) added, ${s.edges.removed} removed.`);
   } else if (!m.curated) {
     for (const n of res.arch.project.notes || []) if (/^Analysed|truncated/.test(n)) parts.push(n);
     parts.push('This is an automatic picture from imports. Repos can publish a richer, narrated tour with the Claude Code skill.');
