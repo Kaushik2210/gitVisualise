@@ -46,12 +46,22 @@ test('vscode webview: the tour runs under the extension\'s CSP and asks the host
     const nodes = await page.waitFor(async () => { const n = await page.eval("document.querySelectorAll('#diagram .node').length"); return n >= 3 ? n : 0; }, 'the diagram under the CSP');
     assert.ok(nodes >= 3);
 
+    // the page tells the host it is listening, so the host can send it a component to reveal ("where am I?")
+    assert.ok((await page.eval('window.__posted')).some((m) => m.type === 'ready'), 'the page posts ready');
+    const target = await page.eval("document.querySelectorAll('#diagram .node')[1].getAttribute('data-id')");
+    const targetLabel = await page.eval("document.querySelectorAll('#diagram .node')[1].querySelector('.lbl, text').textContent");
+    await page.eval(`window.postMessage({ gvSelect: ${JSON.stringify(target)} }, '*'); 1`);
+    await page.waitFor(() => page.eval("!document.getElementById('detail-body').hidden"), 'the selected component\'s details');
+    assert.match(await page.eval("document.getElementById('detail-body').textContent"), new RegExp(targetLabel.trim().slice(0, 6).replace(/[^\w]/g, '.')));
+    await page.eval("window.postMessage({ gvSelect: 'no-such-component' }, '*'); window.postMessage({ gvSelect: 42 }, '*'); 1"); // ignored, never throws
+    assert.equal(await page.eval("document.querySelectorAll('#diagram .node.selected').length"), 1);
+
     // select a component: its source block offers "Open in editor" (only inside a webview), and clicking it messages the host
     await page.eval("document.querySelector('#diagram .node').dispatchEvent(new MouseEvent('click', { bubbles: true })); 1");
     const label = await page.waitFor(() => page.eval("[...document.querySelectorAll('#detail-body button')].map((b) => b.textContent).find((t) => t === 'Open in editor') || ''"), 'an Open in editor button');
     assert.equal(label, 'Open in editor');
     await page.eval("[...document.querySelectorAll('#detail-body button')].find((b) => b.textContent === 'Open in editor').click(); 1");
-    const posted = await page.eval('window.__posted');
+    const posted = (await page.eval('window.__posted')).filter((m) => m.type !== 'ready');
     assert.equal(posted.length, 1);
     assert.equal(posted[0].type, 'open');
     assert.match(posted[0].path, /^(src\/|package\.json)/, 'a repository-relative path: ' + posted[0].path);

@@ -221,15 +221,29 @@ export function generate(scan, opts = {}) {
     if (!p.hits.some((h) => h.call.file === call.file && h.call.line === call.line && h.route.path === route.path)) p.hits.push({ call, route });
     httpPairs.set(`${from}>${to}`, p);
   }
+  // GraphQL operations, already matched exactly by the scanner: client file -> the file whose resolver map implements the field.
+  for (const l of (scan.graphql && scan.graphql.links) || []) {
+    if (!byPath.has(l.client.file) || !byPath.has(l.resolver.file)) continue;
+    const from = unitToId.get(unitKey(l.client.file)), to = unitToId.get(unitKey(l.resolver.file));
+    if (!from || !to || from === to) continue;
+    const call = { method: 'POST', target: l.field, file: l.client.file, line: l.client.line };
+    const route = { method: l.kind.toUpperCase(), path: l.field, label: `${l.kind} ${l.field}`, file: l.resolver.file, line: l.resolver.line };
+    const p = httpPairs.get(`${from}>${to}`) || { from, to, hits: [] };
+    if (!p.hits.some((h) => h.call.file === call.file && h.call.line === call.line && h.route.label === route.label)) p.hits.push({ call, route, schema: l.schema, graphql: true });
+    httpPairs.set(`${from}>${to}`, p);
+  }
   const httpEdges = [];
   for (const p of httpPairs.values()) {
-    const reqs = [...new Set(p.hits.map((h) => `${h.route.method === 'ANY' ? h.call.method : h.route.method} ${h.route.path}`))];
+    const reqs = [...new Set(p.hits.map((h) => h.route.label || `${h.route.method === 'ANY' ? h.call.method : h.route.method} ${h.route.path}`))];
+    const allGql = p.hits.every((h) => h.graphql);
     const edge = {
       id: `h-${p.from}--${p.to}`.slice(0, 120), from: p.from, to: p.to, kind: 'http', origin: 'auto',
-      label: reqs.length === 1 ? reqs[0] : `${reqs.length} API calls`,
-      summary: `${reqs.length} HTTP request${reqs.length > 1 ? 's' : ''} handled by routes here: ${list(reqs, 4)}.`,
-      // Evidence on both sides: where the request is sent and where the route is registered.
-      sources: p.hits.slice(0, 2).flatMap((h) => [{ path: h.call.file, lines: [h.call.line, h.call.line] }, { path: h.route.file, lines: [h.route.line, h.route.line] }]),
+      label: reqs.length === 1 ? reqs[0] : `${reqs.length} ${allGql ? 'GraphQL operations' : 'API calls'}`,
+      summary: allGql
+        ? `${reqs.length} GraphQL operation${reqs.length > 1 ? 's' : ''} resolved here: ${list(reqs, 4)}.`
+        : `${reqs.length} HTTP request${reqs.length > 1 ? 's' : ''} handled by routes here: ${list(reqs, 4)}.`,
+      // Evidence on both sides: where the request is sent and where the route (or GraphQL resolver) is registered; a GraphQL link also cites the schema field.
+      sources: p.hits.slice(0, 2).flatMap((h) => [{ path: h.call.file, lines: [h.call.line, h.call.line] }, ...(h.schema ? [{ path: h.schema.file, lines: [h.schema.line, h.schema.line] }] : []), { path: h.route.file, lines: [h.route.line, h.route.line] }]),
     };
     edges.push(edge);
     httpEdges.push({ edge, hits: p.hits, reqs });
@@ -271,14 +285,14 @@ export function generate(scan, opts = {}) {
   const nodeIdIndex = new Map(nodes.map((n) => [n.id, n])); // the code components, before services and tables are added
   const infraSvcs = [];
   const infraList = (scan.infra && scan.infra.services) || [];
-  for (const s of infraList.slice(0, 25)) {
+  for (const s of infraList.slice(0, 40)) {
     const id = uniqueId('svc-' + slug(s.name));
     const built = s.build ? ` It is built from the ${s.build.dir || 'repository root'} folder.` : '';
     const image = s.image ? ` It runs the image ${s.image}.` : '';
     const ports = s.ports.length ? ` It publishes ${list(s.ports, 3)}.` : '';
     nodes.push({
-      id, label: s.name, kind: 'infra', origin: 'auto', tech: ['Docker Compose'],
-      summary: `Docker Compose service ${s.name}.${image}${built}${ports}`.trim(),
+      id, label: s.name, kind: 'infra', origin: 'auto', tech: [s.tech || 'Docker Compose'],
+      summary: s.summary || `Docker Compose service ${s.name}.${image}${built}${ports}`.trim(),
       sources: [{ path: s.file, lines: [s.line, s.endLine] }],
       _files: [],
     });
@@ -289,7 +303,7 @@ export function generate(scan, opts = {}) {
     for (const d of s.dependsOn) {
       const to = svcByName(d.name, s.file);
       if (!to || to.id === s.id) continue;
-      edges.push({ id: `d-${s.id}--${to.id}`.slice(0, 120), from: s.id, to: to.id, kind: 'depends', origin: 'auto', label: 'depends on', summary: `${s.name} waits for ${to.name} to start.`, sources: [{ path: s.file, lines: [d.line, d.line] }] });
+      edges.push({ id: `d-${s.id}--${to.id}`.slice(0, 120), from: s.id, to: to.id, kind: d.kind || 'depends', origin: 'auto', label: d.label || 'depends on', summary: d.summary || `${s.name} waits for ${to.name} to start.`, sources: [{ path: s.file, lines: [d.line, d.line] }] });
     }
     if (s.build) {
       // Link the service to the code it is built from: the components whose directory is the build context (or inside it).
@@ -384,16 +398,21 @@ export function generate(scan, opts = {}) {
   const requestFlows = [];
   for (const { edge, hits, reqs } of httpEdges.slice(0, 3)) {
     const client = nodeById.get(edge.from), server = nodeById.get(edge.to);
-    const { call, route } = hits[0];
+    const { call, route, schema } = hits[0];
+    const gql = !!hits[0].graphql;
     const steps = [
       {
         id: 's1', title: `${client.label} sends ${reqs[0]}`, nodes: [client.id], edges: [], origin: 'auto',
-        narration: `${client.label} makes an HTTP request, ${reqs[0]}, to the backend. The call is at ${call.file}:${call.line}.`,
+        narration: gql
+          ? `${client.label} sends the GraphQL operation ${reqs[0]}. It is written at ${call.file}:${call.line}.`
+          : `${client.label} makes an HTTP request, ${reqs[0]}, to the backend. The call is at ${call.file}:${call.line}.`,
         sources: [{ path: call.file, lines: [call.line, call.line] }],
       },
       {
         id: 's2', title: `${server.label} handles it`, nodes: [client.id, server.id], edges: [edge.id], origin: 'auto',
-        narration: `The route ${route.method} ${route.path} is registered in ${route.file}:${route.line}, so ${server.label} receives the request.${reqs.length > 1 ? ` The same pair also talks over ${list(reqs.slice(1), 3)}.` : ''}`,
+        narration: gql
+          ? `The schema declares the field at ${schema.file}:${schema.line}, and its resolver is at ${route.file}:${route.line}, so ${server.label} answers it.${reqs.length > 1 ? ` The same pair also talks over ${list(reqs.slice(1), 3)}.` : ''}`
+          : `The route ${route.method} ${route.path} is registered in ${route.file}:${route.line}, so ${server.label} receives the request.${reqs.length > 1 ? ` The same pair also talks over ${list(reqs.slice(1), 3)}.` : ''}`,
         sources: [{ path: route.file, lines: [route.line, route.line] }],
       },
     ];
@@ -418,13 +437,25 @@ export function generate(scan, opts = {}) {
     }
     requestFlows.push({
       id: `request-${slug(client.id)}-${slug(server.id)}`.slice(0, 80), title: `Request: ${reqs[0]}`,
-      description: `Follows an HTTP request from ${client.label} to the route that handles it in ${server.label}.`, origin: 'auto', steps,
+      description: gql ? `Follows a GraphQL operation from ${client.label} to the resolver that answers it in ${server.label}.` : `Follows an HTTP request from ${client.label} to the route that handles it in ${server.label}.`, origin: 'auto', steps,
     });
   }
   flows.push(...requestFlows);
 
   // Infrastructure: which services exist, in what order they start, and which code they are built from.
+  const composeSvcs = infraSvcs.filter((s) => !s.tech || s.tech === 'Docker Compose');
+  const otherSvcs = infraSvcs.filter((s) => s.tech && s.tech !== 'Docker Compose');
   if (infraSvcs.length) {
+    const steps = [];
+    if (composeSvcs.length) steps.push(...composeSteps(composeSvcs));
+    for (const tech of [...new Set(otherSvcs.map((s) => s.tech))]) steps.push(...techSteps(tech, otherSvcs.filter((s) => s.tech === tech)));
+    flows.push({
+      id: 'infrastructure', title: 'Infrastructure', origin: 'auto', steps,
+      description: `${list([...new Set(infraSvcs.map((s) => s.tech || 'Docker Compose'))], 3)}: what is declared, and how the pieces connect.`,
+    });
+    steps.forEach((st, i) => { st.id = `i${i + 1}`; });
+  }
+  function composeSteps(infraSvcs) {
     const depOf = new Map(infraSvcs.map((s) => [s.id, edges.filter((e) => e.kind === 'depends' && e.from === s.id).map((e) => e.to)]));
     const level = new Map();
     const lvl = (id, seenIds = new Set()) => {
@@ -461,7 +492,28 @@ export function generate(scan, opts = {}) {
         sources: [builds[0].sources[0]],
       });
     }
-    flows.push({ id: 'infrastructure', title: 'Infrastructure', description: 'The services Docker Compose runs, and the order they start in.', origin: 'auto', steps });
+    return steps;
+  }
+  // Kubernetes objects and Terraform resources: what is declared, then how the pieces point at each other.
+  function techSteps(tech, svcs) {
+    const ids = new Set(svcs.map((s) => s.id));
+    const rels = edges.filter((e) => ids.has(e.from) && ids.has(e.to));
+    const noun = tech === 'Kubernetes' ? 'object' : 'resource';
+    const roles = [...new Set(svcs.map((s) => s.role).filter(Boolean))];
+    const steps = [{
+      id: 'x', title: `${svcs.length} ${tech} ${noun}${svcs.length === 1 ? '' : 's'}`, nodes: svcs.map((s) => s.id).slice(0, 12), edges: [], origin: 'auto',
+      narration: `${tech} declares ${svcs.length} ${noun}${svcs.length === 1 ? '' : 's'}${roles.length ? ` (${list(roles, 4)})` : ''}: ${list(svcs.map((s) => s.name), 6)}.`,
+      sources: [{ path: svcs[0].file, lines: [svcs[0].line, svcs[0].line] }],
+    }];
+    if (rels.length) {
+      steps.push({
+        id: 'x', title: tech === 'Kubernetes' ? 'Routing: Ingress, Service, workload' : 'References between resources', origin: 'auto',
+        nodes: [...new Set(rels.flatMap((e) => [e.from, e.to]))].slice(0, 12), edges: rels.map((e) => e.id).slice(0, 12),
+        narration: `${rels.length} link${rels.length === 1 ? ' is' : 's are'} written in the files: ${list(rels.map((e) => `${nodeById.get(e.from).label} → ${nodeById.get(e.to).label} (${e.label})`), 4)}. Only links that match exactly are drawn.`,
+        sources: [rels[0].sources[0]],
+      });
+    }
+    return steps;
   }
 
   // Data model: the tables or models, then the most connected ones and what they reference.

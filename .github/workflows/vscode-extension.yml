@@ -1,0 +1,97 @@
+name: VS Code extension
+
+# Pull requests that touch the extension (or the engine it bundles) build the .vsix and keep it as a workflow artifact.
+# Pushing a tag named vscode-v<version> (matching vscode-extension/package.json) builds it, attaches it to a GitHub release of that
+# name, and publishes it to the Visual Studio Marketplace and to Open VSX. Publishing is skipped, not failed, when the repository
+# secrets VSCE_PAT (Marketplace) and OVSX_PAT (Open VSX) are not set. Their values are never printed or written anywhere.
+on:
+  pull_request:
+    paths:
+      - 'vscode-extension/**'
+      - 'skills/repo-architecture/**'
+      - '.github/workflows/vscode-extension.yml'
+  push:
+    tags: ['vscode-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build the .vsix
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Read the version and check it against the tag
+        id: meta
+        run: |
+          version=$(node -p "require('./vscode-extension/package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ "${GITHUB_REF_NAME}" != "vscode-v${version}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match vscode-extension/package.json version ${version} (expected vscode-v${version})."
+            exit 1
+          fi
+      - name: Unit tests
+        run: npm test
+      - name: Bundle the CLI and viewer, then package
+        working-directory: vscode-extension
+        run: |
+          node scripts/bundle-skill.mjs
+          npx --yes @vscode/vsce package --out "gitvisualise-${{ steps.meta.outputs.version }}.vsix"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gitvisualise-vsix
+          path: vscode-extension/*.vsix
+          if-no-files-found: error
+
+  release:
+    name: Attach to a GitHub release
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gitvisualise-vsix
+      - name: Create the release if needed, then upload the .vsix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --title "VS Code extension ${{ needs.package.outputs.version }}" --notes "The gitvisualise VS Code extension, packaged as a .vsix. Install it with: code --install-extension gitvisualise-${{ needs.package.outputs.version }}.vsix"
+          gh release upload "$GITHUB_REF_NAME" ./*.vsix --clobber
+
+  publish:
+    name: Publish to the Marketplace and Open VSX
+    needs: [package, release]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    # Secrets cannot be tested in `if:` directly, so they are exposed to the job as environment variables and the steps test those.
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: gitvisualise-vsix
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Visual Studio Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        run: npx --yes @vscode/vsce publish --packagePath ./*.vsix
+      - name: Open VSX (VSCodium and other editors)
+        if: ${{ env.OVSX_PAT != '' }}
+        run: npx --yes ovsx publish ./*.vsix --pat "$OVSX_PAT"
+      - name: Say what was skipped
+        run: |
+          [ -n "$VSCE_PAT" ] || echo "::notice::VSCE_PAT is not set: the Visual Studio Marketplace was skipped."
+          [ -n "$OVSX_PAT" ] || echo "::notice::OVSX_PAT is not set: Open VSX was skipped."

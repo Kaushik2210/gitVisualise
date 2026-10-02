@@ -7,7 +7,7 @@ const path = require('node:path');
 const fs = require('node:fs');
 const crypto = require('node:crypto');
 const { spawn } = require('node:child_process');
-const { resolveInside, lineRange, prepareWebviewHtml, randomNonce } = require('./lib.js');
+const { resolveInside, lineRange, prepareWebviewHtml, randomNonce, findComponent } = require('./lib.js');
 
 /** The bundled CLI (after `npm run prepare` in this folder), or the one next to this extension when developing in the repository. */
 function cliPath(context) {
@@ -44,6 +44,8 @@ async function generateTour(context, folder, output) {
 }
 
 const panels = new Map(); // workspace folder path -> panel
+const tours = new Map(); // workspace folder path -> { dir, ready, pending }: where the tour was generated, and whether its page is listening
+let lastSelection = null; // the component id most recently sent to a tour page (read by the Extension Host test)
 
 async function openTour(context, output, opts = {}) {
   const folder = (vscode.workspace.workspaceFolders || [])[0];
@@ -63,9 +65,14 @@ async function openTour(context, output, opts = {}) {
       enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [vscode.Uri.file(tourDir)],
     });
     panels.set(key, panel);
-    panel.onDidDispose(() => panels.delete(key), null, context.subscriptions);
-    panel.webview.onDidReceiveMessage((msg) => handleMessage(msg, folder), null, context.subscriptions);
+    panel.onDidDispose(() => { panels.delete(key); tours.delete(key); }, null, context.subscriptions);
+    panel.webview.onDidReceiveMessage((msg) => {
+      // the page says it is listening once it has drawn the diagram; a selection requested before that is delivered now
+      if (msg && msg.type === 'ready') { const t = tours.get(key); if (t) { t.ready = true; flushSelection(panel, t); } return; }
+      return handleMessage(msg, folder);
+    }, null, context.subscriptions);
   }
+  tours.set(key, { dir: tourDir, ready: false, pending: tours.get(key)?.pending || null });
   const html = fs.readFileSync(path.join(tourDir, 'index.html'), 'utf8');
   const nonce = randomNonce();
   panel.webview.html = prepareWebviewHtml(html, {
@@ -74,6 +81,40 @@ async function openTour(context, output, opts = {}) {
   });
   if (!opts.background) panel.reveal(vscode.ViewColumn.Beside, true);
   return panel;
+}
+
+function flushSelection(panel, tour) {
+  if (!tour.pending) return;
+  const id = tour.pending;
+  tour.pending = null;
+  lastSelection = id;
+  panel.webview.postMessage({ gvSelect: id });
+}
+
+/** The component of the open tour that contains the active file; null when nothing points at it. Pure apart from reading architecture.json. */
+function componentFor(tourDir, relPath, line) {
+  let arch;
+  try { arch = JSON.parse(fs.readFileSync(path.join(tourDir, 'architecture.json'), 'utf8')); } catch { return null; }
+  return findComponent(arch, relPath, line);
+}
+
+/** "Where am I?": reveals and selects, in the tour, the component that contains the active editor's file. */
+async function whereAmI(context, output) {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.uri.scheme !== 'file') { vscode.window.showInformationMessage('gitvisualise: open a file from the workspace first.'); return null; }
+  const folder = vscode.workspace.getWorkspaceFolder(editor.document.uri);
+  if (!folder) { vscode.window.showInformationMessage('gitvisualise: this file is not inside the open workspace.'); return null; }
+  const key = folder.uri.fsPath;
+  let panel = panels.get(key);
+  if (!panel) { panel = await openTour(context, output, { background: true }); if (!panel) return null; }
+  const tour = tours.get(key);
+  const rel = path.relative(folder.uri.fsPath, editor.document.uri.fsPath).split(path.sep).join('/');
+  const node = componentFor(tour.dir, rel, editor.selection.active.line + 1);
+  if (!node) { vscode.window.showInformationMessage(`gitvisualise: no component in the tour points at ${rel}. It may be ignored, a test, or not analysed.`); return null; }
+  panel.reveal(vscode.ViewColumn.Beside, true);
+  tour.pending = node.id;
+  if (tour.ready) flushSelection(panel, tour);
+  return node.id;
 }
 
 /** Messages from the webview are untrusted: only a well-formed "open" for a path inside the workspace does anything. */
@@ -96,11 +137,13 @@ function activate(context) {
     output,
     vscode.commands.registerCommand('gitvisualise.openTour', () => openTour(context, output)),
     vscode.commands.registerCommand('gitvisualise.refreshTour', () => openTour(context, output, { background: true })),
+    vscode.commands.registerCommand('gitvisualise.whereAmI', () => whereAmI(context, output)),
     // exposed so the integration test can drive the extension without clicking through the UI
     vscode.commands.registerCommand('gitvisualise._panelCount', () => panels.size),
+    vscode.commands.registerCommand('gitvisualise._lastSelection', () => lastSelection),
   );
 }
 
 function deactivate() {}
 
-module.exports = { activate, deactivate, __test: { handleMessage } };
+module.exports = { activate, deactivate, __test: { handleMessage, componentFor } };

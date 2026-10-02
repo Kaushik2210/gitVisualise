@@ -116,7 +116,7 @@ test('run: reads the pull request event and the two architectures, and posts one
     env: { GITHUB_REPOSITORY: 'o/r', GITHUB_TOKEN: 'ghs_x', GITHUB_EVENT_PATH: path.join(dir, 'event.json') },
   });
   assert.equal(r.action, 'created');
-  assert.deepEqual(r.summary.nodes, { added: 1, removed: 1, changed: 1 });
+  assert.deepEqual(r.summary.nodes, { added: 1, removed: 1, changed: 1, moved: 0 });
   assert.equal(api.calls.find((c) => c.method === 'POST').path, '/repos/o/r/issues/12/comments');
   assert.match(JSON.parse(api.calls.find((c) => c.method === 'POST').body).body, /aaaaaaaaaaaa\.\.\.bbbbbbbbbbbb/);
 });

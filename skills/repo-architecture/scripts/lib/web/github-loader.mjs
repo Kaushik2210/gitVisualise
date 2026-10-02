@@ -5,22 +5,16 @@
 //
 // A personal access token is optional: it raises the API rate limit and unlocks private repos.
 // The heavy lifting (scan, generate, validate) is the exact same pure code the CLI uses.
-import { makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf } from '../core/scan-core.mjs';
 import { validateCore } from '../core/validate-core.mjs';
-import { isExamplePath, TOOLING_RE } from '../generate.mjs';
-import { makeView, runAnalysis } from './analyse.mjs';
+import { makeView, createRunner } from './analyse.mjs';
 import { diffArchitectures } from '../core/diff-core.mjs';
-import { PLUGIN_MANIFEST_SRC } from '../core/languages.mjs';
-import { COMPOSE_RE } from '../core/infra-core.mjs';
-import { DATA_FILE_RE } from '../core/data-core.mjs';
-import { OPENAPI_RE } from '../core/http-core.mjs';
+import { pickSourceFiles, MAX_FILE_BYTES } from './tree-plan.mjs';
 
-export { makeView };
+export { makeView, pickSourceFiles };
 
 const API = 'https://api.github.com';
 const RAW = 'https://raw.githubusercontent.com';
 const CURATED_PATH = 'docs/architecture/architecture.json';
-const MAX_FILE_BYTES = 512 * 1024;
 
 export class GitHubError extends Error {
   constructor(kind, message, extra = {}) {
@@ -123,27 +117,6 @@ async function pool(items, limit, worker, signal) {
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, run));
 }
 
-// Small files the scanner reads besides source: dependency manifests, workspace definitions, and the configs that
-// define import aliases (tsconfig/jsconfig paths, Vite and webpack aliases).
-const MANIFEST_RE = new RegExp('(^|/)(package\\.json|requirements[^/]*\\.txt|pyproject\\.toml|go\\.mod|go\\.work|pnpm-workspace\\.yaml|(tsconfig|jsconfig)[^/]*\\.json|(vite|webpack)\\.config\\.[cm]?[jt]s|' + PLUGIN_MANIFEST_SRC + ')$');
-const ENTRY_HINT = /(^|\/)(main|index|app|server|cli|__main__|manage|__init__)\.[a-z]+$/i;
-
-/** Decides which source files to download: skip tests/examples/tooling, prefer shallow + entry-like files. */
-export function pickSourceFiles(paths, sizes, maxFiles) {
-  const skipped = { tests: 0, examples: 0, tooling: 0 };
-  const candidates = [];
-  for (const p of paths) {
-    if (!UNIT_EXT.has(extOf(p)) || (sizes.get(p) || 0) > MAX_FILE_BYTES) continue;
-    if (TEST_RE.test(p)) { skipped.tests++; continue; }
-    if (isExamplePath(p)) { skipped.examples++; continue; }
-    if (TOOLING_RE.test(p)) { skipped.tooling++; continue; }
-    candidates.push(p);
-  }
-  const rank = (p) => (ENTRY_HINT.test(p) ? 0 : 1);
-  candidates.sort((a, b) => a.split('/').length - b.split('/').length || rank(a) - rank(b) || a.localeCompare(b));
-  return { chosen: candidates.slice(0, maxFiles), total: candidates.length, skipped };
-}
-
 function collectSourcePaths(arch) {
   const set = new Set();
   const add = (arr) => (arr || []).forEach((s) => s && typeof s.path === 'string' && set.add(s.path.replace(/\/$/, '')));
@@ -186,10 +159,18 @@ export async function analyzeRepo(input, opts = {}) {
   onProgress({ stage: 'tree' });
   const treeRes = await apiGet(`/repos/${owner}/${repo}/git/trees/${sha}?recursive=1`, { ...o, accept: 'application/vnd.github+json' });
   rate = rateInfo(treeRes);
-  const tree = await treeRes.json();
-  const blobs = (tree.tree || []).filter((t) => t.type === 'blob');
-  const sizes = new Map(blobs.map((b) => [b.path, b.size || 0]));
-  const allPaths = blobs.map((b) => b.path).sort();
+  const treeText = await treeRes.text();
+  // Parsing, sorting, filtering and choosing files is thousands of entries of CPU work: it runs in the analysis worker (opts.worker),
+  // so the page keeps painting and the progress bar keeps moving.
+  const runner = createRunner({ worker: !!opts.worker, signal });
+  try {
+  let tree;
+  try { tree = await runner.run('tree', treeText); } catch (e) {
+    if (e && e.name === 'AbortError') throw e;
+    throw new GitHubError('network', 'GitHub returned a file listing that could not be read. Try again in a moment.');
+  }
+  const allPaths = tree.allPaths;
+  const sizes = new Map(tree.sizes);
   if (!allPaths.length) throw new GitHubError('empty', 'This repository has no files.');
 
   const contents = new Map();
@@ -225,16 +206,11 @@ export async function analyzeRepo(input, opts = {}) {
 
   // 2) Otherwise analyse the code.
   const ignoreText = sizes.has('.gitignore') ? (await fetchText(owner, repo, sha, '.gitignore', o)) : null;
-  const paths = filterPaths(allPaths, makeIgnorer((ignoreText || '').split('\n')));
-  // Manifests and configs: shallow ones everywhere, plus package.json up to five levels deep (monorepo packages).
-  const manifests = paths.filter((p) => MANIFEST_RE.test(p) && p.split('/').length <= (/(^|\/)package\.json$/.test(p) ? 5 : 3)).slice(0, 150);
-  const readme = paths.find((p) => /^readme(\.md|\.rst|\.txt)?$/i.test(p));
-  const inScope = sub ? paths.filter((p) => p.startsWith(sub + '/')) : paths;
-  if (sub && !inScope.length) throw new GitHubError('empty', `Nothing was found under "${sub}" in ${owner}/${repo}. Check the folder name.`);
-  const picked = pickSourceFiles(inScope, sizes, maxFiles);
+  const plan = await runner.run('plan', { allPaths, sizes: tree.sizes, ignoreText, sub, maxFiles });
+  const { paths, manifests, readme, viewFiles } = plan;
+  const picked = { chosen: plan.chosen, total: plan.total, skipped: plan.skipped };
+  if (plan.scopeEmpty) throw new GitHubError('empty', `Nothing was found under "${sub}" in ${owner}/${repo}. Check the folder name.`);
   if (!picked.chosen.length) throw new GitHubError('empty', 'No analysable source files were found (supported: JavaScript/TypeScript, Python, Go, Java, Rust and more, as structure only). This may be a docs-only or asset-only repository.');
-  // Docker Compose files, SQL / Prisma / Django schemas, and OpenAPI documents feed the infrastructure, data-model and request-tracing views.
-  const viewFiles = inScope.filter((p) => (COMPOSE_RE.test(p) || DATA_FILE_RE.test(p) || OPENAPI_RE.test(p)) && p.split('/').length <= 6 && (sizes.get(p) || 0) <= MAX_FILE_BYTES).slice(0, 40);
   await download([...new Set([...manifests, ...(readme ? [readme] : []), ...viewFiles, ...picked.chosen])], 'source files');
 
   onProgress({ stage: 'analyse' });
@@ -242,13 +218,13 @@ export async function analyzeRepo(input, opts = {}) {
   if (picked.total > picked.chosen.length) notes.push(`Analysed the ${picked.chosen.length} shallowest of ${picked.total} source files.`);
   if (tree.truncated) notes.push('GitHub truncated the file listing for this very large repository, so the picture is partial.');
   // Scanning, generating and validating is the CPU-heavy part: the website runs it in a Web Worker (opts.worker).
-  const { arch, validation, workspaces, depth } = await runAnalysis(
+  const { arch, validation, workspaces, depth } = await runner.run('analyse',
     { paths, allPaths, contents, repo: { name: repo, url: repoUrl, branch: ref || null, commit: sha }, sub, alreadySkipped: picked.skipped, notes, layout: opts.layout },
-    { worker: !!opts.worker, signal },
   );
   if (opts.layout && depth !== undefined) opts.layout.depth = depth; // in/out: a comparison reuses the head's node granularity
   const view = makeView(allPaths, contents);
   return { arch, view, validation, meta: { ...meta, analysed: picked.chosen.length, sourceTotal: picked.total, skipped: picked.skipped, workspaces } };
+  } finally { runner.close(); }
 }
 
 /**

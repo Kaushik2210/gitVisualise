@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 
-const { resolveInside, lineRange, prepareWebviewHtml, randomNonce } = createRequire(import.meta.url)('../vscode-extension/lib.js');
+const { resolveInside, lineRange, prepareWebviewHtml, randomNonce, findComponent } = createRequire(import.meta.url)('../vscode-extension/lib.js');
 
 function workspace() {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'gvvs-'));
@@ -71,9 +71,9 @@ test('randomNonce: long, hex and different every time', () => {
   assert.notEqual(a, b);
 });
 
-test('extension manifest: two commands, no activation on startup, no network permissions, MIT and pointing at the repository', () => {
+test('extension manifest: three commands, no activation on startup, no network permissions, MIT and pointing at the repository', () => {
   const pkg = JSON.parse(fs.readFileSync(new URL('../vscode-extension/package.json', import.meta.url), 'utf8'));
-  assert.deepEqual(pkg.contributes.commands.map((c) => c.command), ['gitvisualise.openTour', 'gitvisualise.refreshTour']);
+  assert.deepEqual(pkg.contributes.commands.map((c) => c.command), ['gitvisualise.openTour', 'gitvisualise.refreshTour', 'gitvisualise.whereAmI']);
   assert.deepEqual(pkg.activationEvents, [], 'VS Code activates it when a contributed command runs');
   assert.equal(pkg.license, 'MIT');
   assert.ok(!pkg.dependencies, 'zero runtime dependencies, like the rest of the project');
@@ -86,4 +86,33 @@ test('extension: the desktop-only VS Code runner is not something `node --test` 
   assert.ok(fs.existsSync(new URL('../' + runner, import.meta.url)));
   assert.ok(!/(-test|_test|\.test)\.m?js$|(^|\/)test-[^/]*\.m?js$|(^|\/)test\/|(^|\/)test\.m?js$/.test(runner), runner);
   assert.ok(!/(-test|_test|\.test)\.m?js$|(^|\/)test-[^/]*\.m?js$|(^|\/)test\//.test('vscode-extension/e2e/suite.js'));
+});
+
+// ---- "where am I?" (#57) ----
+const ARCH = {
+  nodes: [
+    { id: 'app', label: 'app', sources: [{ path: 'src', lines: null }] },
+    { id: 'svc', label: 'services', sources: [{ path: 'src/svc/index.js', lines: [1, 80] }, { path: 'src/svc/util.js', lines: [1, 10] }] },
+    { id: 'users', label: 'users', sources: [{ path: 'src/svc/index.js', lines: [20, 40] }] },
+    { id: 'gone', label: 'gone', diff: 'removed', sources: [{ path: 'src/svc/index.js', lines: [1, 5], commit: 'abc' }] },
+    { id: 'bad', label: 'bad', sources: [null, { path: 42 }, { lines: [1, 2] }] },
+  ],
+};
+
+test('findComponent: the narrowest source whose lines hold the cursor wins, then a source naming the file, then a folder', () => {
+  assert.equal(findComponent(ARCH, 'src/svc/index.js', 30).id, 'users', 'lines 20-40 hold line 30 and are narrower than 1-80');
+  assert.equal(findComponent(ARCH, 'src/svc/index.js', 60).id, 'svc', 'only 1-80 holds line 60');
+  assert.equal(findComponent(ARCH, 'src/svc/index.js', 500).id, 'users', 'no range holds it: a source that names the file, narrowest first');
+  assert.equal(findComponent(ARCH, 'src/svc/util.js').id, 'svc');
+  assert.equal(findComponent(ARCH, 'src/other/x.js').id, 'app', 'a folder source holds files under it');
+  assert.equal(findComponent(ARCH, 'src\\svc\\util.js').id, 'svc', 'Windows separators');
+  assert.equal(findComponent(ARCH, './src/svc/util.js').id, 'svc');
+});
+
+test('findComponent: nothing guessed: unrelated files, removed components, base-commit evidence and malformed input give null', () => {
+  assert.equal(findComponent(ARCH, 'docs/readme.md', 1), null);
+  assert.equal(findComponent(ARCH, 'srcx/a.js', 1), null, 'a folder is matched on a path boundary, not a string prefix');
+  assert.equal(findComponent({ nodes: [ARCH.nodes[3]] }, 'src/svc/index.js', 3), null, 'a removed component and its pinned sources are ignored');
+  for (const bad of [null, undefined, {}, { nodes: 'x' }, { nodes: [null, 3, {}] }]) assert.equal(findComponent(bad, 'a.js', 1), null);
+  for (const bad of ['', null, 7, undefined]) assert.equal(findComponent(ARCH, bad, 1), null);
 });

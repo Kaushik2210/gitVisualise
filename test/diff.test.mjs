@@ -31,7 +31,7 @@ test('diff: nodes and edges are marked added, removed, changed or same by id', (
   const e = Object.fromEntries(d.edges.map((x) => [x.id, x.diff]));
   assert.equal(e['e-a-js--c-js'], 'added');
   assert.equal(e['e-main-js--b-js'], 'removed');
-  assert.deepEqual(summary.nodes, { added: 1, removed: 1, changed: 2 });
+  assert.deepEqual(summary.nodes, { added: 1, removed: 1, changed: 2, moved: 0 });
   assert.equal(summary.empty, false);
 });
 
@@ -60,7 +60,7 @@ test('diff: identical revisions produce no changes and keep the original flows',
 test('diff: the validator rejects a bogus diff value', () => {
   const root = repo(HEAD);
   const a = generate(scanRepo(root));
-  a.nodes[0].diff = 'moved';
+  a.nodes[0].diff = 'sideways';
   assert.ok(validate(a, root).errors.some((e) => /diff must be/.test(e)));
 });
 
@@ -102,7 +102,7 @@ test('compareRepos: analyses both refs from GitHub and returns a validated compa
   assert.deepEqual(res.validation.errors, []);
   assert.equal(res.meta.sha, shas.v2);
   assert.equal(res.meta.compare.baseSha, shas.v1);
-  assert.deepEqual(res.meta.compare.summary.nodes, { added: 1, removed: 1, changed: 2 });
+  assert.deepEqual(res.meta.compare.summary.nodes, { added: 1, removed: 1, changed: 2, moved: 0 });
   assert.equal(res.arch.flows[0].id, 'what-changed');
   const removed = res.arch.nodes.find((n) => n.diff === 'removed');
   assert.ok(removed.sources.every((s) => s.commit === shas.v1));
@@ -123,4 +123,55 @@ test('cli: `diff` writes a merged architecture.json and a page that validates ag
   const d = JSON.parse(fs.readFileSync(path.join(out, 'architecture.json'), 'utf8'));
   assert.equal(d.project.compare.base.ref, 'v1');
   assert.ok(fs.existsSync(path.join(out, 'index.html')));
+});
+
+// A file that moved to another directory with its content untouched is one "moved" component; everything doubtful stays add + remove.
+const MV_BASE = { 'package.json': '{"name":"app","main":"main.js"}', 'main.js': "import { a } from './a.js';\n", 'a.js': 'export const a = 1;\n' };
+const MV_HEAD = { 'package.json': '{"name":"app","main":"main.js"}', 'main.js': "import { a } from './lib/a.js';\n", 'lib/a.js': 'export const a = 1;\n' };
+
+test('diff: a file moved to another directory is one moved component and keeps its relationships', () => {
+  const root = repo(MV_HEAD);
+  const { arch: d, summary } = diffArchitectures(arch(MV_BASE), generate(scanRepo(root)), { baseCommit: 'd'.repeat(40) });
+  const moved = d.nodes.filter((n) => n.diff === 'moved');
+  assert.equal(moved.length, 1, JSON.stringify(d.nodes.map((n) => [n.id, n.diff])));
+  assert.deepEqual(moved[0].movedFrom, { paths: ['a.js'], commit: 'd'.repeat(40) });
+  assert.match(moved[0].diffNote, /Was at a\.js/);
+  assert.deepEqual(summary.nodes, { added: 0, removed: 0, changed: 0, moved: 1 });
+  assert.ok(d.edges.every((e) => e.diff === 'same'), 'the import of the moved file is not shown as removed or added');
+  assert.ok(d.flows[0].steps.some((s) => /^Moved components/.test(s.title)));
+  assert.match(d.flows[0].steps[0].narration, /1 moved/);
+  assert.deepEqual(validate(d, root).errors, []);
+});
+
+test('diff: a move that changes the id (two files share a name) is paired and keeps its edge', () => {
+  const b = { 'package.json': MV_BASE['package.json'], 'main.js': "import { a } from './x/a.js';\nimport { b } from './y/a.js';\n", 'x/a.js': 'export const a = 1;\n', 'y/a.js': 'export const a = 1;\n' };
+  const h = { ...b, 'main.js': "import { a } from './x/a.js';\nimport { b } from './z/a.js';\n", 'z/a.js': 'export const a = 1;\n' };
+  delete h['y/a.js'];
+  const root = repo(h);
+  const { arch: d, summary } = diffArchitectures(arch(b), generate(scanRepo(root)));
+  const n = byId(d);
+  assert.equal(n['z-a-js'].diff, 'moved');
+  assert.equal(n['y-a-js'], undefined, 'the old id is folded into the moved component');
+  assert.equal(summary.nodes.moved, 1);
+  assert.equal(summary.nodes.removed, 0);
+  assert.ok(!d.edges.some((e) => e.diff === 'removed' || e.diff === 'added'));
+  assert.deepEqual(validate(d, root).errors, []);
+});
+
+test('diff: look-alikes, edited moves and ambiguous candidates are never paired', () => {
+  // two identical files vanish and two appear elsewhere: which is which cannot be known
+  const b = { 'package.json': MV_BASE['package.json'], 'main.js': "import { a } from './x/a.js';\nimport { b } from './y/a.js';\n", 'x/a.js': 'export const a = 1;\n', 'y/a.js': 'export const a = 1;\n' };
+  const h = { 'package.json': MV_BASE['package.json'], 'main.js': "import { a } from './p/a.js';\nimport { b } from './q/a.js';\n", 'p/a.js': 'export const a = 1;\n', 'q/a.js': 'export const a = 1;\n' };
+  const amb = diffArchitectures(arch(b), arch(h)).summary.nodes;
+  assert.equal(amb.moved, 0);
+  assert.deepEqual([amb.added, amb.removed], [2, 2]);
+  // moved and edited: the description differs, so it stays a plain change
+  const edited = arch({ ...MV_HEAD, 'lib/a.js': 'export const a = 1;\nexport const extra = 2;\n' });
+  assert.equal(diffArchitectures(arch(MV_BASE), edited).summary.nodes.moved, 0);
+  // the same file name elsewhere while the original is still there is an addition, not a move
+  const copy = diffArchitectures(arch(MV_BASE), arch({ ...MV_BASE, 'lib/a.js': 'export const a = 1;\n' })).summary.nodes;
+  assert.equal(copy.moved, 0);
+  // same name, different content, different directory: the false pair that must stay apart
+  const other = diffArchitectures(arch({ ...MV_BASE, 'x/a.js': 'export const a = 1;\n', 'a.js': 'export const q = 9;\n' }), arch({ ...MV_BASE, 'y/a.js': 'export const zz = 1;\n', 'a.js': 'export const q = 9;\n' })).summary.nodes;
+  assert.equal(other.moved, 0);
 });

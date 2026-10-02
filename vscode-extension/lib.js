@@ -54,6 +54,33 @@ function prepareWebviewHtml(html, { cspSource, nonce, asUri }) {
   return out;
 }
 
+/**
+ * Which component of the tour contains a file? Uses each component's `sources` (the evidence the tour is built from), nothing else.
+ * Preference: a source whose line range holds `line`, then a source naming the file, then a source that is a folder holding it;
+ * within a tier the narrowest source wins. Components that only existed in a comparison's base revision are ignored.
+ * @returns the node, or null when no component points at the file
+ */
+function findComponent(arch, relPath, line) {
+  if (!arch || !Array.isArray(arch.nodes) || typeof relPath !== 'string' || !relPath) return null;
+  const rel = relPath.replace(/\\/g, '/').replace(/^\.\//, '');
+  let best = null;
+  for (const n of arch.nodes) {
+    if (!n || n.diff === 'removed') continue;
+    for (const s of Array.isArray(n.sources) ? n.sources : []) {
+      if (!s || typeof s.path !== 'string' || s.commit) continue;
+      const p = s.path.replace(/\\/g, '/').replace(/\/$/, '');
+      const range = lineRange(s.lines);
+      let tier;
+      if (p === rel) tier = range && Number.isInteger(line) && line >= range[0] && line <= range[1] ? 0 : 1;
+      else if (rel.startsWith(p + '/')) tier = 2;
+      else continue;
+      const size = range ? range[1] - range[0] : Infinity;
+      if (!best || tier < best.tier || (tier === best.tier && size < best.size)) best = { node: n, tier, size };
+    }
+  }
+  return best ? best.node : null;
+}
+
 const randomNonce = () => require('node:crypto').randomBytes(16).toString('hex');
 
-module.exports = { resolveInside, lineRange, prepareWebviewHtml, randomNonce };
+module.exports = { resolveInside, lineRange, prepareWebviewHtml, randomNonce, findComponent };

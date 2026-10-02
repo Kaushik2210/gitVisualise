@@ -83,7 +83,7 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 | ▶️ **Guided flows** | Play, pause, next, previous, restart, speed control, progress dots, keyboard shortcuts, deep links to any step |
 | 🔌 **Request tracing** | A `fetch`/`axios` call (including through a client with a literal `baseURL`) is linked to the server route that handles it, with evidence on both sides and a "Request: GET /x" tour |
 | 🔀 **Compare two revisions** | `owner/repo@v1...v2` marks components and relationships added, removed or changed, and narrates the difference |
-| 🗄️ **Infrastructure and data model** | Docker Compose services (with `depends_on` and the code each one is built from) and SQL / Prisma tables with their foreign keys become components too, each pointing at the file and line it came from, with a tour of each |
+| 🗄️ **Infrastructure and data model** | Docker Compose services (with `depends_on` and the code each one is built from), Kubernetes manifests (workloads, the Services that select them, Ingress routes) and Terraform resources (with the references between them) and SQL / Prisma tables with their foreign keys become components too, each pointing at the file and line it came from, with a tour of each |
 | 🧩 **Monorepos** | One component per workspace package, or analyse a single folder (`owner/repo:apps/web`) |
 | 🔎 **Search, swimlanes, export** | Find a component with `/`, group by folder or kind, save the diagram as SVG or PNG, copy it as Mermaid or PlantUML, or copy a README badge that links back to the tour |
 | 🖨️ **Print, or save as PDF** | One page per step — its own highlighted diagram, narration and source links, forced light-on-white — for design docs and onboarding packs |
@@ -305,7 +305,7 @@ viewer is a pure function of it.
 | Swift | ✅ | `import` resolves to Swift Package Manager targets (`Sources/<Target>/`) declared in `Package.swift`; system frameworks and undeclared packages are dropped, `main.swift` and `@main` entry points |
 | Everything else | ➖ | Structure, manifests and dependencies only. **[Add yours!](#-help-wanted)** |
 
-Beyond code, two extra views are read when the files exist: **infrastructure** (services, `depends_on` and build contexts from `docker-compose.yml` / `compose.yaml`) and **data model** (tables and foreign keys from `CREATE TABLE` / `ALTER TABLE … FOREIGN KEY` in `.sql` files, models and `@relation`s from `schema.prisma`, and Django models — classes deriving `models.Model` and their `ForeignKey` / `OneToOneField` / `ManyToManyField` targets — in `models.py`; a migration history counts as one schema). SQLAlchemy, TypeORM, Kubernetes and Terraform are not read yet.
+Beyond code, two extra views are read when the files exist: **infrastructure** (services, `depends_on` and build contexts from `docker-compose.yml` / `compose.yaml`; Kubernetes manifests with selector and Ingress links; Terraform `resource` blocks with their references) and **data model** (tables and foreign keys from `CREATE TABLE` / `ALTER TABLE … FOREIGN KEY` in `.sql` files, models and `@relation`s from `schema.prisma`, and Django models — classes deriving `models.Model` and their `ForeignKey` / `OneToOneField` / `ManyToManyField` targets — in `models.py`; a migration history counts as one schema). SQLAlchemy, TypeORM, Kubernetes and Terraform are not read yet.
 
 Also detected: dependencies from `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `build.gradle` and
 `Cargo.toml`; workspaces (npm, pnpm, Cargo, `go.work`); server routes (only when a real server framework is imported, with
@@ -354,22 +354,15 @@ start without asking. Comment "I'll take this" and a maintainer will help you ge
 - [#48](https://github.com/Kaushik2210/gitVisualise/issues/48) Language support: Scala
 - [#49](https://github.com/Kaushik2210/gitVisualise/issues/49) Data model: read ORM models from application code
 - [#50](https://github.com/Kaushik2210/gitVisualise/issues/50) Request tracing: read routes from OpenAPI documents
-- [#51](https://github.com/Kaushik2210/gitVisualise/issues/51) Performance: process the file tree off the main thread
-- [#52](https://github.com/Kaushik2210/gitVisualise/issues/52) Viewer: a minimap for large diagrams
-- [#53](https://github.com/Kaushik2210/gitVisualise/issues/53) Diff: detect renamed and moved files
-- [#54](https://github.com/Kaushik2210/gitVisualise/issues/54) Infrastructure view: Kubernetes manifests
-- [#57](https://github.com/Kaushik2210/gitVisualise/issues/57) VS Code extension: "where am I?" and Marketplace publishing
 
 **🔴 Ambitious** (discuss the design first)
 
 - [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) Sign in with GitHub to list private repositories
-- [#55](https://github.com/Kaushik2210/gitVisualise/issues/55) Infrastructure view: Terraform resources
-- [#56](https://github.com/Kaushik2210/gitVisualise/issues/56) Request tracing: GraphQL operations to resolvers
 
 The full plan, grouped into milestones, is in [ROADMAP.md](ROADMAP.md).
 
 <details>
-<summary><b>✅ Already shipped from this list</b> (34 issues closed)</summary>
+<summary><b>✅ Already shipped from this list</b> (41 issues closed)</summary>
 
 Closed so far: #1, #2, #3, #4, #5, #6, #8, #9, #10, #11, #12, #13, #15, #16, #20, #21, #22, #23, #24, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40. The changelog says what each one delivered.
 
@@ -429,7 +422,7 @@ npm run docs      # regenerate this repo's own tour (curated content is preserve
 
 ## Limits
 
-- Dynamic dispatch and runtime autoloading (Rails constants, PHP classmaps, reflection) are not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match; a literal `baseURL` / `prefixUrl` set in the same file is applied, but clients configured in another file, OpenAPI documents and GraphQL are not followed yet.
+- Dynamic dispatch and runtime autoloading (Rails constants, PHP classmaps, reflection) are not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match; a literal `baseURL` / `prefixUrl` set in the same file is applied, but clients configured in another file, OpenAPI documents are read for routes. GraphQL operations are linked to resolvers only when the operation, the schema field and a literal resolver map (`{ Query: { users() {} } }`) all match exactly; schemas or resolvers assembled dynamically are not followed, and a field defined or implemented twice stays unlinked.
 - A comparison matches components by id, so a moved or renamed file shows as one removal plus one addition.
 - The automatic narration is templated; the Claude Code skill is what turns it into an explanation.
 - The website analyses public repos anonymously (GitHub's 60 requests/hour per network); private repos need a token.

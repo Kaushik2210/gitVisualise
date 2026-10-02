@@ -18,7 +18,7 @@ exports.run = async function run() {
   await ext.activate();
 
   const commands = await vscode.commands.getCommands(true);
-  assert.ok(commands.includes('gitvisualise.openTour') && commands.includes('gitvisualise.refreshTour'), 'both commands are registered');
+  assert.ok(['gitvisualise.openTour', 'gitvisualise.refreshTour', 'gitvisualise.whereAmI'].every((c) => commands.includes(c)), 'all three commands are registered');
 
   const ws = process.env.GV_TEST_WORKSPACE;
   const norm = (p) => path.resolve(p).toLowerCase(); // Windows may report the drive letter in another case
@@ -36,6 +36,14 @@ exports.run = async function run() {
   const editor = await waitFor(() => vscode.window.activeTextEditor, 'an editor');
   assert.equal(path.basename(editor.document.fileName), 'a.js');
   assert.equal(editor.selection.start.line, 0);
+
+  // 2b. "where am I?": with src/a.js active, the command picks the component that contains it and sends it to the tour page
+  const doc = await vscode.workspace.openTextDocument(path.join(ws, 'src', 'a.js'));
+  await vscode.window.showTextDocument(doc);
+  const picked = await vscode.commands.executeCommand('gitvisualise.whereAmI');
+  assert.ok(picked, 'a component was found for src/a.js');
+  await waitFor(async () => (await vscode.commands.executeCommand('gitvisualise._lastSelection')) === picked, 'the selection to reach the tour page');
+  assert.equal(__test.componentFor(path.join(ws, 'no-such-tour'), 'src/a.js', 1), null, 'a missing tour folder finds nothing instead of throwing');
 
   // 3. a hostile message cannot open anything outside the workspace or anything malformed
   const before = vscode.window.activeTextEditor.document.fileName;

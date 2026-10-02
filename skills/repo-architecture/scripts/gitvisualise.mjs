@@ -224,7 +224,7 @@ function doDiff(positional, flags) {
   const file = path.join(outDir, 'architecture.json');
   writeJSON(file, arch);
   const n = summary.nodes, e = summary.edges;
-  console.log(summary.empty ? 'No structural differences.' : `Components: +${n.added} -${n.removed} ~${n.changed}   Relationships: +${e.added} -${e.removed} ~${e.changed}`);
+  console.log(summary.empty ? 'No structural differences.' : `Components: +${n.added} -${n.removed} ~${n.changed} →${n.moved || 0}   Relationships: +${e.added} -${e.removed} ~${e.changed}`);
   console.log(`Wrote ${file}`);
   if (flags.root) {
     const r = validate(arch, path.resolve(flags.root));

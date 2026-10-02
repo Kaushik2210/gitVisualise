@@ -4,14 +4,20 @@
 import { scanCore } from '../core/scan-core.mjs';
 import { validateCore } from '../core/validate-core.mjs';
 import { generate } from '../generate.mjs';
+import { readTree, planSources } from './tree-plan.mjs';
 
 /** A read-only view of the repo (the same shape the CLI validator uses), backed by the tree + downloaded files. */
 export function makeView(paths, contents) {
   const files = new Set(paths);
   const dirs = new Set();
   for (const p of paths) {
-    const s = p.split('/');
-    for (let i = 1; i < s.length; i++) dirs.add(s.slice(0, i).join('/'));
+    // Every ancestor directory. A directory is only ever added together with all of its ancestors, so the walk up can stop at the
+    // first one already known: this is about one lookup per file instead of one string per path segment (7,000 files in a big repo).
+    for (let i = p.lastIndexOf('/'); i > 0; i = p.lastIndexOf('/', i - 1)) {
+      const d = p.slice(0, i);
+      if (dirs.has(d)) break;
+      dirs.add(d);
+    }
   }
   let names = null;
   return {
@@ -49,23 +55,58 @@ export function analyseSources({ paths, allPaths, contents, repo, sub = '', alre
   return { arch, validation, workspaces: scan.workspaces, depth: lay.depth };
 }
 
+/** Every job the analysis worker can run. Each is a pure function of its (cloneable) input. */
+export const TASKS = { analyse: analyseSources, tree: readTree, plan: planSources };
+
 /**
- * Runs analyseSources in a module Worker when asked and available, and on this thread otherwise (no Worker in Node, a browser
- * that cannot start module workers, a CSP that forbids them). Aborting terminates the worker.
+ * Runs jobs in one module Worker when asked and available, and on this thread otherwise (no Worker in Node, a browser that
+ * cannot start module workers, a CSP that forbids them). If the worker cannot load or crashes, the jobs it was holding run here
+ * instead of failing the analysis. Aborting terminates the worker and rejects what is pending with an AbortError.
+ *   const r = createRunner({ worker: true, signal }); const tree = await r.run('tree', text); ...; r.close();
  */
+export function createRunner({ worker = false, signal } = {}) {
+  const local = (type, payload) => Promise.resolve().then(() => TASKS[type](payload));
+  if (!worker || typeof Worker !== 'function') return { run: (type, payload) => (signal && signal.aborted ? Promise.reject(new DOMException('Aborted', 'AbortError')) : local(type, payload)), close() {} };
+  let w = null, dead = false, closed = false, next = 1;
+  const pending = new Map();
+  const abortError = () => new DOMException('Aborted', 'AbortError');
+  const close = () => { closed = true; if (signal) signal.removeEventListener('abort', onAbort); if (w) { w.terminate(); w = null; } };
+  const onAbort = () => { const jobs = [...pending.values()]; pending.clear(); close(); jobs.forEach((j) => j.reject(abortError())); };
+  const giveUp = () => { // the worker is unusable: finish what it was holding on this thread, and use this thread from now on
+    dead = true;
+    if (w) { w.terminate(); w = null; }
+    const jobs = [...pending.values()];
+    pending.clear();
+    jobs.forEach((j) => local(j.type, j.payload).then(j.resolve, j.reject));
+  };
+  if (signal) signal.addEventListener('abort', onAbort);
+  try {
+    w = new Worker(new URL('./analysis-worker.mjs', import.meta.url), { type: 'module' });
+    w.onmessage = (e) => {
+      const d = e.data || {};
+      const job = pending.get(d.id);
+      if (!job) return;
+      pending.delete(d.id);
+      if (d.ok) job.resolve(d.result); else job.reject(new Error(d.error || 'The analysis worker failed'));
+    };
+    w.onerror = (e) => { if (e && e.preventDefault) e.preventDefault(); if (!closed) giveUp(); };
+  } catch { dead = true; w = null; }
+  return {
+    run(type, payload) {
+      if (signal && signal.aborted) return Promise.reject(abortError());
+      if (dead || closed || !w) return local(type, payload);
+      return new Promise((resolve, reject) => {
+        const id = next++;
+        pending.set(id, { type, payload, resolve, reject });
+        try { w.postMessage({ id, type, payload }); } catch { pending.delete(id); local(type, payload).then(resolve, reject); }
+      });
+    },
+    close,
+  };
+}
+
+/** One analysis job in a worker (or here); kept for callers that only need that. */
 export function runAnalysis(input, { worker = false, signal } = {}) {
-  const here = () => Promise.resolve().then(() => analyseSources(input));
-  if (!worker || typeof Worker !== 'function') return here();
-  return new Promise((resolve, reject) => {
-    let w;
-    try { w = new Worker(new URL('./analysis-worker.mjs', import.meta.url), { type: 'module' }); } catch { return here().then(resolve, reject); }
-    let done = false;
-    const finish = (fn, v) => { if (done) return; done = true; if (signal) signal.removeEventListener('abort', onAbort); w.terminate(); fn(v); };
-    const onAbort = () => finish(reject, new DOMException('Aborted', 'AbortError'));
-    if (signal) { if (signal.aborted) return onAbort(); signal.addEventListener('abort', onAbort); }
-    w.onmessage = (e) => (e.data && e.data.ok ? finish(resolve, e.data.result) : finish(reject, new Error((e.data && e.data.error) || 'The analysis worker failed')));
-    // the worker file could not load or crashed: do the work here instead of failing the analysis
-    w.onerror = (e) => { if (done) return; e.preventDefault && e.preventDefault(); done = true; if (signal) signal.removeEventListener('abort', onAbort); w.terminate(); here().then(resolve, reject); };
-    w.postMessage(input);
-  });
+  const runner = createRunner({ worker, signal });
+  return runner.run('analyse', input).finally(() => runner.close());
 }

@@ -75,8 +75,12 @@ must match exact case. `node scripts/gitvisualise.mjs validate` enforces everyth
 ## Comparisons (`diff`)
 
 `gitvisualise diff <older> <newer>` and the website's `owner/repo@base...head` produce an architecture in which every node and edge carries an optional
-`diff` of `added | removed | changed | same` (matched by id, so a moved file is a removal plus an addition). Nodes that changed also carry a
-`diffNote` (what the description used to say). Evidence for a **removed** item lives in the older tree, so its sources carry a `commit`;
+`diff` of `added | removed | changed | moved | same` (matched by id). Nodes that changed also carry a
+`diffNote` (what the description used to say). A file that merely moved is reported as one `moved` node, with `movedFrom: { paths, commit }` (where it
+was, in the base commit) and a `diffNote`, and its relationships are kept rather than shown as removed and added. The rule is deliberately strict:
+the removed and the added component must have the same label, technologies, file name and scanner description (its line count and what
+it defines; the kind is inferred from the directory and may differ), in different directories, and exactly one removed and one added component may carry that signature. A move that is also
+an edit, a rename, or two look-alike files stays a removal plus an addition; the result never guesses. Evidence for a **removed** item lives in the older tree, so its sources carry a `commit`;
 the validator only checks their shape, and the viewer links them to that commit. `project.compare` records `{ base: { ref, commit }, head: { ref, commit } }`,
 and a generated **What changed** flow comes first.
 

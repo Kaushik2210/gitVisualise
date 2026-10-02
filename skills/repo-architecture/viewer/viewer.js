@@ -273,7 +273,7 @@
       var i = h('i'); i.setAttribute('style', '--kc:' + kindColor(n.kind));
       legend.appendChild(h('span', {}, [i, document.createTextNode(n.kind)]));
     });
-    ['added', 'removed', 'changed'].forEach(function (d) {
+    ['added', 'removed', 'changed', 'moved'].forEach(function (d) {
       if (!nodes.some(function (n) { return n.diff === d; }) && !edges.some(function (e) { return e.diff === d; })) return;
       var k = h('i', { class: 'diff-key d-' + d, text: DIFF_MARK[d] });
       legend.appendChild(h('span', {}, [k, document.createTextNode(d)]));
@@ -282,10 +282,11 @@
       var hl = h('i', { class: 'http-key' });
       legend.appendChild(h('span', {}, [hl, document.createTextNode('HTTP request')]));
     }
+    drawMinimap();
   }
 
   // ---------- camera ----------
-  function applyView() { svg.setAttribute('viewBox', [view.x, view.y, view.w, view.h].join(' ')); }
+  function applyView() { svg.setAttribute('viewBox', [view.x, view.y, view.w, view.h].join(' ')); syncMinimap(); }
   function bbox(ids) {
     var x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
     ids.forEach(function (id) { var b = boxes[id]; if (!b) return; x1 = Math.min(x1, b.x); y1 = Math.min(y1, b.y); x2 = Math.max(x2, b.x + b.w); y2 = Math.max(y2, b.y + b.h); });
@@ -299,6 +300,57 @@
     tweenTo(bb.x + bb.w / 2 - cw / sc / 2, bb.y + bb.h / 2 - ch / sc / 2, cw / sc, ch / sc, true);
     userMoved = false;
   }
+  // ---------- minimap ----------
+  // A small overview of the whole diagram with the visible region as a rectangle; click or drag it to move the camera. It is a
+  // pointer convenience only (decorative for assistive technology, no tab stops), it follows every camera change because they all go
+  // through applyView(), it is redrawn with the diagram (so collapsed lanes show as their one chip), and it is hidden while the
+  // whole diagram is already on screen.
+  var minimap = $('minimap'), mmSvg = null, mmView = null, mmFit = null;
+  function drawMinimap() {
+    if (!minimap) return;
+    minimap.replaceChildren(); mmSvg = mmView = mmFit = null;
+    var bb = bbox(Object.keys(boxes));
+    if (!bb) { minimap.hidden = true; return; }
+    var pad = 30, vb = { x: bb.x - pad, y: bb.y - pad, w: bb.w + 2 * pad, h: bb.h + 2 * pad };
+    mmFit = bb;
+    mmSvg = s('svg', { viewBox: [vb.x, vb.y, vb.w, vb.h].join(' '), preserveAspectRatio: 'xMidYMid meet', focusable: 'false' });
+    var seen = {};
+    nodes.forEach(function (n) {
+      var b = boxes[n.id]; if (!b) return;
+      var key = b.x + ',' + b.y; if (seen[key]) return; seen[key] = 1;  // a collapsed lane's members share one box
+      mmSvg.appendChild(s('rect', { class: 'mm-node' + diffClass(n), x: b.x, y: b.y, width: b.w, height: b.h, rx: 8, style: '--kc:' + kindColor(n.kind) }));
+    });
+    mmView = s('rect', { class: 'mm-view' });
+    mmSvg.appendChild(mmView);
+    minimap.appendChild(mmSvg);
+    var mw = 168, mh = Math.max(56, Math.min(130, Math.round(mw * vb.h / vb.w)));
+    minimap.style.width = mw + 'px'; minimap.style.height = mh + 'px';
+    syncMinimap();
+  }
+  function syncMinimap() {
+    if (!minimap || !mmView || !mmFit) return;
+    var f = mmFit, eps = 2;
+    var allVisible = view.x <= f.x + eps && view.y <= f.y + eps && view.x + view.w >= f.x + f.w - eps && view.y + view.h >= f.y + f.h - eps;
+    minimap.hidden = allVisible;
+    canvas.classList.toggle('has-minimap', !allVisible);
+    if (allVisible) return;
+    mmView.setAttribute('x', view.x); mmView.setAttribute('y', view.y); mmView.setAttribute('width', view.w); mmView.setAttribute('height', view.h);
+  }
+  (function minimapPointer() {
+    if (!minimap) return;
+    var dragging = false;
+    function moveTo(e) {
+      var ctm = mmSvg && mmSvg.getScreenCTM && mmSvg.getScreenCTM(); if (!ctm) return;
+      var p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+      tweenId++; userMoved = true;
+      view.x = p.x - view.w / 2; view.y = p.y - view.h / 2; applyView();
+    }
+    minimap.addEventListener('pointerdown', function (e) { dragging = true; minimap.setPointerCapture(e.pointerId); e.preventDefault(); moveTo(e); });
+    minimap.addEventListener('pointermove', function (e) { if (dragging) moveTo(e); });
+    function end() { dragging = false; }
+    minimap.addEventListener('pointerup', end); minimap.addEventListener('pointercancel', end);
+    minimap.addEventListener('wheel', function (e) { e.preventDefault(); zoom(e.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
+  })();
   // Smoothly move the camera (instant when the user prefers reduced motion or on first paint).
   var tweenId = 0;
   function tweenTo(x, y, w, h, instant) {
@@ -494,8 +546,8 @@
   }
 
   // ---------- comparison marks (architecture diff) ----------
-  var DIFF_MARK = { added: '+', removed: '−', changed: '~' };
-  var DIFF_LABEL = { added: 'Added', removed: 'Removed', changed: 'Changed' };
+  var DIFF_MARK = { added: '+', removed: '−', changed: '~', moved: '→' };
+  var DIFF_LABEL = { added: 'Added', removed: 'Removed', changed: 'Changed', moved: 'Moved' };
   function diffClass(x) { return x.diff && x.diff !== 'same' ? ' d-' + x.diff : ''; }
 
   // ---------- detail panel ----------
@@ -868,6 +920,7 @@
     if (e.source !== window.parent || !e.data || typeof e.data !== 'object') return;
     if (typeof e.data.gvTheme === 'string') applyTheme(e.data.gvTheme, true);
     if (e.data.gvGoto && typeof e.data.gvGoto === 'object') gotoState(e.data.gvGoto);
+    if (typeof e.data.gvSelect === 'string' && byId[e.data.gvSelect]) selectNode(e.data.gvSelect, true); // the host reveals a component (VS Code: "where am I?")
   });
   applyTheme(store('theme') || 'auto', true);
 
@@ -1009,4 +1062,5 @@
   $('follow').addEventListener('change', function (e) { S.follow = e.target.checked; store('follow', S.follow ? '1' : '0'); if (S.follow) cameraForStep(); else fit(); });
   var hm = /[#&]flow=([^&]+)&step=(\d+)/.exec(location.hash); // standalone deep link
   if (hm) gotoState({ flow: decodeURIComponent(hm[1]), step: Number(hm[2]) });
+  if (vscodeApi) vscodeApi.postMessage({ type: 'ready' }); // a host that wants to send gvSelect waits for this
 })();
