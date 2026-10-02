@@ -300,6 +300,7 @@ viewer is a pure function of it.
 | PHP | ✅ | `use` (including group use) through declared classes and PSR-4, `require` with literal paths, `composer.json` packages |
 | C / C++ | ✅ | Quoted `#include`s through relative paths and CMake / Makefile include directories, `main` entry points |
 | Dart / Flutter | ✅ | `package:` imports of this repository's packages (monorepos included), relative imports, `export` and `part`, `pubspec.yaml` dependencies |
+| Swift | ✅ | `import` resolves to Swift Package Manager targets (`Sources/<Target>/`) declared in `Package.swift`; system frameworks and undeclared packages are dropped, `main.swift` and `@main` entry points |
 | Everything else | ➖ | Structure, manifests and dependencies only. **[Add yours!](#-help-wanted)** |
 
 Beyond code, two extra views are read when the files exist: **infrastructure** (services, `depends_on` and build contexts from `docker-compose.yml` / `compose.yaml`) and **data model** (tables and foreign keys from `CREATE TABLE` / `ALTER TABLE … FOREIGN KEY` in `.sql` files, and models and `@relation`s from `schema.prisma`; a migration history counts as one schema). ORM models in code, Kubernetes and Terraform are not read yet.

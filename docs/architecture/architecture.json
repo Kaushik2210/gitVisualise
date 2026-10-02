@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-02T04:15:29.218Z",
+    "generatedAt": "2026-10-02T04:22:10.476Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 4 tests files, 36 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 4 tests files, 37 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -917,8 +917,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            36,
-            56
+            37,
+            57
           ]
         }
       ]
@@ -1123,6 +1123,25 @@
           "lines": [
             6,
             26
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-swift-mjs",
+      "label": "lang-swift.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Swift: `import Module` names a Swift Package Manager target, not a file, so resolution goes through the targets a Package.swift manifest actually declares.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-swift.mjs",
+          "lines": [
+            13,
+            33
           ]
         }
       ]
@@ -2575,6 +2594,42 @@
           ]
         }
       ]
+    },
+    {
+      "id": "e-lang-swift-mjs--posix-mjs",
+      "from": "lang-swift-mjs",
+      "to": "posix-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "posix",
+      "summary": "1 import (posix).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-swift.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-swift-mjs",
+      "from": "languages-mjs",
+      "to": "lang-swift-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "swift",
+      "summary": "1 import (swift).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            32,
+            32
+          ]
+        }
+      ]
     }
   ],
   "flows": [
@@ -3158,7 +3213,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 44 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 45 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
@@ -3211,7 +3266,7 @@
         },
         {
           "id": "t3",
-          "title": "Service (37)",
+          "title": "Service (38)",
           "nodes": [
             "build-mjs",
             "build-core-mjs",
@@ -3228,6 +3283,7 @@
             "lang-php-mjs",
             "lang-ruby-mjs",
             "lang-rust-mjs",
+            "lang-swift-mjs",
             "languages-mjs",
             "posix-mjs",
             "scan-core-mjs",
@@ -3253,7 +3309,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "37 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
+          "narration": "38 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",

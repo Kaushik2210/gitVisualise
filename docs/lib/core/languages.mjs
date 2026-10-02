@@ -29,6 +29,7 @@ import { ruby } from './lang-ruby.mjs';
 import { php } from './lang-php.mjs';
 import { c } from './lang-c.mjs';
 import { dart } from './lang-dart.mjs';
+import { swift } from './lang-swift.mjs';
 
 const byDepth = (a, b) => a.path.split('/').length - b.path.split('/').length;
 
@@ -93,7 +94,7 @@ export const rust = {
   },
 };
 
-export const PLUGINS = [jvm, rust, csharp, ruby, php, c, dart];
+export const PLUGINS = [jvm, rust, csharp, ruby, php, c, dart, swift];
 
 export const PLUGIN_BY_EXT = Object.fromEntries(PLUGINS.flatMap((p) => p.exts.map((e) => [e, p])));
 /** Extensions whose directory (package) is the diagram unit, for the generator. */

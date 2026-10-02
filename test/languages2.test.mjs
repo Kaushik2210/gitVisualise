@@ -1,4 +1,4 @@
-// Import graphs for C#, Ruby, PHP, C/C++ and Dart. Every test includes imports that must stay unresolved.
+// Import graphs for C#, Ruby, PHP, C/C++, Dart and Swift. Every test includes imports that must stay unresolved.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { scanRepo } from '../skills/repo-architecture/scripts/lib/scan.mjs';
@@ -149,6 +149,59 @@ test('dart: packages of a monorepo resolve to each other', () => {
   const scan = scanRepo(root);
   assert.deepEqual(resolvedOf(scan, 'packages/app/lib/main.dart', 'package:core/core.dart'), ['packages/core/lib/core.dart']);
   assert.deepEqual(resolvedOf(scan, 'packages/app/lib/main.dart', 'package:core/missing.dart'), [null]);
+});
+
+test('swift: imports resolve to Package.swift targets; system frameworks and undeclared packages are dropped', () => {
+  const root = repo({
+    'Package.swift': [
+      '// swift-tools-version:5.9',
+      'import PackageDescription',
+      'let package = Package(',
+      '  name: "App",',
+      '  dependencies: [',
+      '    .package(url: "https://github.com/apple/swift-algorithms.git", from: "1.0.0"),',
+      '  ],',
+      '  targets: [',
+      '    .executableTarget(name: "App", dependencies: ["Core", .product(name: "Algorithms", package: "swift-algorithms")]),',
+      '    .target(name: "Core"),',
+      '    .testTarget(name: "AppTests", dependencies: ["App"]),',
+      '  ]',
+      ')',
+      '',
+    ].join('\n'),
+    'Sources/App/main.swift': [
+      'import Foundation',
+      'import SwiftUI',
+      'import Core',
+      'import Algorithms',
+      'import Unlisted',
+      'print(Core.greeting)',
+      '',
+    ].join('\n'),
+    'Sources/Core/Core.swift': 'public enum Core { public static let greeting = "hi" }\n',
+    'Tests/AppTests/AppTests.swift': '@testable import App\n',
+  });
+  const scan = scanRepo(root);
+  const p = 'Sources/App/main.swift';
+  assert.deepEqual(resolvedOf(scan, p, 'Core'), ['Sources/Core/Core.swift']);
+  assert.deepEqual(resolvedOf(scan, p, 'Algorithms'), [null], 'a product resolves to an external package, not a file');
+  assert.deepEqual(resolvedOf(scan, p, 'Foundation'), [null], 'a system framework is dropped, never guessed');
+  assert.deepEqual(resolvedOf(scan, p, 'SwiftUI'), [null]);
+  assert.deepEqual(resolvedOf(scan, p, 'Unlisted'), [null], 'not a declared target or package product');
+  assert.deepEqual(externals(scan), ['swift-algorithms'], 'only the package a manifest actually declares');
+  assert.ok(scan.entryPoints.some((e) => e.path === p), 'main.swift is the executable entry point');
+  const arch = generate(scan);
+  assert.deepEqual(validate(arch, root).errors, []);
+  assert.ok(arch.edges.some((e) => e.kind === 'uses' && e.to.startsWith('ext-')), 'the package becomes an external node');
+});
+
+test('swift: @main marks an entry point outside main.swift too', () => {
+  const root = repo({
+    'Package.swift': 'let package = Package(name: "App", targets: [.executableTarget(name: "App")])\n',
+    'Sources/App/Entry.swift': '@main\nstruct Entry {\n  static func main() {}\n}\n',
+  });
+  const scan = scanRepo(root);
+  assert.ok(scan.entryPoints.some((e) => e.path === 'Sources/App/Entry.swift'));
 });
 
 test('new languages: test files by convention are not drawn, and language names are reported', () => {
