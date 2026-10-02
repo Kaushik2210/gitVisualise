@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-02
+
 ### Changed
 - **Performance: the file tree is processed off the main thread (#51).** Parsing the tree response, sorting it, applying `.gitignore`, and choosing manifests, view files and source files (`readTree` / `planSources` in the new `web/tree-plan.mjs`) now run in the same analysis Web Worker as the scan, through one shared worker per analysis (`createRunner`). It falls back to the calling thread if the worker cannot load, and cancelling rejects every pending job and terminates the worker. `makeView` also stopped rebuilding every ancestor directory string for every path. Measured in headless Chrome with a fake GitHub holding 7,245 files (`e2e/longtask.e2e.mjs`, a `longtask` observer, 4x CPU throttle on the development machine): the worst main-thread task between pressing Go and the results view went from 90-123 ms (two long tasks) to about 60 ms (one); the test now normalises for the speed of the machine it runs on. The test now fails above 100 ms.
 
@@ -113,6 +115,7 @@ First public release.
   keyboard shortcuts, dark mode, a phone layout, reduced-motion support and a no-JavaScript fallback.
 - A self-documenting architecture tour of this repository in `docs/architecture/`.
 
+[1.3.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.3.0
 [1.2.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.1.0
 [1.0.1]: https://github.com/Kaushik2210/gitVisualise/releases/tag/v1.0.1
