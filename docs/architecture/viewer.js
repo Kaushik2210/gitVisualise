@@ -926,8 +926,13 @@
   // ---------- boot ----------
   $('proj-name').textContent = arch.project.name;
   $('proj-desc').textContent = arch.project.description || '';
-  if (typeof arch.project.repoUrl === 'string' && arch.project.repoUrl.indexOf('https://github.com/') === 0) {
-    var rl = $('repo-link'); rl.href = arch.project.repoUrl; rl.hidden = false;
+  if (typeof arch.project.repoUrl === 'string') {
+    try {
+      var repoUrl = new URL(arch.project.repoUrl);
+      if (repoUrl.protocol === 'https:' && repoUrl.hostname === 'github.com' && /^\/[^\/]+\/[^\/]+/.test(repoUrl.pathname)) {
+        var rl = $('repo-link'); rl.href = repoUrl.href; rl.hidden = false;
+      }
+    } catch (_) {}
   }
   $('app').hidden = false;
   render(); buildDots(); fit(); applyState();
