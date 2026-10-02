@@ -36,13 +36,14 @@ export function javaSymbols(text) {
   return out;
 }
 
-/** Index of top-level types by fully qualified name, and of files by package. Paths are repository-relative. */
+/** Index of top-level types by fully qualified name, and of files by package. Paths are repository-relative.
+    Shared by Java, Kotlin and Scala, so an import in any of the three can resolve to a file in any of the three. */
 export function buildJavaIndex(files) {
   const byClass = new Map();
   const byPackage = new Map();
   for (const f of files) {
-    if (!/\.(java|kt)$/.test(f.path)) continue;
-    const cls = f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.(java|kt)$/, '');
+    if (!/\.(java|kt|scala)$/.test(f.path)) continue;
+    const cls = f.path.slice(f.path.lastIndexOf('/') + 1).replace(/\.(java|kt|scala)$/, '');
     const names = new Set([...(f.path.endsWith('.java') ? [cls] : []), ...(f.symbols || []).map((s) => s.name)]);
     for (const name of names) {
       const fqcn = f.package ? `${f.package}.${name}` : name;

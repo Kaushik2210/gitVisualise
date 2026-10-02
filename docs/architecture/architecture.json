@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-02T04:22:10.476Z",
+    "generatedAt": "2026-10-02T04:31:06.546Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 4 tests files, 37 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 4 tests files, 38 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -624,7 +624,7 @@
       "label": "lang-java.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "JavaScript file, 116 lines. Defines javaImports, javaPackage, javaSymbols, buildJavaIndex and 4 more.",
+      "summary": "JavaScript file, 117 lines. Defines javaImports, javaPackage, javaSymbols, buildJavaIndex and 4 more.",
       "tech": [
         "JavaScript"
       ],
@@ -917,8 +917,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            37,
-            57
+            38,
+            58
           ]
         }
       ]
@@ -1142,6 +1142,25 @@
           "lines": [
             13,
             33
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lang-scala-mjs",
+      "label": "lang-scala.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "JavaScript file, 80 lines. Defines scalaImports, scalaPackage, scalaSymbols, hasScalaMain and 1 more.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-scala.mjs",
+          "lines": [
+            16,
+            36
           ]
         }
       ]
@@ -2175,8 +2194,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            27,
-            27
+            28,
+            28
           ]
         }
       ]
@@ -2193,8 +2212,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            28,
-            28
+            29,
+            29
           ]
         }
       ]
@@ -2211,8 +2230,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            29,
-            29
+            30,
+            30
           ]
         }
       ]
@@ -2229,8 +2248,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            30,
-            30
+            31,
+            31
           ]
         }
       ]
@@ -2247,8 +2266,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            31,
-            31
+            32,
+            32
           ]
         }
       ]
@@ -2625,8 +2644,26 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            32,
-            32
+            33,
+            33
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-languages-mjs--lang-scala-mjs",
+      "from": "languages-mjs",
+      "to": "lang-scala-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "scalaImports, scalaPackage, scalaSymbols and 2 more",
+      "summary": "1 import (scalaImports, scalaPackage, scalaSymbols, hasScalaMain, parseSbtDeps).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            27,
+            27
           ]
         }
       ]
@@ -3213,7 +3250,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 45 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 46 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
@@ -3266,7 +3303,7 @@
         },
         {
           "id": "t3",
-          "title": "Service (38)",
+          "title": "Service (39)",
           "nodes": [
             "build-mjs",
             "build-core-mjs",
@@ -3283,6 +3320,7 @@
             "lang-php-mjs",
             "lang-ruby-mjs",
             "lang-rust-mjs",
+            "lang-scala-mjs",
             "lang-swift-mjs",
             "languages-mjs",
             "posix-mjs",
@@ -3309,7 +3347,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "38 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
+          "narration": "39 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",

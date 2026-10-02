@@ -294,6 +294,7 @@ viewer is a pure function of it.
 | Go | ✅ | Packages (directories) as nodes, module-internal imports, `go.mod` and `go.work` |
 | Java | ✅ | Classes, nested classes, static and wildcard imports resolved to real files; Maven and Gradle dependencies; Spring Boot entry points |
 | Kotlin | ✅ | Class, wildcard and aliased imports resolve to Kotlin or Java files in the repository; `fun main` entry points |
+| Scala | ✅ | Plain, braced, renamed and wildcard imports resolve to Scala, Kotlin or Java files (one shared class index); `build.sbt` dependencies; `object extends App` and `def main` entry points |
 | Rust | ✅ | `mod`, `use crate::`/`self::`/`super::`, workspaces and `Cargo.toml` dependencies |
 | C# | ✅ | `using` directives resolved through declared namespaces and types (only to files that are really used), `.csproj` NuGet packages, `Main` and ASP.NET entry points |
 | Ruby | ✅ | `require_relative`, `require` through `lib/` and the load path, gems from `Gemfile` and gemspecs |

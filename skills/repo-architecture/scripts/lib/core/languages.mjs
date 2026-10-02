@@ -24,6 +24,7 @@
 import { rustImports, buildRustContext, resolveRustImport, rustDependencies } from './lang-rust.mjs';
 import { javaImports, javaPackage, javaSymbols, buildJavaIndex, resolveJavaImport, parseJavaDeps, matchJavaDependency, hasJavaMain } from './lang-java.mjs';
 import { kotlinImports, kotlinPackage, kotlinSymbols, hasKotlinMain } from './lang-kotlin.mjs';
+import { scalaImports, scalaPackage, scalaSymbols, hasScalaMain, parseSbtDeps } from './lang-scala.mjs';
 import { csharp } from './lang-csharp.mjs';
 import { ruby } from './lang-ruby.mjs';
 import { php } from './lang-php.mjs';
@@ -33,23 +34,23 @@ import { swift } from './lang-swift.mjs';
 
 const byDepth = (a, b) => a.path.split('/').length - b.path.split('/').length;
 
-/** Java and Kotlin share one class index, so a Kotlin file can import a Java class and the other way round. */
+/** Java, Kotlin and Scala share one class index, so an import in any of the three can resolve to a file in any. */
 export const jvm = {
   name: 'jvm',
-  exts: ['java', 'kt'],
-  langNames: { java: 'Java', kt: 'Kotlin' },
+  exts: ['java', 'kt', 'scala'],
+  langNames: { java: 'Java', kt: 'Kotlin', scala: 'Scala' },
   packageUnit: true,
-  manifests: ['pom\\.xml', 'build\\.gradle(?:\\.kts)?'],
-  alwaysPrepare: true, // pom.xml / build.gradle dependencies are read even when no Java file was scanned
+  manifests: ['pom\\.xml', 'build\\.gradle(?:\\.kts)?', 'build\\.sbt'],
+  alwaysPrepare: true, // pom.xml / build.gradle / build.sbt dependencies are read even when no source file was scanned
   parse(text, ext) {
-    return ext === 'java'
-      ? { imports: javaImports(text), package: javaPackage(text), symbols: javaSymbols(text) }
-      : { imports: kotlinImports(text), package: kotlinPackage(text), symbols: kotlinSymbols(text) };
+    if (ext === 'java') return { imports: javaImports(text), package: javaPackage(text), symbols: javaSymbols(text) };
+    if (ext === 'kt') return { imports: kotlinImports(text), package: kotlinPackage(text), symbols: kotlinSymbols(text) };
+    return { imports: scalaImports(text), package: scalaPackage(text), symbols: scalaSymbols(text) };
   },
   prepare({ files, allPaths, read }) {
-    const deps = parseJavaDeps(read, allPaths);
+    const deps = [...parseJavaDeps(read, allPaths), ...parseSbtDeps(read, allPaths)];
     const manifests = [...new Set(deps.map((d) => d.file))].map((file) => ({
-      file, type: file.endsWith('pom.xml') ? 'maven' : 'gradle', dependencies: deps.filter((d) => d.file === file).map((d) => d.name),
+      file, type: file.endsWith('pom.xml') ? 'maven' : file.endsWith('.sbt') ? 'sbt' : 'gradle', dependencies: deps.filter((d) => d.file === file).map((d) => d.name),
     }));
     return { state: { index: buildJavaIndex(files), deps }, deps, manifests };
   },
@@ -62,6 +63,7 @@ export const jvm = {
   entry(file) {
     if (file.path.endsWith('.java') && hasJavaMain(file._text)) return 'Java main method or Spring Boot application';
     if (file.path.endsWith('.kt') && hasKotlinMain(file._text)) return 'Kotlin main function';
+    if (file.path.endsWith('.scala') && hasScalaMain(file._text)) return 'Scala object extends App, or a main method';
     return null;
   },
 };
@@ -94,7 +96,7 @@ export const rust = {
   },
 };
 
-export const PLUGINS = [jvm, rust, csharp, ruby, php, c, dart, swift];
+export const PLUGINS = [jvm, rust, csharp, ruby, php, c, dart, swift]; // scala is part of jvm, not its own plugin
 
 export const PLUGIN_BY_EXT = Object.fromEntries(PLUGINS.flatMap((p) => p.exts.map((e) => [e, p])));
 /** Extensions whose directory (package) is the diagram unit, for the generator. */

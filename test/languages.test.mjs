@@ -273,6 +273,87 @@ test('kotlin: resolves regular, wildcard and aliased imports across Kotlin and J
   assert.deepEqual(validate(arch, root).errors, []);
 });
 
+test('scala: resolves plain, braced, renamed and wildcard imports, across Scala and Java files, sbt dependencies external', () => {
+  const root = repo({
+    'build.sbt': 'libraryDependencies += "com.typesafe.scalalogging" %% "scala-logging" % "3.9.5"\n',
+    'src/main/scala/com/acme/App.scala': [
+      'package com.acme',
+      '',
+      'import com.acme.model.{User => Person, Order}',
+      'import com.acme.model._',
+      'import com.acme.legacy.LegacyClient',
+      'import com.acme.missing.NotThere',
+      'import com.typesafe.scalalogging.LazyLogging',
+      'import scala.collection.mutable.ArrayBuffer',
+      '',
+      'object App extends App {',
+      '  val u = new Person()',
+      '}',
+      '',
+    ].join('\n'),
+    'src/main/scala/com/acme/model/User.scala': 'package com.acme.model\nclass User\n',
+    'src/main/scala/com/acme/model/Order.scala': 'package com.acme.model\ncase class Order()\n',
+    'src/main/java/com/acme/legacy/LegacyClient.java': 'package com.acme.legacy;\npublic class LegacyClient {}\n',
+  });
+  const scan = scanRepo(root);
+  const app = scan.files.find((f) => f.path === 'src/main/scala/com/acme/App.scala');
+  const resolved = (spec) => app.imports.filter((i) => i.spec === spec).map((i) => i.resolved);
+  assert.equal(app.package, 'com.acme');
+  assert.deepEqual(resolved('com.acme.model.User'), ['src/main/scala/com/acme/model/User.scala'], 'renamed selector resolves by its real name');
+  assert.deepEqual(resolved('com.acme.model.Order'), ['src/main/scala/com/acme/model/Order.scala']);
+  assert.deepEqual(resolved('com.acme.model.*').sort(), [
+    'src/main/scala/com/acme/model/Order.scala',
+    'src/main/scala/com/acme/model/User.scala',
+  ], 'the Scala 2/3 wildcard import of the package');
+  assert.deepEqual(resolved('com.acme.legacy.LegacyClient'), ['src/main/java/com/acme/legacy/LegacyClient.java'], 'resolves across to a Java file');
+  assert.deepEqual(resolved('com.acme.missing.NotThere'), [null], 'absent from the repository, dropped rather than guessed');
+  assert.deepEqual(resolved('scala.collection.mutable.ArrayBuffer'), [null], 'the standard library is never external');
+  assert.deepEqual(externals(scan), ['com.typesafe.scalalogging:scala-logging'], 'only the sbt dependency actually imported');
+  assert.ok(scan.entryPoints.some((e) => e.path === 'src/main/scala/com/acme/App.scala' && /extends App/.test(e.reason)));
+  const arch = generate(scan);
+  assert.deepEqual(validate(arch, root).errors, []);
+});
+
+test('scala: a def main entry point, and stacked package clauses combine into one package', () => {
+  const root = repo({
+    'src/main/scala/com/acme/Main.scala': [
+      'package com.acme',
+      'package tools',
+      '',
+      'object Main {',
+      '  def main(args: Array[String]): Unit = {}',
+      '}',
+      '',
+    ].join('\n'),
+  });
+  const scan = scanRepo(root);
+  const f = scan.files.find((x) => x.path === 'src/main/scala/com/acme/Main.scala');
+  assert.equal(f.package, 'com.acme.tools');
+});
+
+test('scala: a license header (block comment) before the package clause does not hide it', () => {
+  const root = repo({
+    'src/main/scala/com/acme/App.scala': [
+      '/*',
+      ' * Copyright 2026 Acme',
+      ' * Licensed under the Apache License, Version 2.0',
+      ' */',
+      '',
+      'package com.acme',
+      '',
+      'import com.acme.model.User',
+      '',
+      'class App { val u = new User }',
+      '',
+    ].join('\n'),
+    'src/main/scala/com/acme/model/User.scala': 'package com.acme.model\nclass User\n',
+  });
+  const scan = scanRepo(root);
+  const f = scan.files.find((x) => x.path === 'src/main/scala/com/acme/App.scala');
+  assert.equal(f.package, 'com.acme', 'the license header must not be mistaken for the end of the package chain');
+  assert.deepEqual(f.imports.filter((i) => i.spec === 'com.acme.model.User').map((i) => i.resolved), ['src/main/scala/com/acme/model/User.scala']);
+});
+
 test('rust: mod declarations and use paths resolve through the module tree (crate, self, super, braces, aliases)', () => {
   const root = repo({
     'Cargo.toml': '[package]\nname = "demo"\nversion = "0.1.0"\n\n[dependencies]\nserde = { version = "1", features = ["derive"] }\nanyhow = "1.0"\n\n[dev-dependencies]\ncriterion = "0.5"\n',
