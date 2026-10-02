@@ -273,7 +273,7 @@
       var i = h('i'); i.setAttribute('style', '--kc:' + kindColor(n.kind));
       legend.appendChild(h('span', {}, [i, document.createTextNode(n.kind)]));
     });
-    ['added', 'removed', 'changed'].forEach(function (d) {
+    ['added', 'removed', 'changed', 'moved'].forEach(function (d) {
       if (!nodes.some(function (n) { return n.diff === d; }) && !edges.some(function (e) { return e.diff === d; })) return;
       var k = h('i', { class: 'diff-key d-' + d, text: DIFF_MARK[d] });
       legend.appendChild(h('span', {}, [k, document.createTextNode(d)]));
@@ -494,8 +494,8 @@
   }
 
   // ---------- comparison marks (architecture diff) ----------
-  var DIFF_MARK = { added: '+', removed: '−', changed: '~' };
-  var DIFF_LABEL = { added: 'Added', removed: 'Removed', changed: 'Changed' };
+  var DIFF_MARK = { added: '+', removed: '−', changed: '~', moved: '→' };
+  var DIFF_LABEL = { added: 'Added', removed: 'Removed', changed: 'Changed', moved: 'Moved' };
   function diffClass(x) { return x.diff && x.diff !== 'same' ? ' d-' + x.diff : ''; }
 
   // ---------- detail panel ----------

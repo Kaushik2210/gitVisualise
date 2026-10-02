@@ -6,7 +6,7 @@ import { countLines } from './text.mjs';
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/;
 const FILE_EXT_RE = /\.(m?[jt]sx?|cjs|vue|svelte|py|go|rs|java|kt|rb|php|cs|html?|css|scss|json|ya?ml|toml|md|sh|sql|txt|lock|env)$/i;
 const ORIGINS = new Set(['auto', 'claude', 'manual']);
-const DIFFS = new Set(['added', 'removed', 'changed', 'same']);
+const DIFFS = new Set(['added', 'removed', 'changed', 'moved', 'same']);
 
 /**
  * Pure validation. `view` abstracts the repository:
@@ -102,7 +102,7 @@ export function validateCore(arch, view) {
     if (!n.label) err(`${w}: label is required`);
     if (!n.kind) err(`${w}: kind is required`);
     if (n.group != null && typeof n.group !== 'string') err(`${w}: group must be a string`);
-    if (n.diff != null && !DIFFS.has(n.diff)) err(`${w}: diff must be added | removed | changed | same`);
+    if (n.diff != null && !DIFFS.has(n.diff)) err(`${w}: diff must be added | removed | changed | moved | same`);
     if (n.origin && !ORIGINS.has(n.origin)) err(`${w}: origin must be auto | claude | manual`);
     if (!n.summary) warn(`${w}: has no summary`);
     if (n.position && !(Number.isFinite(n.position.x) && Number.isFinite(n.position.y))) err(`${w}: position needs numeric x and y`);
@@ -131,7 +131,7 @@ export function validateCore(arch, view) {
         if (f && !f.text.slice(s.lines[0] - 1, s.lines[1]).some((l) => /import|require|from|src\s*=|include|use\b|using\b|export\b|part\b|autoload|load|^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*;/i.test(l) ||/^\s*(?:[\w.]+\s+)?"[^"]+"\s*$/.test(l))) warn(`${w}: kind "imports" but ${s.path}:${s.lines[0]} does not look like an import`);
       }
     }
-    if (e.diff != null && !DIFFS.has(e.diff)) err(`${w}: diff must be added | removed | changed | same`);
+    if (e.diff != null && !DIFFS.has(e.diff)) err(`${w}: diff must be added | removed | changed | moved | same`);
     if (e.diff !== 'removed') checkText(`${w} summary`, e.summary);
   });
 

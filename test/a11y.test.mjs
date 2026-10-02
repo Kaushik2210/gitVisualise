@@ -122,12 +122,12 @@ test('palette: diff states get their own dash pattern too, not just a colour, so
 
 test('palette: cb-palette diff colours meet 3:1 (WCAG non-text contrast) against every panel/background token in both themes', () => {
   const cb = tokens(':root.cb-palette {');
-  assert.ok(cb['d-added'] && cb['d-removed'] && cb['d-changed'], 'cb-palette overrides all three diff tokens');
-  assert.equal(new Set(Object.values(cb)).size, 3, 'added/removed/changed must be three different colours');
+  assert.ok(cb['d-added'] && cb['d-removed'] && cb['d-changed'] && cb['d-moved'], 'cb-palette overrides all four diff tokens');
+  assert.equal(new Set(Object.values(cb)).size, 4, 'added/removed/changed/moved must be four different colours');
   const light = tokens(':root {'), dark = tokens(':root[data-theme="dark"] {');
   for (const [theme, t] of [['light', light], ['dark', dark]]) {
     for (const bg of ['panel', 'bg', 'node-bg']) {
-      for (const key of ['d-added', 'd-removed', 'd-changed']) {
+      for (const key of ['d-added', 'd-removed', 'd-changed', 'd-moved']) {
         const r = ratio(cb[key], t[bg]);
         assert.ok(r >= 3, `${theme}: ${key} ${cb[key]} on ${bg} ${t[bg]} is ${r.toFixed(2)}:1, needs 3:1`);
       }
