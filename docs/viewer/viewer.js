@@ -783,6 +783,73 @@
   $('export-png').addEventListener('click', exportPng);
   window.__gvExportSvg = buildExportSvg; // used by the automated browser checks
 
+  // ---------- print / save as PDF ----------
+  // A standalone document, not a print stylesheet on the live app: the live page only ever shows one step at a
+  // time, so this walks every step with goto(), grabs that step's own highlighted diagram from buildExportSvg(),
+  // and assembles a page-per-step HTML document forced to light-on-white regardless of the current theme.
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function stepSources(st) {
+    var seen = {}, ids = {}, out = [];
+    (st.nodes || []).forEach(function (id) { ids[id] = 1; });
+    (st.edges || []).forEach(function (id) { var e = edgeById[id]; if (e) { ids[e.from] = 1; ids[e.to] = 1; } });
+    Object.keys(ids).forEach(function (id) {
+      var n = byId[id]; if (!n) return;
+      (n.sources || []).forEach(function (src) {
+        var key = n.label + '#' + srcKey(src); if (seen[key]) return; seen[key] = 1;
+        out.push({ label: n.label, src: src });
+      });
+    });
+    return out;
+  }
+  function printSection(title, ex, bodyHtml) {
+    return '<section class="p-step"><h2>' + escHtml(title) + '</h2>' +
+      (ex ? '<div class="p-diagram">' + ex.text + '</div>' : '') + bodyHtml + '</section>';
+  }
+  var PRINT_CSS = 'body{font:14px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#14181f;background:#fff;margin:0;padding:28px 32px;}' +
+    'h1{font-size:22px;margin:0 0 4px;}h2{font-size:17px;margin:0 0 10px;}' +
+    '.p-step{page-break-before:always;break-before:page;padding-top:4px;}.p-step:first-child{page-break-before:avoid;break-before:avoid;}' +
+    '.p-diagram{margin:0 0 14px;border:1px solid #d9dee6;border-radius:8px;padding:10px;}.p-diagram svg{max-width:100%;height:auto;display:block;}' +
+    'p{max-width:760px;}.p-src{list-style:none;padding:0;margin:12px 0 0;font-size:12.5px;color:#5b6573;}.p-src li{margin:3px 0;}' +
+    '.p-src a{color:#2563eb;text-decoration:none;}.p-src a:hover{text-decoration:underline;}' +
+    '@page{margin:1.5cm;}';
+  function buildPrintDoc() {
+    var savedTheme = document.documentElement.getAttribute('data-theme'), savedStep = S.step, savedSel = S.sel;
+    pausePlayback();
+    document.documentElement.setAttribute('data-theme', 'light'); // acceptance: light-on-white regardless of the current theme
+    clearSelection();
+    goto(-1);
+    var sections = [printSection(arch.project.name, buildExportSvg(), '<p>' + escHtml(arch.project.description || '') + (S.flow ? ' ' + escHtml(S.flow.description || '') : '') + '</p>')];
+    if (S.flow) {
+      S.flow.steps.forEach(function (st, i) {
+        goto(i);
+        var srcs = stepSources(st);
+        var srcHtml = srcs.length ? '<ul class="p-src">' + srcs.map(function (s) {
+          var url = srcUrl(s.src), label = escHtml(s.label) + ': ' + escHtml(srcLabel(s.src));
+          return '<li>' + (url ? '<a href="' + escHtml(url) + '">' + label + '</a>' : label) + '</li>';
+        }).join('') + '</ul>' : '';
+        sections.push(printSection('Step ' + (i + 1) + ' of ' + S.flow.steps.length + ': ' + st.title, buildExportSvg(), '<p>' + escHtml(st.narration) + '</p>' + srcHtml));
+      });
+    }
+    goto(savedStep); S.sel = savedSel; applyState();
+    if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme); else document.documentElement.removeAttribute('data-theme');
+    return '<!doctype html><html><head><meta charset="utf-8"><title>' + escHtml(arch.project.name) + ' — architecture tour</title><style>' + PRINT_CSS + '</style></head><body>' +
+      '<h1>' + escHtml(arch.project.name) + '</h1>' + sections.join('') +
+      '<script>window.addEventListener("load",function(){setTimeout(function(){print();},60);});<\/script></body></html>';
+  }
+  function printTour() {
+    var blob = new Blob([buildPrintDoc()], { type: 'text/html' });
+    var url = URL.createObjectURL(blob);
+    // A new tab (not window.print() on this document) so it still works inside a sandboxed iframe, which has
+    // allow-popups-to-escape-sandbox: the opened tab is a full, unsandboxed browsing context that can print itself.
+    var w = window.open(url, '_blank');
+    if (!w) saveBlob(fileBase() + '-print.html', blob); // pop-up blocked: a file the visitor can open and print themselves
+    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+  }
+  $('export-print').addEventListener('click', printTour);
+  window.__gvBuildPrintDoc = buildPrintDoc; // used by the automated browser checks
+
   // ---------- theme & host bridge ----------
   // The tour usually runs in a sandboxed frame (no storage, opaque origin), so the hosting page and the tour keep
   // each other in sync with postMessage. Standalone, the choice is remembered in localStorage.

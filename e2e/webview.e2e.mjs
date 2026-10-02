@@ -72,6 +72,18 @@ test('vscode webview: the tour runs under the extension\'s CSP and asks the host
     await page.eval("document.getElementById('shortcuts-dialog').dispatchEvent(new Event('cancel', { cancelable: true })); 1");
     const closedAndRefocused = await page.waitFor(() => page.eval("!document.getElementById('shortcuts-dialog').open && document.activeElement.id === 'keys-btn'"), 'the dialog to close and focus to return to Keys');
     assert.equal(closedAndRefocused, true);
+
+    // print / save as PDF: one page per step, each with its own highlighted diagram, forced to light theme,
+    // and the live view left exactly where it was (step 1, still playing nothing, no selection)
+    await page.eval("document.documentElement.setAttribute('data-theme', 'dark'); 1");
+    const html = await page.eval('window.__gvBuildPrintDoc()');
+    const themeAfter = await page.eval("document.documentElement.getAttribute('data-theme')");
+    assert.equal(themeAfter, 'dark', "the live page keeps the visitor's own theme after printing");
+    assert.match(html, /<!doctype html>/i);
+    const stepCount = (html.match(/class="p-step"/g) || []).length;
+    assert.ok(stepCount >= 2, 'an overview section plus at least one step, got ' + stepCount);
+    assert.ok((html.match(/<svg/g) || []).length >= stepCount, 'every section has its own diagram');
+    assert.doesNotMatch(html, /data-theme="dark"/, 'the print document never carries the dark theme');
   } finally {
     await close();
     for (const d of [repo, out]) { try { fs.rmSync(d, { recursive: true, force: true }); } catch { /* a lock on Windows */ } }

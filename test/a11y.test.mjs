@@ -56,6 +56,33 @@ for (const [name, sel] of [['light', ':root {'], ['dark', ':root[data-theme="dar
   });
 }
 
+// ---- print / save as PDF (#46) ----
+test('print: every untrusted field goes through escHtml before it reaches the generated document', () => {
+  assert.match(js, /function escHtml\(/);
+  // repo content (project name/description, step title/narration, a source's label and path) is attacker-controlled
+  assert.match(js, /escHtml\(arch\.project\.name\)/);
+  assert.match(js, /escHtml\(arch\.project\.description \|\| ''\)/);
+  assert.match(js, /function printSection\(title, ex, bodyHtml\)[\s\S]*?escHtml\(title\)/, 'every section title, including one built from st.title, is escaped');
+  assert.match(js, /escHtml\(st\.narration\)/);
+  assert.match(js, /escHtml\(s\.label\)/);
+  assert.match(js, /escHtml\(srcLabel\(s\.src\)\)/);
+  assert.match(js, /escHtml\(url\)/, 'even a URL used as an href attribute is escaped, not just trusted');
+});
+
+test('print: a step per page, forced light-on-white, reuses the real diagram export and restores the live view', () => {
+  assert.match(js, /\.p-step\{page-break-before:always/, 'CSS Fragmentation break for a real print, not just a scroll');
+  assert.match(js, /setAttribute\('data-theme', 'light'\)/);
+  assert.match(js, /if \(savedTheme\) document\.documentElement\.setAttribute\('data-theme', savedTheme\); else document\.documentElement\.removeAttribute\('data-theme'\)/, "the visitor's own theme is restored, not left on light");
+  assert.match(js, /buildExportSvg\(\)/);
+  assert.match(js, /goto\(savedStep\); S\.sel = savedSel; applyState\(\)/, 'the live tour is left exactly where the visitor had it');
+});
+
+test('print: opens a new, unsandboxed tab rather than calling window.print() on this document', () => {
+  assert.match(js, /window\.open\(url, '_blank'\)/);
+  assert.match(js, /if \(!w\) saveBlob\(/, 'a blocked pop-up still gives the visitor something to print');
+  assert.match(html, /id="export-print"/);
+});
+
 test('lanes: collapsible swimlanes are keyboard-operable buttons with state, and folded content is left out of exports', () => {
   assert.match(html, /id="lanes-toggle"/);
   assert.match(js, /'aria-expanded': lr\.collapsed \? 'false' : 'true'/);

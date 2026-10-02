@@ -86,6 +86,7 @@ These are real captures of the tool run on [tj/commander.js](https://github.com/
 | 🗄️ **Infrastructure and data model** | Docker Compose services (with `depends_on` and the code each one is built from) and SQL / Prisma tables with their foreign keys become components too, each pointing at the file and line it came from, with a tour of each |
 | 🧩 **Monorepos** | One component per workspace package, or analyse a single folder (`owner/repo:apps/web`) |
 | 🔎 **Search, swimlanes, export** | Find a component with `/`, group by folder or kind, save the diagram as SVG or PNG, copy it as Mermaid or PlantUML, or copy a README badge that links back to the tour |
+| 🖨️ **Print, or save as PDF** | One page per step — its own highlighted diagram, narration and source links, forced light-on-white — for design docs and onboarding packs |
 | 🔊 **Voice narration** | Uses your browser's built-in speech: pick a voice, stop, mute. No server, no keys |
 | 🔗 **Click through to source** | Every component shows its code and an **Open Source** link to the exact lines on GitHub |
 | ✅ **Grounded by construction** | Validator rejects nonexistent files, out-of-range lines, and fake paths in narration |
