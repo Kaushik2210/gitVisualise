@@ -305,7 +305,7 @@ viewer is a pure function of it.
 | Swift | ✅ | `import` resolves to Swift Package Manager targets (`Sources/<Target>/`) declared in `Package.swift`; system frameworks and undeclared packages are dropped, `main.swift` and `@main` entry points |
 | Everything else | ➖ | Structure, manifests and dependencies only. **[Add yours!](#-help-wanted)** |
 
-Beyond code, two extra views are read when the files exist: **infrastructure** (services, `depends_on` and build contexts from `docker-compose.yml` / `compose.yaml`) and **data model** (tables and foreign keys from `CREATE TABLE` / `ALTER TABLE … FOREIGN KEY` in `.sql` files, and models and `@relation`s from `schema.prisma`; a migration history counts as one schema). ORM models in code, Kubernetes and Terraform are not read yet.
+Beyond code, two extra views are read when the files exist: **infrastructure** (services, `depends_on` and build contexts from `docker-compose.yml` / `compose.yaml`) and **data model** (tables and foreign keys from `CREATE TABLE` / `ALTER TABLE … FOREIGN KEY` in `.sql` files, models and `@relation`s from `schema.prisma`, and Django models — classes deriving `models.Model` and their `ForeignKey` / `OneToOneField` / `ManyToManyField` targets — in `models.py`; a migration history counts as one schema). SQLAlchemy, TypeORM, Kubernetes and Terraform are not read yet.
 
 Also detected: dependencies from `package.json`, `requirements.txt`, `pyproject.toml`, `go.mod`, `pom.xml`, `build.gradle` and
 `Cargo.toml`; workspaces (npm, pnpm, Cargo, `go.work`); server routes (only when a real server framework is imported, with

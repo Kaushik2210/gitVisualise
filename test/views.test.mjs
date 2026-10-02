@@ -6,7 +6,7 @@ import { generate } from '../skills/repo-architecture/scripts/lib/generate.mjs';
 import { validate } from '../skills/repo-architecture/scripts/lib/validate.mjs';
 import { parseYaml } from '../skills/repo-architecture/scripts/lib/core/yaml-lite.mjs';
 import { extractInfra } from '../skills/repo-architecture/scripts/lib/core/infra-core.mjs';
-import { parseSql, parsePrisma, extractDataModel } from '../skills/repo-architecture/scripts/lib/core/data-core.mjs';
+import { parseSql, parsePrisma, parseDjango, extractDataModel } from '../skills/repo-architecture/scripts/lib/core/data-core.mjs';
 import { analyzeRepo } from '../skills/repo-architecture/scripts/lib/web/github-loader.mjs';
 import { repo } from './helpers.mjs';
 
@@ -114,6 +114,59 @@ test('data: Prisma models, relation fields and foreign keys', () => {
   assert.deepEqual(m[1].refs, [{ to: 'User', column: 'author', line: 8 }]);
 });
 
+test('data: Django models, string and bare references, a relation to a model that does not exist, self excluded', () => {
+  const py = [
+    'from django.db import models',
+    '',
+    'class User(models.Model):',
+    '    name = models.CharField(max_length=100)',
+    '',
+    'class Comment(models.Model):',
+    '    author = models.ForeignKey("blog.User", on_delete=models.CASCADE)',
+    '    parent = models.ForeignKey("self", null=True, on_delete=models.CASCADE)',
+    '    ghost = models.ForeignKey(NotAModel, on_delete=models.CASCADE)',
+    '',
+    'class Post(models.Model):',
+    '    title = models.CharField(max_length=200)',
+    '    editor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)',
+    '    tags = models.ManyToManyField("Tag")',
+    '',
+    'class NotAModel:',
+    '    pass',
+    '',
+  ].join('\n');
+  const m = parseDjango('blog/models.py', py);
+  assert.deepEqual(m.map((x) => x.name), ['User', 'Comment', 'Post'], 'NotAModel does not derive models.Model');
+  assert.deepEqual(m[0].columns.map((c) => c.name), ['name']);
+  const comment = m.find((x) => x.name === 'Comment');
+  assert.deepEqual(comment.refs.map((r) => [r.to, r.column, r.line]), [['User', 'author', 7], ['NotAModel', 'ghost', 9]], '"self" produced no ref; a quoted "app.Model" resolves by its last segment');
+  const post = m.find((x) => x.name === 'Post');
+  assert.deepEqual(post.refs, [{ to: 'User', column: 'editor', line: 13 }, { to: 'Tag', column: 'tags', line: 14 }]);
+  assert.deepEqual(post.columns.map((c) => c.name), ['title'], 'relation fields are not plain columns');
+
+  // extractDataModel drops a relation to a model that was never actually found (ghost -> NotAModel, a plain class)
+  const dm = extractDataModel(['blog/models.py'], () => py);
+  assert.deepEqual(dm.entities.map((e) => e.name).sort(), ['Comment', 'Post', 'User']);
+  assert.ok(!dm.relations.some((r) => r.column === 'ghost'), 'NotAModel is not a model, so the relation is dropped, not guessed');
+  assert.ok(!dm.relations.some((r) => r.column === 'parent'), 'a self-relation never becomes an edge in this view');
+  assert.ok(dm.relations.some((r) => r.from.name === 'Comment' && r.to.name === 'User' && r.column === 'author'));
+  assert.ok(dm.relations.some((r) => r.from.name === 'Post' && r.to.name === 'User' && r.column === 'editor'));
+});
+
+test('data: a generated tour with Django models validates like SQL and Prisma', () => {
+  const root = repo({
+    'blog/models.py': 'from django.db import models\n\nclass User(models.Model):\n    name = models.CharField(max_length=100)\n\nclass Post(models.Model):\n    author = models.ForeignKey(User, on_delete=models.CASCADE)\n',
+  });
+  const scan = scanRepo(root);
+  assert.equal(scan.dataModel.entities.length, 2);
+  const arch = generate(scan);
+  const ents = arch.nodes.filter((n) => n.kind === 'entity');
+  assert.deepEqual(ents.map((n) => n.label).sort(), ['Post', 'User']);
+  const ref = arch.edges.find((e) => e.kind === 'references');
+  assert.deepEqual(ref.sources[0], { path: 'blog/models.py', lines: [7, 7] });
+  assert.deepEqual(validate(arch, root).errors, []);
+});
+
 test('data: a generated tour with tables, foreign-key edges pointing at the lines, and validated evidence', () => {
   const root = repo({
     'db/schema.sql': SQL,
@@ -169,6 +222,29 @@ test('website loader: downloads compose files and schemas, so the browser gets t
   const r = await analyzeRepo({ owner: 'o', repo: 'r', ref: null }, { fetchImpl });
   assert.ok(fetched.includes('docker-compose.yml') && fetched.includes('db/schema.sql'));
   assert.ok(r.arch.nodes.some((n) => n.kind === 'infra') && r.arch.nodes.some((n) => n.kind === 'entity'));
+  assert.deepEqual(r.validation.errors, []);
+});
+
+test('website loader: downloads Django models.py too, even one the normal source-file budget would not prioritise', async () => {
+  const files = {
+    'blog/models.py': 'from django.db import models\n\nclass User(models.Model):\n    name = models.CharField(max_length=100)\n\nclass Post(models.Model):\n    author = models.ForeignKey(User, on_delete=models.CASCADE)\n',
+    'web/index.js': '1;\n',
+    'package.json': '{"name":"x"}',
+  };
+  const fetched = [];
+  const fetchImpl = async (url) => {
+    const u = new URL(url);
+    if (u.hostname === 'api.github.com') {
+      if (/\/commits\//.test(u.pathname)) return new Response('e'.repeat(40));
+      return new Response(JSON.stringify({ truncated: false, tree: Object.keys(files).map((p) => ({ path: p, type: 'blob', size: files[p].length })) }));
+    }
+    const p = decodeURIComponent(u.pathname.split('/').slice(4).join('/'));
+    fetched.push(p);
+    return files[p] != null ? new Response(files[p]) : new Response('', { status: 404 });
+  };
+  const r = await analyzeRepo({ owner: 'o', repo: 'r', ref: null }, { fetchImpl });
+  assert.ok(fetched.includes('blog/models.py'));
+  assert.ok(r.arch.nodes.some((n) => n.kind === 'entity' && n.label === 'User'));
   assert.deepEqual(r.validation.errors, []);
 });
 

@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-02T04:41:28.156Z",
+    "generatedAt": "2026-10-02T04:51:18.763Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -757,7 +757,7 @@
       "label": "data-core.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "JavaScript file, 163 lines. Defines SQL_RE, PRISMA_RE, DATA_FILE_RE, parseSql and 3 more.",
+      "summary": "JavaScript file, 217 lines. Defines SQL_RE, PRISMA_RE, DJANGO_RE, DATA_FILE_RE and 5 more.",
       "tech": [
         "JavaScript"
       ],
@@ -3347,7 +3347,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "39 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 163 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
+          "narration": "39 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 217 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",

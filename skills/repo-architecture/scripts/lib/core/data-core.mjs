@@ -1,11 +1,13 @@
-// Data-model view: the tables a SQL schema declares (CREATE TABLE) and the models of a Prisma schema, with the relationships
-// between them (foreign keys, @relation). Each entity and each relationship carries the file and line it was read from.
-// ORM models in application code (Django, SQLAlchemy, TypeORM) are not read yet.
+// Data-model view: the tables a SQL schema declares (CREATE TABLE), the models of a Prisma schema, and Django models
+// in application code, with the relationships between them (foreign keys, @relation, ForeignKey/OneToOne/ManyToMany).
+// Each entity and each relationship carries the file and line it was read from. SQLAlchemy and TypeORM are not read yet.
 
 export const SQL_RE = /\.sql$/i;
 export const PRISMA_RE = /(^|\/)schema\.prisma$|\.prisma$/i;
-/** Files the website must download for this view, besides source files. */
-export const DATA_FILE_RE = /\.sql$|\.prisma$/i;
+export const DJANGO_RE = /(^|\/)models\.py$|(^|\/)models\/\w+\.py$/i;
+/** Files the website must download for this view, besides source files (a large repo's file budget can otherwise
+    drop models.py the way it would any other source file, same as it would an .sql or .prisma file). */
+export const DATA_FILE_RE = /\.sql$|\.prisma$|(^|\/)models\.py$|(^|\/)models\/\w+\.py$/i;
 
 const lineAt = (text, idx) => { let n = 1; for (let i = 0; i < idx; i++) if (text.charCodeAt(i) === 10) n++; return n; };
 const unquote = (s) => String(s).trim().replace(/^[`"[]|[`"\]]$/g, '');
@@ -107,6 +109,55 @@ export function parsePrisma(file, raw) {
 }
 
 
+/** The model name a ForeignKey/OneToOneField/ManyToManyField's first argument refers to: a bare class (`User`),
+    a quoted reference (`'User'`, `"blog.Category"`), or `'self'` (a self-relation, which the caller drops: an
+    entity never references itself in this view). Anything else (a lazy callable, a variable) is not guessable. */
+function djangoTarget(rawArg) {
+  const t = rawArg.trim();
+  const quoted = /^['"]([^'"]+)['"]/.exec(t);
+  if (quoted) { const name = quoted[1].split('.').pop(); return name === 'self' ? null : name; }
+  const bare = /^([A-Za-z_]\w*)$/.exec(t);
+  return bare ? bare[1] : null;
+}
+
+const DJANGO_RELATION_FIELDS = new Set(['ForeignKey', 'OneToOneField', 'ManyToManyField']);
+
+/** Django models: `class X(models.Model):` (or `class X(Model):`), one level of inheritance only — a model that
+    derives an abstract base class rather than models.Model directly is out of scope, like the issue describes. */
+export function parseDjango(file, raw) {
+  const text = blankComments(raw.replace(/#[^\n]*/g, (s) => ' '.repeat(s.length)));
+  const entities = [];
+  const classRe = /^class\s+(\w+)\s*\(([^)]*)\)\s*:/gm;
+  const classes = [];
+  let m;
+  while ((m = classRe.exec(text))) classes.push({ name: m[1], bases: m[2], at: m.index, bodyStart: m.index + m[0].length });
+  for (let i = 0; i < classes.length; i++) {
+    const c = classes[i];
+    const isModel = c.bases.split(',').some((b) => { const t = b.trim(); return t === 'Model' || /\.Model$/.test(t); });
+    if (!isModel) continue;
+    const bodyEnd = i + 1 < classes.length ? classes[i + 1].at : text.length;
+    const body = text.slice(c.bodyStart, bodyEnd);
+    const cols = [], refs = [];
+    const fieldRe = /^[ \t]+(\w+)\s*=\s*models\.(\w+)\s*\(/gm;
+    let fm;
+    while ((fm = fieldRe.exec(body))) {
+      const open = fm.index + fm[0].length - 1;
+      const close = balanced(body, open);
+      if (close < 0) continue;
+      const fieldName = fm[1], fieldType = fm[2], line = lineAt(text, c.bodyStart + fm.index);
+      if (DJANGO_RELATION_FIELDS.has(fieldType)) {
+        const target = djangoTarget(body.slice(open + 1, close).split(',')[0] || '');
+        if (target) refs.push({ to: target, column: fieldName, line });
+      } else {
+        cols.push({ name: fieldName, type: fieldType });
+      }
+    }
+    const trimmedEnd = c.bodyStart + body.replace(/\s+$/, '').length; // trailing blank lines are not part of the class
+    entities.push({ name: c.name, kind: 'model', file, line: lineAt(text, c.at), endLine: lineAt(text, Math.max(trimmedEnd, c.bodyStart)), columns: cols, refs });
+  }
+  return entities;
+}
+
 /** Foreign keys added after the fact: ALTER TABLE t ADD [CONSTRAINT n] FOREIGN KEY (c) REFERENCES other (id). Migrations use this a lot. */
 export function parseSqlAlters(file, raw) {
   const text = blankComments(raw);
@@ -138,6 +189,9 @@ export function extractDataModel(paths, read) {
     } else if (PRISMA_RE.test(file)) {
       const t = read(file);
       if (t) found.push(...parsePrisma(file, t));
+    } else if (DJANGO_RE.test(file)) {
+      const t = read(file);
+      if (t && /models\.Model\b|\(\s*Model\s*\)/.test(t)) found.push(...parseDjango(file, t));
     }
   }
   const byName = new Map();
