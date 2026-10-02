@@ -271,14 +271,14 @@ export function generate(scan, opts = {}) {
   const nodeIdIndex = new Map(nodes.map((n) => [n.id, n])); // the code components, before services and tables are added
   const infraSvcs = [];
   const infraList = (scan.infra && scan.infra.services) || [];
-  for (const s of infraList.slice(0, 25)) {
+  for (const s of infraList.slice(0, 40)) {
     const id = uniqueId('svc-' + slug(s.name));
     const built = s.build ? ` It is built from the ${s.build.dir || 'repository root'} folder.` : '';
     const image = s.image ? ` It runs the image ${s.image}.` : '';
     const ports = s.ports.length ? ` It publishes ${list(s.ports, 3)}.` : '';
     nodes.push({
-      id, label: s.name, kind: 'infra', origin: 'auto', tech: ['Docker Compose'],
-      summary: `Docker Compose service ${s.name}.${image}${built}${ports}`.trim(),
+      id, label: s.name, kind: 'infra', origin: 'auto', tech: [s.tech || 'Docker Compose'],
+      summary: s.summary || `Docker Compose service ${s.name}.${image}${built}${ports}`.trim(),
       sources: [{ path: s.file, lines: [s.line, s.endLine] }],
       _files: [],
     });
@@ -289,7 +289,7 @@ export function generate(scan, opts = {}) {
     for (const d of s.dependsOn) {
       const to = svcByName(d.name, s.file);
       if (!to || to.id === s.id) continue;
-      edges.push({ id: `d-${s.id}--${to.id}`.slice(0, 120), from: s.id, to: to.id, kind: 'depends', origin: 'auto', label: 'depends on', summary: `${s.name} waits for ${to.name} to start.`, sources: [{ path: s.file, lines: [d.line, d.line] }] });
+      edges.push({ id: `d-${s.id}--${to.id}`.slice(0, 120), from: s.id, to: to.id, kind: d.kind || 'depends', origin: 'auto', label: d.label || 'depends on', summary: d.summary || `${s.name} waits for ${to.name} to start.`, sources: [{ path: s.file, lines: [d.line, d.line] }] });
     }
     if (s.build) {
       // Link the service to the code it is built from: the components whose directory is the build context (or inside it).
@@ -424,7 +424,19 @@ export function generate(scan, opts = {}) {
   flows.push(...requestFlows);
 
   // Infrastructure: which services exist, in what order they start, and which code they are built from.
+  const composeSvcs = infraSvcs.filter((s) => !s.tech || s.tech === 'Docker Compose');
+  const otherSvcs = infraSvcs.filter((s) => s.tech && s.tech !== 'Docker Compose');
   if (infraSvcs.length) {
+    const steps = [];
+    if (composeSvcs.length) steps.push(...composeSteps(composeSvcs));
+    for (const tech of [...new Set(otherSvcs.map((s) => s.tech))]) steps.push(...techSteps(tech, otherSvcs.filter((s) => s.tech === tech)));
+    flows.push({
+      id: 'infrastructure', title: 'Infrastructure', origin: 'auto', steps,
+      description: `${list([...new Set(infraSvcs.map((s) => s.tech || 'Docker Compose'))], 3)}: what is declared, and how the pieces connect.`,
+    });
+    steps.forEach((st, i) => { st.id = `i${i + 1}`; });
+  }
+  function composeSteps(infraSvcs) {
     const depOf = new Map(infraSvcs.map((s) => [s.id, edges.filter((e) => e.kind === 'depends' && e.from === s.id).map((e) => e.to)]));
     const level = new Map();
     const lvl = (id, seenIds = new Set()) => {
@@ -461,7 +473,28 @@ export function generate(scan, opts = {}) {
         sources: [builds[0].sources[0]],
       });
     }
-    flows.push({ id: 'infrastructure', title: 'Infrastructure', description: 'The services Docker Compose runs, and the order they start in.', origin: 'auto', steps });
+    return steps;
+  }
+  // Kubernetes objects and Terraform resources: what is declared, then how the pieces point at each other.
+  function techSteps(tech, svcs) {
+    const ids = new Set(svcs.map((s) => s.id));
+    const rels = edges.filter((e) => ids.has(e.from) && ids.has(e.to));
+    const noun = tech === 'Kubernetes' ? 'object' : 'resource';
+    const roles = [...new Set(svcs.map((s) => s.role).filter(Boolean))];
+    const steps = [{
+      id: 'x', title: `${svcs.length} ${tech} ${noun}${svcs.length === 1 ? '' : 's'}`, nodes: svcs.map((s) => s.id).slice(0, 12), edges: [], origin: 'auto',
+      narration: `${tech} declares ${svcs.length} ${noun}${svcs.length === 1 ? '' : 's'}${roles.length ? ` (${list(roles, 4)})` : ''}: ${list(svcs.map((s) => s.name), 6)}.`,
+      sources: [{ path: svcs[0].file, lines: [svcs[0].line, svcs[0].line] }],
+    }];
+    if (rels.length) {
+      steps.push({
+        id: 'x', title: tech === 'Kubernetes' ? 'Routing: Ingress, Service, workload' : 'References between resources', origin: 'auto',
+        nodes: [...new Set(rels.flatMap((e) => [e.from, e.to]))].slice(0, 12), edges: rels.map((e) => e.id).slice(0, 12),
+        narration: `${rels.length} link${rels.length === 1 ? ' is' : 's are'} written in the files: ${list(rels.map((e) => `${nodeById.get(e.from).label} → ${nodeById.get(e.to).label} (${e.label})`), 4)}. Only links that match exactly are drawn.`,
+        sources: [rels[0].sources[0]],
+      });
+    }
+    return steps;
   }
 
   // Data model: the tables or models, then the most connected ones and what they reference.

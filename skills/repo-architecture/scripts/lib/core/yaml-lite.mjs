@@ -1,6 +1,6 @@
 // A small YAML reader for the subset that configuration files actually use (Docker Compose, simple manifests): block mappings
 // and sequences, flow lists and maps on one line, quoted and plain scalars, comments, and block scalars (skipped). It is not a
-// general YAML parser (no anchors, tags, multi-document streams or multi-line flow collections), and it never throws: anything it
+// general YAML parser (no anchors, tags or multi-line flow collections; `parseYamlDocs` reads a multi-document stream), and it never throws: anything it
 // does not understand becomes an empty value. Its point is to keep the line number of every key and list item, so a service or a
 // dependency can be pointed at in the file. Pure, no dependencies.
 //
@@ -126,14 +126,14 @@ export function parseYaml(text) {
         const key = scalar(kv[1]);
         iln[key] = t.line;
         const childIndent = indent + (t.text.length - rest.length);
-        item[key] = value((kv[2] || '').trim(), t.line, childIndent, false);
+        item[key] = value((kv[2] || '').trim(), t.line, childIndent, true);
         while (pos < toks.length && toks[pos].indent === childIndent && !/^-( |$)/.test(toks[pos].text)) {
           const u = toks[pos++];
           const mm = /^("[^"]*"|'[^']*'|[^\s:][^:]*?)\s*:(?:\s+(.*)|)$/.exec(u.text);
           if (!mm) continue;
           const k2 = scalar(mm[1]);
           iln[k2] = u.line;
-          item[k2] = value((mm[2] || '').trim(), u.line, childIndent, false);
+          item[k2] = value((mm[2] || '').trim(), u.line, childIndent, true); // a list may sit at its key's indent
         }
         arr.push(lines$(item, iln));
       } else arr.push(rest.startsWith('[') || rest.startsWith('{') ? flow(rest, t.line) : scalar(rest));
@@ -142,4 +142,27 @@ export function parseYaml(text) {
   }
 
   return toks.length ? block(toks[0].indent) : null;
+}
+
+/**
+ * Reads a multi-document stream (documents separated by `---`), as Kubernetes manifests are written. Every document is parsed on
+ * its own with its original line numbers, so a key in the third document still reports the line it has in the file.
+ * @returns [{ value, start, end }] one per non-empty document: the parsed value and the 1-based first and last content line
+ */
+export function parseYamlDocs(text) {
+  const lines = String(text || '').replace(/\r\n/g, '\n').split('\n');
+  const docs = [];
+  let from = 0;
+  const flush = (to) => {
+    const content = [];
+    for (let i = from; i < to; i++) if (lines[i].trim() && !lines[i].trim().startsWith('#')) content.push(i + 1);
+    if (!content.length) return;
+    const value = parseYaml('\n'.repeat(from) + lines.slice(from, to).join('\n'));
+    docs.push({ value, start: content[0], end: content[content.length - 1] });
+  };
+  for (let i = 0; i < lines.length; i++) {
+    if (/^(---|\.\.\.)(\s|$)/.test(lines[i])) { flush(i); from = i + 1; }
+  }
+  flush(lines.length);
+  return docs;
 }
