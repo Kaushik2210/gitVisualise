@@ -46,6 +46,16 @@ html.js .static { display: none; }
 .search input { font: inherit; font-size: 13px; width: 220px; max-width: 46vw; padding: 6px 10px; color: var(--ink); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; }
 .search input:focus { outline: 2px solid var(--focus); border-color: transparent; }
 .zoom { position: absolute; right: 10px; top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.minimap { position: absolute; right: 10px; bottom: 10px; box-sizing: content-box; padding: 4px; border: 1px solid var(--line); border-radius: 8px; background: color-mix(in srgb, var(--panel) 88%, transparent); box-shadow: var(--shadow); cursor: crosshair; touch-action: none; overflow: hidden; }
+.minimap[hidden] { display: none; }
+.minimap svg { display: block; width: 100%; height: 100%; }
+.minimap .mm-node { fill: var(--kc); opacity: .7; }
+.minimap .mm-node.d-added { stroke: var(--d-added); stroke-width: 6; }
+.minimap .mm-node.d-removed { stroke: var(--d-removed); stroke-width: 6; }
+.minimap .mm-node.d-changed { stroke: var(--d-changed); stroke-width: 6; }
+.minimap .mm-node.d-moved { stroke: var(--d-moved); stroke-width: 6; }
+.minimap .mm-view { fill: color-mix(in srgb, var(--accent) 14%, transparent); stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.canvas.has-minimap .legend { max-width: calc(100% - 215px); }
 .legend { position: absolute; left: 10px; bottom: 10px; display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--panel) 88%, transparent); padding: 6px 10px; border-radius: 8px; max-width: calc(100% - 70px); }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--kc); }
 
@@ -146,6 +156,7 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
   .player { order: 3; }
   #detail { order: 4; }
   .legend { display: none; }
+  .minimap { display: none; }
   .btn { padding: 9px 12px; }
   .controls { justify-content: space-between; }
   .step-count { flex-basis: 100%; order: 9; }
@@ -226,3 +237,9 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
 #shortcuts-list dt { display: flex; gap: 4px; align-items: center; font-weight: normal; }
 #shortcuts-list dd { margin: 0; font-size: 13.5px; color: var(--muted); }
 #shortcuts-list kbd { font: inherit; font-size: 12px; padding: 2px 7px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--bg); min-width: 1.6em; text-align: center; }
+
+@media (forced-colors: active) {
+  .minimap { border-color: CanvasText; background: Canvas; }
+  .minimap .mm-node { fill: GrayText; opacity: 1; }
+  .minimap .mm-view { fill: none; stroke: Highlight; }
+}
