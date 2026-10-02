@@ -1,3 +1,4 @@
 skill/
 *.vsix
 node_modules/
+*.vsix

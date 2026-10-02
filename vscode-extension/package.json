@@ -1,20 +1,62 @@
 {
   "name": "gitvisualise",
   "displayName": "gitvisualise: architecture tour",
-  "description": "See how your workspace works: an animated, narrated architecture tour beside your code, with one click from any component to the exact file and line.",
+  "description": "See how your workspace works: an animated, narrated architecture tour beside your code, with one click from any component to the exact file and line, and one command from any file back to its component.",
   "version": "0.1.0",
   "publisher": "kaushik2210",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/Kaushik2210/gitVisualise.git", "directory": "vscode-extension" },
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Visualization", "Education", "Other"],
-  "keywords": ["architecture", "diagram", "visualization", "onboarding", "dependency graph"],
+  "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#0b1220",
+    "theme": "dark"
+  },
+  "homepage": "https://kaushik2210.github.io/gitVisualise/",
+  "bugs": {
+    "url": "https://github.com/Kaushik2210/gitVisualise/issues"
+  },
+  "qna": "https://github.com/Kaushik2210/gitVisualise/discussions",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kaushik2210/gitVisualise.git",
+    "directory": "vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Education",
+    "Other"
+  ],
+  "keywords": [
+    "architecture",
+    "diagram",
+    "visualization",
+    "onboarding",
+    "dependency graph",
+    "architecture tour",
+    "code navigation",
+    "codebase onboarding"
+  ],
   "main": "./extension.js",
   "activationEvents": [],
   "contributes": {
     "commands": [
-      { "command": "gitvisualise.openTour", "title": "Open architecture tour", "category": "gitvisualise" },
-      { "command": "gitvisualise.refreshTour", "title": "Refresh architecture tour", "category": "gitvisualise" }
+      {
+        "command": "gitvisualise.openTour",
+        "title": "Open architecture tour",
+        "category": "gitvisualise"
+      },
+      {
+        "command": "gitvisualise.refreshTour",
+        "title": "Refresh architecture tour",
+        "category": "gitvisualise"
+      },
+      {
+        "command": "gitvisualise.whereAmI",
+        "title": "Show this file in the architecture tour",
+        "category": "gitvisualise"
+      }
     ],
     "configuration": {
       "title": "gitvisualise",
@@ -25,10 +67,28 @@
           "description": "Comma-separated paths to leave out of the analysis (for example: vendor,generated)."
         }
       }
-    }
+    },
+    "menus": {
+      "editor/context": [
+        {
+          "command": "gitvisualise.whereAmI",
+          "when": "resourceScheme == file",
+          "group": "navigation@9"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "gitvisualise.whereAmI",
+        "key": "ctrl+alt+g",
+        "mac": "cmd+alt+g",
+        "when": "editorTextFocus"
+      }
+    ]
   },
   "scripts": {
     "prepare": "node scripts/bundle-skill.mjs",
-    "test": "node scripts/run-in-vscode.mjs"
+    "test": "node scripts/run-in-vscode.mjs",
+    "package": "node scripts/bundle-skill.mjs && npx --yes @vscode/vsce package"
   }
 }

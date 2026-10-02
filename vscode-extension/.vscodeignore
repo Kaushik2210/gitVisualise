@@ -1,4 +1,9 @@
+# Only what the extension needs at run time ships: extension.js, lib.js, the bundled skill/ (CLI and viewer), the icon, README and LICENSE.
 e2e/**
 scripts/**
+.vscode/**
+**/*.map
+**/*.vsix
+node_modules/**
+package-lock.json
 .gitignore
-*.vsix

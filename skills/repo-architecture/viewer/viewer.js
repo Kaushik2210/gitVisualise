@@ -920,6 +920,7 @@
     if (e.source !== window.parent || !e.data || typeof e.data !== 'object') return;
     if (typeof e.data.gvTheme === 'string') applyTheme(e.data.gvTheme, true);
     if (e.data.gvGoto && typeof e.data.gvGoto === 'object') gotoState(e.data.gvGoto);
+    if (typeof e.data.gvSelect === 'string' && byId[e.data.gvSelect]) selectNode(e.data.gvSelect, true); // the host reveals a component (VS Code: "where am I?")
   });
   applyTheme(store('theme') || 'auto', true);
 
@@ -1061,4 +1062,5 @@
   $('follow').addEventListener('change', function (e) { S.follow = e.target.checked; store('follow', S.follow ? '1' : '0'); if (S.follow) cameraForStep(); else fit(); });
   var hm = /[#&]flow=([^&]+)&step=(\d+)/.exec(location.hash); // standalone deep link
   if (hm) gotoState({ flow: decodeURIComponent(hm[1]), step: Number(hm[2]) });
+  if (vscodeApi) vscodeApi.postMessage({ type: 'ready' }); // a host that wants to send gvSelect waits for this
 })();
