@@ -14,6 +14,7 @@ import { PLUGIN_MANIFEST_SRC } from '../core/languages.mjs';
 import { COMPOSE_RE, TERRAFORM_RE, k8sCandidates } from '../core/infra-core.mjs';
 import { DATA_FILE_RE } from '../core/data-core.mjs';
 import { OPENAPI_RE } from '../core/http-core.mjs';
+import { GRAPHQL_FILE_RE } from '../core/graphql-core.mjs';
 
 export { makeView };
 
@@ -234,10 +235,10 @@ export async function analyzeRepo(input, opts = {}) {
   const picked = pickSourceFiles(inScope, sizes, maxFiles);
   if (!picked.chosen.length) throw new GitHubError('empty', 'No analysable source files were found (supported: JavaScript/TypeScript, Python, Go, Java, Rust and more, as structure only). This may be a docs-only or asset-only repository.');
   // Docker Compose files, Terraform files, Kubernetes manifests (YAML in the folders they usually live in, then the shallowest; whether one
-  // is a manifest is decided from its content), SQL / Prisma / Django schemas, and OpenAPI documents feed the infrastructure, data-model and request-tracing views.
+  // is a manifest is decided from its content), SQL / Prisma / Django schemas, OpenAPI documents and GraphQL (.graphql / .gql) documents feed the infrastructure, data-model and request-tracing views.
   const small = (p) => (sizes.get(p) || 0) <= MAX_FILE_BYTES;
   const viewFiles = [
-    ...inScope.filter((p) => (COMPOSE_RE.test(p) || TERRAFORM_RE.test(p) || DATA_FILE_RE.test(p) || OPENAPI_RE.test(p)) && !/(^|\/)\.terraform\//.test(p) && p.split('/').length <= 6 && small(p)).slice(0, 40),
+    ...inScope.filter((p) => (COMPOSE_RE.test(p) || TERRAFORM_RE.test(p) || DATA_FILE_RE.test(p) || OPENAPI_RE.test(p) || GRAPHQL_FILE_RE.test(p)) && !/(^|\/)\.terraform\//.test(p) && p.split('/').length <= 6 && small(p)).slice(0, 40),
     ...k8sCandidates(inScope.filter(small), 40),
   ];
   await download([...new Set([...manifests, ...(readme ? [readme] : []), ...viewFiles, ...picked.chosen])], 'source files');

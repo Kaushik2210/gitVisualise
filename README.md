@@ -429,7 +429,7 @@ npm run docs      # regenerate this repo's own tour (curated content is preserve
 
 ## Limits
 
-- Dynamic dispatch and runtime autoloading (Rails constants, PHP classmaps, reflection) are not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match; a literal `baseURL` / `prefixUrl` set in the same file is applied, but clients configured in another file, OpenAPI documents and GraphQL are not followed yet.
+- Dynamic dispatch and runtime autoloading (Rails constants, PHP classmaps, reflection) are not resolved, and only the alias forms in `tsconfig`/`jsconfig`, Vite and webpack are understood. Request tracing links a call to a route only on an exact method-and-path match; a literal `baseURL` / `prefixUrl` set in the same file is applied, but clients configured in another file, OpenAPI documents are read for routes. GraphQL operations are linked to resolvers only when the operation, the schema field and a literal resolver map (`{ Query: { users() {} } }`) all match exactly; schemas or resolvers assembled dynamically are not followed, and a field defined or implemented twice stays unlinked.
 - A comparison matches components by id, so a moved or renamed file shows as one removal plus one addition.
 - The automatic narration is templated; the Claude Code skill is what turns it into an explanation.
 - The website analyses public repos anonymously (GitHub's 60 requests/hour per network); private repos need a token.

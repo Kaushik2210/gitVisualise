@@ -221,15 +221,29 @@ export function generate(scan, opts = {}) {
     if (!p.hits.some((h) => h.call.file === call.file && h.call.line === call.line && h.route.path === route.path)) p.hits.push({ call, route });
     httpPairs.set(`${from}>${to}`, p);
   }
+  // GraphQL operations, already matched exactly by the scanner: client file -> the file whose resolver map implements the field.
+  for (const l of (scan.graphql && scan.graphql.links) || []) {
+    if (!byPath.has(l.client.file) || !byPath.has(l.resolver.file)) continue;
+    const from = unitToId.get(unitKey(l.client.file)), to = unitToId.get(unitKey(l.resolver.file));
+    if (!from || !to || from === to) continue;
+    const call = { method: 'POST', target: l.field, file: l.client.file, line: l.client.line };
+    const route = { method: l.kind.toUpperCase(), path: l.field, label: `${l.kind} ${l.field}`, file: l.resolver.file, line: l.resolver.line };
+    const p = httpPairs.get(`${from}>${to}`) || { from, to, hits: [] };
+    if (!p.hits.some((h) => h.call.file === call.file && h.call.line === call.line && h.route.label === route.label)) p.hits.push({ call, route, schema: l.schema, graphql: true });
+    httpPairs.set(`${from}>${to}`, p);
+  }
   const httpEdges = [];
   for (const p of httpPairs.values()) {
-    const reqs = [...new Set(p.hits.map((h) => `${h.route.method === 'ANY' ? h.call.method : h.route.method} ${h.route.path}`))];
+    const reqs = [...new Set(p.hits.map((h) => h.route.label || `${h.route.method === 'ANY' ? h.call.method : h.route.method} ${h.route.path}`))];
+    const allGql = p.hits.every((h) => h.graphql);
     const edge = {
       id: `h-${p.from}--${p.to}`.slice(0, 120), from: p.from, to: p.to, kind: 'http', origin: 'auto',
-      label: reqs.length === 1 ? reqs[0] : `${reqs.length} API calls`,
-      summary: `${reqs.length} HTTP request${reqs.length > 1 ? 's' : ''} handled by routes here: ${list(reqs, 4)}.`,
-      // Evidence on both sides: where the request is sent and where the route is registered.
-      sources: p.hits.slice(0, 2).flatMap((h) => [{ path: h.call.file, lines: [h.call.line, h.call.line] }, { path: h.route.file, lines: [h.route.line, h.route.line] }]),
+      label: reqs.length === 1 ? reqs[0] : `${reqs.length} ${allGql ? 'GraphQL operations' : 'API calls'}`,
+      summary: allGql
+        ? `${reqs.length} GraphQL operation${reqs.length > 1 ? 's' : ''} resolved here: ${list(reqs, 4)}.`
+        : `${reqs.length} HTTP request${reqs.length > 1 ? 's' : ''} handled by routes here: ${list(reqs, 4)}.`,
+      // Evidence on both sides: where the request is sent and where the route (or GraphQL resolver) is registered; a GraphQL link also cites the schema field.
+      sources: p.hits.slice(0, 2).flatMap((h) => [{ path: h.call.file, lines: [h.call.line, h.call.line] }, ...(h.schema ? [{ path: h.schema.file, lines: [h.schema.line, h.schema.line] }] : []), { path: h.route.file, lines: [h.route.line, h.route.line] }]),
     };
     edges.push(edge);
     httpEdges.push({ edge, hits: p.hits, reqs });
@@ -384,16 +398,21 @@ export function generate(scan, opts = {}) {
   const requestFlows = [];
   for (const { edge, hits, reqs } of httpEdges.slice(0, 3)) {
     const client = nodeById.get(edge.from), server = nodeById.get(edge.to);
-    const { call, route } = hits[0];
+    const { call, route, schema } = hits[0];
+    const gql = !!hits[0].graphql;
     const steps = [
       {
         id: 's1', title: `${client.label} sends ${reqs[0]}`, nodes: [client.id], edges: [], origin: 'auto',
-        narration: `${client.label} makes an HTTP request, ${reqs[0]}, to the backend. The call is at ${call.file}:${call.line}.`,
+        narration: gql
+          ? `${client.label} sends the GraphQL operation ${reqs[0]}. It is written at ${call.file}:${call.line}.`
+          : `${client.label} makes an HTTP request, ${reqs[0]}, to the backend. The call is at ${call.file}:${call.line}.`,
         sources: [{ path: call.file, lines: [call.line, call.line] }],
       },
       {
         id: 's2', title: `${server.label} handles it`, nodes: [client.id, server.id], edges: [edge.id], origin: 'auto',
-        narration: `The route ${route.method} ${route.path} is registered in ${route.file}:${route.line}, so ${server.label} receives the request.${reqs.length > 1 ? ` The same pair also talks over ${list(reqs.slice(1), 3)}.` : ''}`,
+        narration: gql
+          ? `The schema declares the field at ${schema.file}:${schema.line}, and its resolver is at ${route.file}:${route.line}, so ${server.label} answers it.${reqs.length > 1 ? ` The same pair also talks over ${list(reqs.slice(1), 3)}.` : ''}`
+          : `The route ${route.method} ${route.path} is registered in ${route.file}:${route.line}, so ${server.label} receives the request.${reqs.length > 1 ? ` The same pair also talks over ${list(reqs.slice(1), 3)}.` : ''}`,
         sources: [{ path: route.file, lines: [route.line, route.line] }],
       },
     ];
@@ -418,7 +437,7 @@ export function generate(scan, opts = {}) {
     }
     requestFlows.push({
       id: `request-${slug(client.id)}-${slug(server.id)}`.slice(0, 80), title: `Request: ${reqs[0]}`,
-      description: `Follows an HTTP request from ${client.label} to the route that handles it in ${server.label}.`, origin: 'auto', steps,
+      description: gql ? `Follows a GraphQL operation from ${client.label} to the resolver that answers it in ${server.label}.` : `Follows an HTTP request from ${client.label} to the route that handles it in ${server.label}.`, origin: 'auto', steps,
     });
   }
   flows.push(...requestFlows);

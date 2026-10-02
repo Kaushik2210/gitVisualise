@@ -2,6 +2,7 @@
 // that both the heuristic generator and Claude use, so architecture is grounded in the repo.
 // Pure: works on a list of paths plus a read() callback, so it runs unchanged in Node and in the browser.
 import { extractApiCalls, usesHttpClient, OPENAPI_RE, parseOpenApi } from './http-core.mjs';
+import { GRAPHQL_FILE_RE, extractGraphql } from './graphql-core.mjs';
 import * as posix from './posix.mjs';
 import { countLines } from './text.mjs';
 import { PLUGINS, PLUGIN_BY_EXT, PLUGIN_LANG_NAMES } from './languages.mjs';
@@ -616,6 +617,20 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     routes.push(...parseOpenApi(file, text).slice(0, 60 - routes.length));
   }
 
+  // GraphQL: client operations -> schema fields -> resolver maps, linked only when each step is read exactly (see graphql-core).
+  const gqlFiles = [];
+  for (const file of all.filter(inBase)) {
+    if (!GRAPHQL_FILE_RE.test(file) || file.split('/').length > 6) continue;
+    const text = read(file);
+    if (text && text.length < 400 * 1024 && gqlFiles.length < 40) gqlFiles.push({ file, text: text.replace(/\r\n/g, '\n') });
+  }
+  const gqlSources = files.filter((f) => /\.(js|jsx|ts|tsx|mjs|cjs|vue|svelte)$/.test(f.path) && /gql|graphql|GraphQL|\bQuery\b|\bMutation\b/.test(f._text)).map((f) => ({ file: f.path, text: f._text }));
+  const graphql = gqlFiles.length || gqlSources.length ? extractGraphql(gqlFiles, gqlSources) : { links: [] };
+  for (const l of graphql.links) { // a .graphql document that sends an operation needs a diagram node to attach the link to (like an OpenAPI document)
+    const g = gqlFiles.find((x) => x.file === l.client.file);
+    if (g && !files.some((f) => f.path === g.file)) files.push({ path: g.file, lang: null, lines: countLines(g.text), isTest: false, doc: null, symbols: [], imports: [], _text: g.text });
+  }
+
   // Express-style mounting: `app.use('/api/items', itemRouter)` puts every route of the router file that
   // `itemRouter` was imported from under that prefix. Only unambiguous mounts (one prefix per file) are applied.
   const mounts = new Map();
@@ -666,6 +681,7 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     externals: ext,
     routes,
     apiCalls,
+    graphql,
     files: files.map(({ _text, ...rest }) => rest),
   };
 }
