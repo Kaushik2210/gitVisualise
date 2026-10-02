@@ -2,6 +2,7 @@
 // Matching is deliberately strict: methods must agree and every path segment must be equal, with
 // only path parameters (":id", "{id}", "<int:id>", "${id}") acting as wildcards. Anything that
 // cannot be matched this way is left unlinked rather than guessed.
+import { parseYaml } from './yaml-lite.mjs';
 
 const PARAM = '*';
 
@@ -122,4 +123,67 @@ export function joinUrl(base, path) {
   if (!base || /^https?:\/\//i.test(path)) return path;
   const b = /^https?:\/\//i.test(base) ? base : '/' + base.replace(/^\/+/, '');
   return b.replace(/\/+$/, '') + '/' + path.replace(/^\/+/, '');
+}
+
+// ---------- OpenAPI 3 / Swagger 2 documents: routes declared explicitly, not inferred from framework code ----------
+export const OPENAPI_RE = /(^|\/)(openapi|swagger)(\.[\w-]+)?\.(json|ya?ml)$/i;
+const OPENAPI_VERBS = ['get', 'post', 'put', 'delete', 'patch', 'options', 'head'];
+
+const lineAtText = (text, idx) => { let n = 1; for (let i = 0; i < idx; i++) if (text.charCodeAt(i) === 10) n++; return n; };
+const yamlLineOf = (container, key, fallback) => {
+  const l = container && container.$lines ? container.$lines[key] : null;
+  return Number.isInteger(l) ? l : fallback;
+};
+/** The index of a JSON object key (`"key":`) at or after `from`, and before `before` if given, or -1. */
+function jsonKeyIndex(text, key, from, before) {
+  const needle = '"' + String(key).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"';
+  const idx = text.indexOf(needle, from);
+  if (idx < 0 || (before != null && idx >= before)) return -1;
+  return idx;
+}
+
+/**
+ * Reads `paths` from an OpenAPI 3 / Swagger 2 document (JSON or YAML) as routes, in the same shape
+ * scan-core's framework-decorator routes are: { method, path, file, line }. `{param}` path segments
+ * are already the wildcard syntax pathSegments() recognises, so no translation is needed. A malformed
+ * document (bad JSON/YAML, no `paths` object) yields no routes rather than throwing.
+ */
+export function parseOpenApi(file, raw) {
+  const isYaml = /\.ya?ml$/i.test(file);
+  let doc;
+  try { doc = isYaml ? parseYaml(raw) : JSON.parse(raw); } catch { return []; }
+  if (!doc || typeof doc !== 'object' || !doc.paths || typeof doc.paths !== 'object') return [];
+  const paths = doc.paths;
+  const pathKeys = Object.keys(paths).filter((p) => p.startsWith('/'));
+  const routes = [];
+  if (isYaml) {
+    for (const p of pathKeys) {
+      const ops = paths[p];
+      if (!ops || typeof ops !== 'object') continue;
+      const pathLine = yamlLineOf(paths, p, 1);
+      for (const verb of OPENAPI_VERBS) {
+        if (!ops[verb] || typeof ops[verb] !== 'object') continue;
+        routes.push({ method: verb.toUpperCase(), path: p, file, line: yamlLineOf(ops, verb, pathLine) });
+      }
+    }
+  } else {
+    let cursor = 0;
+    for (let i = 0; i < pathKeys.length; i++) {
+      const p = pathKeys[i];
+      const ops = paths[p];
+      const keyIdx = jsonKeyIndex(raw, p, cursor);
+      if (keyIdx < 0) continue;
+      let nextIdx = raw.length;
+      for (let j = i + 1; j < pathKeys.length; j++) { const idx = jsonKeyIndex(raw, pathKeys[j], keyIdx + 1); if (idx >= 0) { nextIdx = idx; break; } }
+      cursor = keyIdx + 1;
+      if (!ops || typeof ops !== 'object') continue;
+      const pathLine = lineAtText(raw, keyIdx);
+      for (const verb of OPENAPI_VERBS) {
+        if (!ops[verb] || typeof ops[verb] !== 'object') continue;
+        const vIdx = jsonKeyIndex(raw, verb, keyIdx, nextIdx);
+        routes.push({ method: verb.toUpperCase(), path: p, file, line: vIdx >= 0 ? lineAtText(raw, vIdx) : pathLine });
+      }
+    }
+  }
+  return routes.slice(0, 60);
 }

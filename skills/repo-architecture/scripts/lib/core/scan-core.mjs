@@ -1,7 +1,7 @@
 // Deterministic repository scanner core. Produces *facts* (files, imports, entry points, dependencies)
 // that both the heuristic generator and Claude use, so architecture is grounded in the repo.
 // Pure: works on a list of paths plus a read() callback, so it runs unchanged in Node and in the browser.
-import { extractApiCalls, usesHttpClient } from './http-core.mjs';
+import { extractApiCalls, usesHttpClient, OPENAPI_RE, parseOpenApi } from './http-core.mjs';
 import * as posix from './posix.mjs';
 import { countLines } from './text.mjs';
 import { PLUGINS, PLUGIN_BY_EXT, PLUGIN_LANG_NAMES } from './languages.mjs';
@@ -311,7 +311,16 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     const ext = extOf(rel);
     const lang = LANG[ext];
     if (lang) langCount[lang] = (langCount[lang] || 0) + 1;
-    if (!UNIT_EXT.has(ext)) continue;
+    if (!UNIT_EXT.has(ext)) {
+      // An OpenAPI/Swagger document is not source code, but its routes need a real diagram node to attach an
+      // http edge to (the same reason a docker-compose.yml or a schema.prisma never needed this: those views
+      // create their own dedicated node kind, but an HTTP edge links two existing file-based components).
+      if (OPENAPI_RE.test(rel)) {
+        const raw = read(rel);
+        if (raw != null) { const text = raw.replace(/\r\n/g, '\n'); files.push({ path: rel, lang: lang || null, lines: countLines(text), isTest: false, doc: null, symbols: [], imports: [], _text: text }); }
+      }
+      continue;
+    }
     const raw = read(rel);
     if (raw == null) continue;
     const text = raw.replace(/\r\n/g, '\n');
@@ -598,6 +607,13 @@ export function scanCore({ paths, read, repo, root = '', subPath = '' }) {
     }
     const clientFile = usesHttpClient(f.imports);
     for (const c of extractApiCalls(f._text, { serverFile, clientFile }, lineAt, 60 - apiCalls.length)) apiCalls.push({ ...c, file: f.path });
+  }
+  // OpenAPI 3 / Swagger 2 documents declare routes explicitly, same shape as the framework-decorator ones above.
+  for (const file of all.filter(inBase)) {
+    if (routes.length >= 60 || file.split('/').length > 4 || !OPENAPI_RE.test(file)) continue;
+    const text = read(file);
+    if (!text) continue;
+    routes.push(...parseOpenApi(file, text).slice(0, 60 - routes.length));
   }
 
   // Express-style mounting: `app.use('/api/items', itemRouter)` puts every route of the router file that

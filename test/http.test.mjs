@@ -1,7 +1,7 @@
 // Request-flow tracing: client calls are linked to server routes only when method and path really agree.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { matchRequests, pathSegments, extractApiCalls } from '../skills/repo-architecture/scripts/lib/core/http-core.mjs';
+import { matchRequests, pathSegments, extractApiCalls, parseOpenApi } from '../skills/repo-architecture/scripts/lib/core/http-core.mjs';
 import { scanRepo } from '../skills/repo-architecture/scripts/lib/scan.mjs';
 import { generate } from '../skills/repo-architecture/scripts/lib/generate.mjs';
 import { validate } from '../skills/repo-architecture/scripts/lib/validate.mjs';
@@ -72,6 +72,77 @@ test('http: generates evidence-backed http edges and a request-flow tour that va
   assert.ok(!JSON.stringify(arch).includes('/api/nope'), 'the unmatched call is not invented into the graph');
   const r = validate(arch, root);
   assert.deepEqual(r.errors, []);
+});
+
+test('http: OpenAPI (JSON) paths become routes, with the line of each operation', () => {
+  const json = [
+    '{',
+    '  "openapi": "3.0.0",',
+    '  "paths": {',
+    '    "/users/{id}": {',
+    '      "get": { "summary": "x" },',
+    '      "delete": { "summary": "y" }',
+    '    },',
+    '    "/health": {',
+    '      "get": {}',
+    '    }',
+    '  }',
+    '}',
+    '',
+  ].join('\n');
+  const routes = parseOpenApi('openapi.json', json);
+  assert.deepEqual(routes, [
+    { method: 'GET', path: '/users/{id}', file: 'openapi.json', line: 5 },
+    { method: 'DELETE', path: '/users/{id}', file: 'openapi.json', line: 6 },
+    { method: 'GET', path: '/health', file: 'openapi.json', line: 9 },
+  ]);
+});
+
+test('http: Swagger/OpenAPI (YAML) paths become routes, with the line of each operation', () => {
+  const yaml = [
+    'openapi: 3.0.0',
+    'paths:',
+    '  /users/{id}:',
+    '    get:',
+    '      summary: x',
+    '    delete:',
+    '      summary: y',
+    '  /health:',
+    '    get:',
+    '      summary: z',
+    '',
+  ].join('\n');
+  const routes = parseOpenApi('openapi.yaml', yaml);
+  assert.deepEqual(routes, [
+    { method: 'GET', path: '/users/{id}', file: 'openapi.yaml', line: 4 },
+    { method: 'DELETE', path: '/users/{id}', file: 'openapi.yaml', line: 6 },
+    { method: 'GET', path: '/health', file: 'openapi.yaml', line: 9 },
+  ]);
+});
+
+test('http: a malformed OpenAPI document yields no routes rather than throwing', () => {
+  assert.deepEqual(parseOpenApi('openapi.json', '{ not json'), []);
+  assert.deepEqual(parseOpenApi('openapi.json', '{"openapi":"3.0.0"}'), [], 'no paths object');
+  assert.deepEqual(parseOpenApi('swagger.yaml', 'not: - [valid, "yaml'), []);
+  assert.deepEqual(parseOpenApi('swagger.yaml', 'paths: not-an-object\n'), []);
+});
+
+test('http: a route from an OpenAPI document links a client call with evidence on both sides, and an uncalled path adds no edge', () => {
+  const root = repo({
+    'openapi.yaml': 'openapi: 3.0.0\npaths:\n  /users/{id}:\n    get:\n      summary: fetch a user\n  /users:\n    post:\n      summary: never called by this client\n',
+    'web/api.js': "export const getUser = (id) => fetch(`/users/${id}`);\n",
+  });
+  const scan = scanRepo(root);
+  assert.deepEqual(scan.routes, [
+    { method: 'GET', path: '/users/{id}', file: 'openapi.yaml', line: 4 },
+    { method: 'POST', path: '/users', file: 'openapi.yaml', line: 7 },
+  ]);
+  const arch = generate(scan);
+  const http = arch.edges.filter((e) => e.kind === 'http');
+  assert.equal(http.length, 1);
+  assert.deepEqual(http[0].sources.map((s) => s.path).sort(), ['openapi.yaml', 'web/api.js'], 'evidence on both sides: the call site and the operation in the document');
+  assert.ok(!JSON.stringify(arch).includes('never called'), 'a path only in the document, never called, adds no edge');
+  assert.deepEqual(validate(arch, root).errors, []);
 });
 
 test('http: no routes or no matching client call means no http edges or flows', () => {

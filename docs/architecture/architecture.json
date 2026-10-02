@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-02T04:51:18.763Z",
+    "generatedAt": "2026-10-02T05:00:35.214Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -605,7 +605,7 @@
       "label": "http-core.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "JavaScript file, 125 lines. Defines pathSegments, matchScore, matchRequests, usesHttpClient and 3 more.",
+      "summary": "Pure helpers for tracing HTTP requests from client code to the server routes that handle them.",
       "tech": [
         "JavaScript"
       ],
@@ -613,8 +613,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/http-core.mjs",
           "lines": [
-            9,
-            29
+            10,
+            30
           ]
         }
       ]
@@ -1900,8 +1900,8 @@
       "to": "http-core-mjs",
       "kind": "imports",
       "origin": "auto",
-      "label": "extractApiCalls, usesHttpClient",
-      "summary": "1 import (extractApiCalls, usesHttpClient).",
+      "label": "extractApiCalls, usesHttpClient, OPENAPI_RE and 1 more",
+      "summary": "1 import (extractApiCalls, usesHttpClient, OPENAPI_RE, parseOpenApi).",
       "sources": [
         {
           "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
@@ -2664,6 +2664,42 @@
           "lines": [
             27,
             27
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-http-core-mjs--yaml-lite-mjs",
+      "from": "http-core-mjs",
+      "to": "yaml-lite-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "parseYaml",
+      "summary": "1 import (parseYaml).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/http-core.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-github-loader-mjs--http-core-mjs",
+      "from": "github-loader-mjs",
+      "to": "http-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "OPENAPI_RE",
+      "summary": "1 import (OPENAPI_RE).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+          "lines": [
+            16,
+            16
           ]
         }
       ]
