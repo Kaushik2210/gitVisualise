@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-09T15:35:21.195Z",
+    "generatedAt": "2026-10-09T15:40:03.271Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 8 tests files, 41 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 8 tests files, 42 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -917,8 +917,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
           "lines": [
-            38,
-            58
+            39,
+            59
           ]
         }
       ]
@@ -1249,6 +1249,25 @@
       "sources": [
         {
           "path": "tools/sync-roadmap.mjs"
+        }
+      ]
+    },
+    {
+      "id": "lang-elixir-mjs",
+      "label": "lang-elixir.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "JavaScript file, 115 lines. Defines elixirModules, elixirImports, parseMix, elixir.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/lang-elixir.mjs",
+          "lines": [
+            25,
+            45
+          ]
         }
       ]
     }
@@ -2880,6 +2899,24 @@
           ]
         }
       ]
+    },
+    {
+      "id": "e-languages-mjs--lang-elixir-mjs",
+      "from": "languages-mjs",
+      "to": "lang-elixir-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "elixir",
+      "summary": "1 import (elixir).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/languages.mjs",
+          "lines": [
+            34,
+            34
+          ]
+        }
+      ]
     }
   ],
   "flows": [
@@ -3463,7 +3500,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 51 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 52 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
@@ -3516,7 +3553,7 @@
         },
         {
           "id": "t3",
-          "title": "Service (42)",
+          "title": "Service (43)",
           "nodes": [
             "build-mjs",
             "build-core-mjs",
@@ -3530,6 +3567,7 @@
             "lang-c-mjs",
             "lang-csharp-mjs",
             "lang-dart-mjs",
+            "lang-elixir-mjs",
             "lang-java-mjs",
             "lang-kotlin-mjs",
             "lang-php-mjs",
@@ -3563,7 +3601,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "42 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; cycles-core.mjs — Circular dependencies: groups of components that import each other, directly or through a chain; data-core.mjs — JavaScript file, 217 lines; and more.",
+          "narration": "43 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; cycles-core.mjs — Circular dependencies: groups of components that import each other, directly or through a chain; data-core.mjs — JavaScript file, 217 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",

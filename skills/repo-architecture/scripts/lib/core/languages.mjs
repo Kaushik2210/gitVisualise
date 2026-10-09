@@ -31,6 +31,7 @@ import { php } from './lang-php.mjs';
 import { c } from './lang-c.mjs';
 import { dart } from './lang-dart.mjs';
 import { swift } from './lang-swift.mjs';
+import { elixir } from './lang-elixir.mjs';
 
 const byDepth = (a, b) => a.path.split('/').length - b.path.split('/').length;
 
@@ -96,7 +97,7 @@ export const rust = {
   },
 };
 
-export const PLUGINS = [jvm, rust, csharp, ruby, php, c, dart, swift]; // scala is part of jvm, not its own plugin
+export const PLUGINS = [jvm, rust, csharp, ruby, php, c, dart, swift, elixir]; // scala is part of jvm, not its own plugin
 
 export const PLUGIN_BY_EXT = Object.fromEntries(PLUGINS.flatMap((p) => p.exts.map((e) => [e, p])));
 /** Extensions whose directory (package) is the diagram unit, for the generator. */
