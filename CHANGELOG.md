@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **Circular dependencies.** A "Circular dependencies" tour appears whenever components import each other in a loop, directly or through a chain: an overview, then one real loop per group (largest first) with the import line that closes it as evidence. Groups are found with an iterative Tarjan pass over the import edges, so a 20,000-deep ring cannot overflow the stack, and nothing is drawn when there are no loops. Imports that do not run at load time never count: TypeScript `import type`, dynamic `import()`, Python imports under `if TYPE_CHECKING:` (any alias, e.g. `t.TYPE_CHECKING`) and Python imports inside a function body. Components that share a label inside one loop are numbered. Verified against real repositories: pallets/flask, psf/requests and encode/httpx report none (their only apparent loops are typing-only or lazy), pallets/click reports one genuine Windows-branch loop between `_compat.py` and `_winconsole.py`.
+
+### Fixed
+- **Python:** an import written inside a docstring or other triple-quoted string (for example `from flask import Flask` in an example) was counted as a real dependency, adding false edges to the graph. It is now ignored.
+
 ## [1.3.0] - 2026-10-02
 
 ### Changed

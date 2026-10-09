@@ -3,6 +3,7 @@
 import * as posix from './core/posix.mjs';
 import { slug } from './core/text.mjs';
 import { matchRequests } from './core/http-core.mjs';
+import { findCycles } from './core/cycles-core.mjs';
 import { PACKAGE_EXTS } from './core/languages.mjs';
 
 const KIND_RULES = [
@@ -191,8 +192,9 @@ export function generate(scan, opts = {}) {
       const to = unitToId.get(unitKey(imp.resolved));
       if (!to || to === from) continue;
       const k = `${from}>${to}`;
-      const e = edgeMap.get(k) || { from, to, count: 0, names: new Set(), sites: [], targets: new Set() };
+      const e = edgeMap.get(k) || { from, to, count: 0, names: new Set(), sites: [], targets: new Set(), liveSite: null };
       e.count++;
+      if (!imp.deferred && !e.liveSite) e.liveSite = { path: f.path, lines: [imp.line, imp.line] }; // a real load-time import, not a type-only or lazy one
       imp.names.forEach((n) => e.names.add(n));
       e.targets.add(imp.resolved);
       if (e.sites.length < 3) e.sites.push({ path: f.path, lines: [imp.line, imp.line] });
@@ -200,8 +202,10 @@ export function generate(scan, opts = {}) {
     }
   }
   const edges = [];
+  const liveSiteOf = new Map(); // edge id -> a load-time import line; absent when every import is type-only or lazy
   for (const [k, e] of edgeMap) {
     const names = [...e.names];
+    if (e.liveSite) liveSiteOf.set(`e-${e.from}--${e.to}`.slice(0, 120), e.liveSite);
     edges.push({
       id: `e-${e.from}--${e.to}`.slice(0, 120), from: e.from, to: e.to, kind: 'imports', origin: 'auto',
       label: e.count === 1 && names.length ? list(names, 3) : `${e.count} imports`,
@@ -441,6 +445,39 @@ export function generate(scan, opts = {}) {
     });
   }
   flows.push(...requestFlows);
+
+  // Circular dependencies: components that import each other in a loop. Only drawn when the scanner really saw the imports.
+  const cycleGroups = findCycles(nodes.filter((n) => !n.external).map((n) => n.id), edges.filter((e) => e.kind === 'imports' && liveSiteOf.has(e.id)));
+  if (cycleGroups.length) {
+    const edgeById = new Map(edges.map((e) => [e.id, e]));
+    const loops = cycleGroups.slice(0, 5).map((g) => ({ g, loop: g.path.map((id) => edgeById.get(id)) })).filter((x) => x.loop.length);
+    if (loops.length) {
+      const plural = loops.length === 1 ? '' : 's';
+      const steps = [{
+        id: 'c1', title: `${cycleGroups.length} circular dependenc${cycleGroups.length === 1 ? 'y' : 'ies'}`, nodes: [...new Set(loops.flatMap((x) => x.g.nodes))].slice(0, 12), edges: [], origin: 'auto',
+        narration: `${cycleGroups.length === 1 ? 'One group of components imports' : cycleGroups.length + ' groups of components import'} each other in a loop, directly or through a chain. Loops make initialisation order fragile and stop the pieces being changed or tested independently. The next step${plural} show${loops.length === 1 ? 's' : ''} one real loop from each of the largest group${plural}.`,
+        sources: [liveSiteOf.get(loops[0].loop[0].id)],
+      }];
+      for (const { g, loop } of loops) {
+        // Two different components can share a label (the same package path in two source sets): number them so a loop reads unambiguously.
+        const labelOf = new Map(), seenLabel = new Map();
+        for (const e of loop) {
+          const n = nodeById.get(e.from), same = seenLabel.get(n.label) || seenLabel.set(n.label, []).get(n.label);
+          if (!same.includes(n.id)) same.push(n.id);
+        }
+        for (const e of loop) { const n = nodeById.get(e.from), same = seenLabel.get(n.label); labelOf.set(n.id, same.length > 1 ? `${n.label} (${same.indexOf(n.id) + 1})` : n.label); }
+        const names = loop.map((e) => labelOf.get(e.from));
+        const shown = names.length > 6 ? [...names.slice(0, 5), '...'] : names;
+        steps.push({
+          id: `c${steps.length + 1}`, title: names.length === 2 ? `${names[0]} ⇄ ${names[1]}` : `Loop through ${names[0]} (${names.length} steps)`,
+          nodes: g.nodes.slice(0, 8), edges: loop.map((e) => e.id).slice(0, 12), origin: 'auto',
+          narration: `${[...shown, names[0]].join(' → ')}. Each arrow is an import found in the code${g.nodes.length > names.length ? `; ${g.nodes.length} components are tied together by loops like this` : ''}. Breaking any one of these imports (for example by moving the shared part into a third module) removes this loop.`,
+          sources: [liveSiteOf.get(loop[0].id)],
+        });
+      }
+      flows.push({ id: 'cycles', title: 'Circular dependencies', description: 'Components that import each other in a loop, with one real loop shown for each group. Imports used only for types, or loaded lazily, are not counted.', origin: 'auto', steps });
+    }
+  }
 
   // Infrastructure: which services exist, in what order they start, and which code they are built from.
   const composeSvcs = infraSvcs.filter((s) => !s.tech || s.tech === 'Docker Compose');

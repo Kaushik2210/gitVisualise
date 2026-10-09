@@ -79,6 +79,7 @@ regenerated (without losing your edits) when the code changes.
 | 🗺️ **Interactive diagram** | Components laid out in layers, with pan, zoom and a "zoom to step" camera |
 | ▶️ **Guided flows** | Play, pause, next, previous, restart, speed control, progress dots, keyboard shortcuts, deep links to any step |
 | 🔌 **Request tracing** | A `fetch`/`axios` call (including through a client with a literal `baseURL`) is linked to the server route that handles it, with evidence on both sides and a "Request: GET /x" tour |
+| ♻️ **Circular dependencies** | Components that import each other in a loop get their own tour, with one real loop per group and the import line that closes it. Type-only and lazy imports (`import type`, `import()`, `TYPE_CHECKING`, imports inside a function) are not counted |
 | 🔀 **Compare two revisions** | `owner/repo@v1...v2` marks components and relationships added, removed or changed, and narrates the difference |
 | 🗄️ **Infrastructure and data model** | Docker Compose services (with `depends_on` and the code each one is built from), Kubernetes manifests (workloads, the Services that select them, Ingress routes) and Terraform resources (with the references between them) and SQL / Prisma tables with their foreign keys become components too, each pointing at the file and line it came from, with a tour of each |
 | 🧩 **Monorepos** | One component per workspace package, or analyse a single folder (`owner/repo:apps/web`) |
@@ -336,32 +337,22 @@ start without asking. Comment "I'll take this" and a maintainer will help you ge
 [**All help wanted →**](https://github.com/Kaushik2210/gitVisualise/labels/help%20wanted) &nbsp;·&nbsp;
 [**Start a discussion →**](https://github.com/Kaushik2210/gitVisualise/discussions)
 
-**🟢 Good first issues** (an afternoon each)
+**🟢 Good first issues (an afternoon each)**
 
-- [#7](https://github.com/Kaushik2210/gitVisualise/issues/7) Add a demo GIF and screenshots to the README
-- [#42](https://github.com/Kaushik2210/gitVisualise/issues/42) CLI: `gitvisualise init` sets a repository up in one command
-- [#43](https://github.com/Kaushik2210/gitVisualise/issues/43) A community gallery of tours, added by pull request
-- [#44](https://github.com/Kaushik2210/gitVisualise/issues/44) Viewer: a "?" keyboard shortcuts overlay
-- [#45](https://github.com/Kaushik2210/gitVisualise/issues/45) Viewer: a colour-blind-safe palette option
+- [#69](https://github.com/Kaushik2210/gitVisualise/issues/69) Viewer: highlight circular dependencies on the diagram
 
 **🟡 Intermediate**
 
-- [#46](https://github.com/Kaushik2210/gitVisualise/issues/46) Export the whole tour as a printable document
-- [#47](https://github.com/Kaushik2210/gitVisualise/issues/47) Language support: Swift import graph
-- [#48](https://github.com/Kaushik2210/gitVisualise/issues/48) Language support: Scala
-- [#49](https://github.com/Kaushik2210/gitVisualise/issues/49) Data model: read ORM models from application code
-- [#50](https://github.com/Kaushik2210/gitVisualise/issues/50) Request tracing: read routes from OpenAPI documents
-
-**🔴 Ambitious** (discuss the design first)
-
-- [#14](https://github.com/Kaushik2210/gitVisualise/issues/14) Sign in with GitHub to list private repositories
+- [#70](https://github.com/Kaushik2210/gitVisualise/issues/70) Cycles: treat require() inside functions as lazy
+- [#71](https://github.com/Kaushik2210/gitVisualise/issues/71) Tour of modules nothing imports ("possibly unused")
+- [#72](https://github.com/Kaushik2210/gitVisualise/issues/72) Language support: Elixir import graph
 
 The full plan, grouped into milestones, is in [ROADMAP.md](ROADMAP.md).
 
 <details>
-<summary><b>✅ Already shipped from this list</b> (41 issues closed)</summary>
+<summary><b>✅ Already shipped from this list</b> (52 issues closed)</summary>
 
-Closed so far: #1, #2, #3, #4, #5, #6, #8, #9, #10, #11, #12, #13, #15, #16, #20, #21, #22, #23, #24, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40. The changelog says what each one delivered.
+Closed so far: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #20, #21, #22, #23, #24, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40, #42, #43, #44, #45, #46, #47, #48, #49, #50, #51, #52, #53, #54, #55, #56, #57
 
 </details>
 

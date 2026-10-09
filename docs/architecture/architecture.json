@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-02T05:00:35.214Z",
+    "generatedAt": "2026-10-09T15:14:25.439Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 4 tests files, 38 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 7 tests files, 41 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -586,7 +586,7 @@
       "label": "diff-core.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "JavaScript file, 105 lines. Defines diffArchitectures.",
+      "summary": "JavaScript file, 157 lines. Defines findMoves, diffArchitectures.",
       "tech": [
         "JavaScript"
       ],
@@ -594,8 +594,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/diff-core.mjs",
           "lines": [
-            21,
-            41
+            34,
+            54
           ]
         }
       ]
@@ -795,7 +795,7 @@
       "label": "infra-core.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "Infrastructure view: the services a Docker Compose file declares, how they depend on each other, and which directory of the repository each one is built from.",
+      "summary": "Infrastructure view: what the repository's deployment files declare and how the pieces relate.",
       "tech": [
         "JavaScript"
       ],
@@ -803,8 +803,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
           "lines": [
-            9,
-            29
+            14,
+            34
           ]
         }
       ]
@@ -928,7 +928,7 @@
       "label": "yaml-lite.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "JavaScript file, 145 lines. Defines parseYaml.",
+      "summary": "JavaScript file, 168 lines. Defines parseYaml, parseYamlDocs.",
       "tech": [
         "JavaScript"
       ],
@@ -974,8 +974,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/web/analyse.mjs",
           "lines": [
-            9,
-            29
+            10,
+            30
           ]
         }
       ]
@@ -985,7 +985,7 @@
       "label": "analysis-worker.mjs",
       "kind": "service",
       "origin": "auto",
-      "summary": "Web Worker entry: runs the analysis off the main thread.",
+      "summary": "Web Worker entry: runs the analysis jobs off the main thread.",
       "tech": [
         "JavaScript"
       ],
@@ -1019,7 +1019,7 @@
       "label": "pr-comment.mjs",
       "kind": "module",
       "origin": "auto",
-      "summary": "JavaScript file, 110 lines. Defines MARKER, buildComment, NO_CHANGES_BODY, postComment and 1 more.",
+      "summary": "JavaScript file, 111 lines. Defines MARKER, buildComment, NO_CHANGES_BODY, postComment and 1 more.",
       "tech": [
         "JavaScript"
       ],
@@ -1038,7 +1038,7 @@
       "label": "extension.js",
       "kind": "module",
       "origin": "auto",
-      "summary": "JavaScript file, 106 lines.",
+      "summary": "JavaScript file, 149 lines.",
       "tech": [
         "JavaScript"
       ],
@@ -1053,7 +1053,7 @@
       "label": "lib.js",
       "kind": "module",
       "origin": "auto",
-      "summary": "JavaScript file, 59 lines.",
+      "summary": "JavaScript file, 86 lines.",
       "tech": [
         "JavaScript"
       ],
@@ -1162,6 +1162,93 @@
             16,
             36
           ]
+        }
+      ]
+    },
+    {
+      "id": "cycles-core-mjs",
+      "label": "cycles-core.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "Circular dependencies: groups of components that import each other, directly or through a chain.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/cycles-core.mjs",
+          "lines": [
+            12,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "id": "graphql-core-mjs",
+      "label": "graphql-core.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "JavaScript file, 331 lines. Defines GRAPHQL_FILE_RE, parseGraphqlDocument, templateDocuments, resolverKeys and 2 more.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/graphql-core.mjs",
+          "lines": [
+            14,
+            34
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tree-plan-mjs",
+      "label": "tree-plan.mjs",
+      "kind": "service",
+      "origin": "auto",
+      "summary": "The CPU-bound middle of loading a repository from GitHub: turning the file tree into \"which files do we download\".",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
+          "lines": [
+            14,
+            34
+          ]
+        }
+      ]
+    },
+    {
+      "id": "make-icon-mjs",
+      "label": "make-icon.mjs",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "Draws the Marketplace icon (icon.png, 256x256) with no dependencies: a dark rounded square holding a small architecture graph (one entry node fanning out to three components, one of them highlighted).",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "vscode-extension/scripts/make-icon.mjs"
+        }
+      ]
+    },
+    {
+      "id": "sync-roadmap-mjs",
+      "label": "sync-roadmap.mjs",
+      "kind": "module",
+      "origin": "auto",
+      "summary": "Rewrites the \"Help wanted\" list in README.md and the milestone tables in ROADMAP.md from the live GitHub issue state, so they cannot go stale.",
+      "tech": [
+        "JavaScript"
+      ],
+      "sources": [
+        {
+          "path": "tools/sync-roadmap.mjs"
         }
       ]
     }
@@ -1366,8 +1453,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
           "lines": [
-            5,
-            5
+            6,
+            6
           ]
         }
       ]
@@ -1384,8 +1471,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
           "lines": [
-            6,
-            6
+            7,
+            7
           ]
         }
       ]
@@ -1535,24 +1622,6 @@
       ]
     },
     {
-      "id": "e-github-loader-mjs--scan-core-mjs",
-      "from": "github-loader-mjs",
-      "to": "scan-core-mjs",
-      "kind": "imports",
-      "origin": "auto",
-      "label": "makeIgnorer, filterPaths, UNIT_EXT and 2 more",
-      "summary": "1 import (makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf).",
-      "sources": [
-        {
-          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
-          "lines": [
-            8,
-            8
-          ]
-        }
-      ]
-    },
-    {
       "id": "e-github-loader-mjs--validate-core-mjs",
       "from": "github-loader-mjs",
       "to": "validate-core-mjs",
@@ -1564,26 +1633,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
           "lines": [
-            9,
-            9
-          ]
-        }
-      ]
-    },
-    {
-      "id": "e-github-loader-mjs--generate-mjs",
-      "from": "github-loader-mjs",
-      "to": "generate-mjs",
-      "kind": "imports",
-      "origin": "auto",
-      "label": "isExamplePath, TOOLING_RE",
-      "summary": "1 import (isExamplePath, TOOLING_RE).",
-      "sources": [
-        {
-          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
-          "lines": [
-            10,
-            10
+            8,
+            8
           ]
         }
       ]
@@ -1942,8 +1993,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
           "lines": [
-            12,
-            12
+            10,
+            10
           ]
         }
       ]
@@ -2014,8 +2065,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
           "lines": [
-            4,
-            4
+            9,
+            9
           ]
         }
       ]
@@ -2026,14 +2077,14 @@
       "to": "yaml-lite-mjs",
       "kind": "imports",
       "origin": "auto",
-      "label": "parseYaml",
-      "summary": "1 import (parseYaml).",
+      "label": "parseYaml, parseYamlDocs",
+      "summary": "1 import (parseYaml, parseYamlDocs).",
       "sources": [
         {
           "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
           "lines": [
-            5,
-            5
+            10,
+            10
           ]
         }
       ]
@@ -2050,8 +2101,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/infra-core.mjs",
           "lines": [
-            6,
-            6
+            11,
+            11
           ]
         }
       ]
@@ -2284,8 +2335,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
           "lines": [
-            7,
-            7
+            8,
+            8
           ]
         }
       ]
@@ -2302,8 +2353,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
           "lines": [
-            8,
-            8
+            9,
+            9
           ]
         }
       ]
@@ -2320,8 +2371,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
           "lines": [
-            9,
-            9
+            10,
+            10
           ]
         }
       ]
@@ -2338,8 +2389,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/generate.mjs",
           "lines": [
-            6,
-            6
+            7,
+            7
           ]
         }
       ]
@@ -2440,14 +2491,14 @@
       "to": "analyse-mjs",
       "kind": "imports",
       "origin": "auto",
-      "label": "analyseSources",
-      "summary": "1 import (analyseSources).",
+      "label": "TASKS",
+      "summary": "1 import (TASKS).",
       "sources": [
         {
           "path": "skills/repo-architecture/scripts/lib/web/analysis-worker.mjs",
           "lines": [
-            2,
-            2
+            4,
+            4
           ]
         }
       ]
@@ -2458,68 +2509,14 @@
       "to": "analyse-mjs",
       "kind": "imports",
       "origin": "auto",
-      "label": "makeView, runAnalysis",
-      "summary": "1 import (makeView, runAnalysis).",
+      "label": "makeView, createRunner",
+      "summary": "1 import (makeView, createRunner).",
       "sources": [
         {
           "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
           "lines": [
-            11,
-            11
-          ]
-        }
-      ]
-    },
-    {
-      "id": "e-github-loader-mjs--languages-mjs",
-      "from": "github-loader-mjs",
-      "to": "languages-mjs",
-      "kind": "imports",
-      "origin": "auto",
-      "label": "PLUGIN_MANIFEST_SRC",
-      "summary": "1 import (PLUGIN_MANIFEST_SRC).",
-      "sources": [
-        {
-          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
-          "lines": [
-            13,
-            13
-          ]
-        }
-      ]
-    },
-    {
-      "id": "e-github-loader-mjs--infra-core-mjs",
-      "from": "github-loader-mjs",
-      "to": "infra-core-mjs",
-      "kind": "imports",
-      "origin": "auto",
-      "label": "COMPOSE_RE",
-      "summary": "1 import (COMPOSE_RE).",
-      "sources": [
-        {
-          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
-          "lines": [
-            14,
-            14
-          ]
-        }
-      ]
-    },
-    {
-      "id": "e-github-loader-mjs--data-core-mjs",
-      "from": "github-loader-mjs",
-      "to": "data-core-mjs",
-      "kind": "imports",
-      "origin": "auto",
-      "label": "DATA_FILE_RE",
-      "summary": "1 import (DATA_FILE_RE).",
-      "sources": [
-        {
-          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
-          "lines": [
-            15,
-            15
+            9,
+            9
           ]
         }
       ]
@@ -2687,8 +2684,170 @@
       ]
     },
     {
-      "id": "e-github-loader-mjs--http-core-mjs",
+      "id": "e-scan-core-mjs--graphql-core-mjs",
+      "from": "scan-core-mjs",
+      "to": "graphql-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "GRAPHQL_FILE_RE, extractGraphql",
+      "summary": "1 import (GRAPHQL_FILE_RE, extractGraphql).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/core/scan-core.mjs",
+          "lines": [
+            5,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-generate-mjs--cycles-core-mjs",
+      "from": "generate-mjs",
+      "to": "cycles-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "findCycles",
+      "summary": "1 import (findCycles).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/generate.mjs",
+          "lines": [
+            6,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-analyse-mjs--tree-plan-mjs",
+      "from": "analyse-mjs",
+      "to": "tree-plan-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "readTree, planSources",
+      "summary": "1 import (readTree, planSources).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/analyse.mjs",
+          "lines": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-github-loader-mjs--tree-plan-mjs",
       "from": "github-loader-mjs",
+      "to": "tree-plan-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "pickSourceFiles, MAX_FILE_BYTES",
+      "summary": "1 import (pickSourceFiles, MAX_FILE_BYTES).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+          "lines": [
+            11,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-tree-plan-mjs--scan-core-mjs",
+      "from": "tree-plan-mjs",
+      "to": "scan-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "makeIgnorer, filterPaths, UNIT_EXT and 2 more",
+      "summary": "1 import (makeIgnorer, filterPaths, UNIT_EXT, TEST_RE, extOf).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
+          "lines": [
+            6,
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-tree-plan-mjs--generate-mjs",
+      "from": "tree-plan-mjs",
+      "to": "generate-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "isExamplePath, TOOLING_RE",
+      "summary": "1 import (isExamplePath, TOOLING_RE).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
+          "lines": [
+            7,
+            7
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-tree-plan-mjs--languages-mjs",
+      "from": "tree-plan-mjs",
+      "to": "languages-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "PLUGIN_MANIFEST_SRC",
+      "summary": "1 import (PLUGIN_MANIFEST_SRC).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
+          "lines": [
+            8,
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-tree-plan-mjs--infra-core-mjs",
+      "from": "tree-plan-mjs",
+      "to": "infra-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "COMPOSE_RE, TERRAFORM_RE, k8sCandidates",
+      "summary": "1 import (COMPOSE_RE, TERRAFORM_RE, k8sCandidates).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
+          "lines": [
+            9,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-tree-plan-mjs--data-core-mjs",
+      "from": "tree-plan-mjs",
+      "to": "data-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "DATA_FILE_RE",
+      "summary": "1 import (DATA_FILE_RE).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
+          "lines": [
+            10,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-tree-plan-mjs--http-core-mjs",
+      "from": "tree-plan-mjs",
       "to": "http-core-mjs",
       "kind": "imports",
       "origin": "auto",
@@ -2696,10 +2855,28 @@
       "summary": "1 import (OPENAPI_RE).",
       "sources": [
         {
-          "path": "skills/repo-architecture/scripts/lib/web/github-loader.mjs",
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
           "lines": [
-            16,
-            16
+            11,
+            11
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-tree-plan-mjs--graphql-core-mjs",
+      "from": "tree-plan-mjs",
+      "to": "graphql-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "GRAPHQL_FILE_RE",
+      "summary": "1 import (GRAPHQL_FILE_RE).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/lib/web/tree-plan.mjs",
+          "lines": [
+            12,
+            12
           ]
         }
       ]
@@ -3282,11 +3459,11 @@
             "gitvisualise-mjs",
             "build-mjs",
             "build-core-mjs",
-            "data-core-mjs"
+            "cycles-core-mjs"
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 46 more. They may be loaded dynamically, run separately, or be unused.",
+          "narration": "These modules are not reachable from the entry point through static imports: exchange.mjs, worker.mjs, index.html, motion.js, gitvisualise.mjs, build.mjs and 51 more. They may be loaded dynamically, run separately, or be unused.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
@@ -3330,7 +3507,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 103 lines.",
+          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 104 lines.",
           "sources": [
             {
               "path": "site/index.html"
@@ -3339,13 +3516,15 @@
         },
         {
           "id": "t3",
-          "title": "Service (39)",
+          "title": "Service (42)",
           "nodes": [
             "build-mjs",
             "build-core-mjs",
+            "cycles-core-mjs",
             "data-core-mjs",
             "diff-core-mjs",
             "export-core-mjs",
+            "graphql-core-mjs",
             "http-core-mjs",
             "infra-core-mjs",
             "lang-c-mjs",
@@ -3379,11 +3558,12 @@
             "idb-store-mjs",
             "narrate-ai-mjs",
             "oauth-mjs",
-            "route-mjs"
+            "route-mjs",
+            "tree-plan-mjs"
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "39 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; data-core.mjs — JavaScript file, 217 lines; diff-core.mjs — JavaScript file, 105 lines; and more.",
+          "narration": "42 service parts: build.mjs — Node adapter: builds the static site (index.html + viewer.js + viewer.css) on disk; build-core.mjs — Pure site building: snippets + page rendering; cycles-core.mjs — Circular dependencies: groups of components that import each other, directly or through a chain; data-core.mjs — JavaScript file, 217 lines; and more.",
           "sources": [
             {
               "path": "skills/repo-architecture/scripts/lib/build.mjs",
@@ -3396,7 +3576,7 @@
         },
         {
           "id": "t4",
-          "title": "Module (11)",
+          "title": "Module (13)",
           "nodes": [
             "exchange-mjs",
             "worker-mjs",
@@ -3405,14 +3585,16 @@
             "pr-comment-mjs",
             "viewer-js",
             "build-site-mjs",
+            "sync-roadmap-mjs",
             "extension-js",
             "lib-js",
             "bundle-skill-mjs",
+            "make-icon-mjs",
             "run-in-vscode-mjs"
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "11 general parts: exchange.mjs — JavaScript file, 180 lines; worker.mjs — JavaScript file, 7 lines; config.js — JavaScript file, 10 lines; motion.js — JavaScript file, 551 lines; and more.",
+          "narration": "13 general parts: exchange.mjs — JavaScript file, 180 lines; worker.mjs — JavaScript file, 7 lines; config.js — JavaScript file, 10 lines; motion.js — JavaScript file, 551 lines; and more.",
           "sources": [
             {
               "path": "server/github-oauth/exchange.mjs",
