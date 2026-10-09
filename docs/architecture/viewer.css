@@ -243,3 +243,8 @@ select { font: inherit; font-size: 13px; color: var(--ink); background: var(--pa
   .minimap .mm-node { fill: GrayText; opacity: 1; }
   .minimap .mm-view { fill: none; stroke: Highlight; }
 }
+
+:root { --loop: #8b5cf6; } /* 3.8:1 or better on every surface in both themes; the dash pattern and the mark carry the meaning, so one colour serves both palettes */
+/* Circular dependencies ("Loops" toggle): a long-dash/dot outline, a heavier line and a ↻ mark in the label, so it reads without colour. */
+.node.in-loop rect.box { stroke: var(--loop); stroke-width: 3.5; stroke-dasharray: 10 3 2 3; }
+.edge.in-loop:not(.active):not(.selected) path.line { stroke: var(--loop); stroke-width: 3; stroke-dasharray: 10 3 2 3; }

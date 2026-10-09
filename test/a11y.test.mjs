@@ -134,3 +134,34 @@ test('palette: cb-palette diff colours meet 3:1 (WCAG non-text contrast) against
     }
   }
 });
+
+// ---- circular dependencies toggle (#69) ----
+test('loops: the toggle is hidden until there are loops, exposes its state, and is remembered', () => {
+  assert.match(html, /id="loops-btn"[^>]*hidden/, 'hidden in the template; the viewer reveals it only when a "cycles" flow exists');
+  assert.match(js, /f\.id !== 'cycles'/);
+  assert.match(js, /b\.hidden = !hasLoops/);
+  assert.match(js, /setAttribute\('aria-pressed', loopsOn/);
+  assert.match(js, /store\('loops'/);
+  assert.match(js, /loopsOn && loopEdges\[e\.id\]/);
+  assert.match(js, /loopsOn && loopNodes\[n\.id\]/);
+});
+
+test('loops: a looped component does not rely on colour alone (dash pattern, heavier line, and a mark in its label)', () => {
+  assert.match(css, /\.node\.in-loop rect\.box \{[^}]*stroke-dasharray: 10 3 2 3/);
+  assert.match(css, /\.edge\.in-loop[^{]*path\.line \{[^}]*stroke-dasharray: 10 3 2 3/);
+  assert.match(js, /\u21BB /, 'a loop mark in the node label');
+  const others = [...css.matchAll(/\.(?:node|edge)\.d-[a-z]+[^{]*\{[^}]*stroke-dasharray: ([\d ]+);/g)].map((m) => m[1]);
+  assert.ok(others.length >= 3 && !others.includes('10 3 2 3'), 'the loop pattern differs from every diff pattern: ' + others.join(' | '));
+});
+
+test('loops: the loop colour meets 3:1 (WCAG non-text contrast) on every panel/background token in both themes', () => {
+  const m = /:root \{ --loop: (#[0-9a-fA-F]{6});/.exec(css);
+  assert.ok(m, 'a --loop token');
+  const light = tokens(':root {'), dark = tokens(':root[data-theme="dark"] {');
+  for (const [theme, t] of [['light', light], ['dark', dark]]) {
+    for (const bg of ['panel', 'bg', 'node-bg']) {
+      const r = ratio(m[1], t[bg]);
+      assert.ok(r >= 3, `${theme}: --loop ${m[1]} on ${bg} ${t[bg]} is ${r.toFixed(2)}:1, needs 3:1`);
+    }
+  }
+});

@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-09T15:31:13.624Z",
+    "generatedAt": "2026-10-09T15:35:21.195Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -17,7 +17,7 @@
     ],
     "notes": [
       "Nodes are individual source files; edges are static imports found by the scanner.",
-      "Not diagrammed: 7 tests files, 41 examples files (add them with --include tests,examples,tooling)."
+      "Not diagrammed: 8 tests files, 41 examples files (add them with --include tests,examples,tooling)."
     ],
     "origin": "claude"
   },
@@ -3507,7 +3507,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 104 lines.",
+          "narration": "2 ui parts: index.html — landing; index.template.html — HTML file, 105 lines.",
           "sources": [
             {
               "path": "site/index.html"
@@ -3651,7 +3651,7 @@
           ],
           "edges": [],
           "origin": "auto",
-          "narration": "viewer.js (1066 lines) has no incoming import from another component in this repository. Generic architecture viewer.",
+          "narration": "viewer.js (1087 lines) has no incoming import from another component in this repository. Generic architecture viewer.",
           "sources": [
             {
               "path": "skills/repo-architecture/viewer/viewer.js",

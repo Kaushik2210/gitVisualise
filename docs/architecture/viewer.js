@@ -48,6 +48,14 @@
   // read as the same colour to red-green colour blindness).
   var SAFE_COLORS = ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#D55E00', '#56B4E9', '#F0E442', '#8C8C8C'];
   var SAFE_ORDER = ['entry', 'ui', 'api', 'service', 'data', 'util', 'config', 'module', 'test'];
+  // Circular dependencies: every component and relationship named by a step of the "cycles" flow.
+  var loopNodes = {}, loopEdges = {};
+  flows.forEach(function (f) {
+    if (f.id !== 'cycles') return;
+    f.steps.forEach(function (st) { (st.nodes || []).forEach(function (id) { loopNodes[id] = true; }); (st.edges || []).forEach(function (id) { loopEdges[id] = true; }); });
+  });
+  var hasLoops = Object.keys(loopNodes).length > 0;
+  var loopsOn = hasLoops && store('loops') === '1';
   var PALETTES = ['default', 'cb'];
   var palette = PALETTES.indexOf(store('palette')) >= 0 ? store('palette') : 'default';
   function kindColor(kind) {
@@ -223,7 +231,7 @@
       var a = boxes[e.from], b = boxes[e.to];
       if (!a || !b) return;
       var geo = edgeGeom(a, b);
-      var g = s('g', { class: (e.kind === 'http' ? 'edge k-http' : 'edge') + diffClass(e) + (isHidden(e.from) && isHidden(e.to) && laneKeyOf(byId[e.from]) === laneKeyOf(byId[e.to]) ? ' lane-hidden' : ''), 'data-id': e.id });
+      var g = s('g', { class: (e.kind === 'http' ? 'edge k-http' : 'edge') + diffClass(e) + (loopsOn && loopEdges[e.id] ? ' in-loop' : '') + (isHidden(e.from) && isHidden(e.to) && laneKeyOf(byId[e.from]) === laneKeyOf(byId[e.to]) ? ' lane-hidden' : ''), 'data-id': e.id });
       g.appendChild(s('title', {}, e.label ? (byId[e.from].label + ' → ' + byId[e.to].label + ': ' + e.label) : ''));
       g.appendChild(s('path', { d: geo.d, class: 'hit' }));
       g.appendChild(s('path', { d: geo.d, class: 'line' }));
@@ -232,12 +240,12 @@
     });
     nodes.forEach(function (n) {
       var b = boxes[n.id];
-      var g = s('g', { class: 'node' + diffClass(n) + (isHidden(n.id) ? ' lane-hidden' : ''), transform: 'translate(' + b.x + ',' + b.y + ')', tabindex: isHidden(n.id) ? -1 : 0, role: 'button', 'aria-label': n.label + ', ' + n.kind + '. ' + (n.summary || ''), 'data-id': n.id, style: '--kc:' + kindColor(n.kind) });
+      var g = s('g', { class: 'node' + diffClass(n) + (loopsOn && loopNodes[n.id] ? ' in-loop' : '') + (isHidden(n.id) ? ' lane-hidden' : ''), transform: 'translate(' + b.x + ',' + b.y + ')', tabindex: isHidden(n.id) ? -1 : 0, role: 'button', 'aria-label': n.label + ', ' + n.kind + '. ' + (n.summary || ''), 'data-id': n.id, style: '--kc:' + kindColor(n.kind) });
       g.appendChild(s('title', {}, n.summary || n.label));
       g.appendChild(s('rect', { class: 'box', width: b.w, height: b.h, rx: 10 }));
       g.appendChild(s('rect', { class: 'bar', x: 0, y: 12, width: 5, height: b.h - 24, rx: 2.5 }));
       g.appendChild(s('text', { class: 'lbl', x: 18, y: 26 }, trunc(n.label, 23)));
-      var sub = (DIFF_MARK[n.diff] ? DIFF_MARK[n.diff] + ' ' : '') + n.kind + (n.tech && n.tech.length ? ' · ' + n.tech[0] : '');
+      var sub = (DIFF_MARK[n.diff] ? DIFF_MARK[n.diff] + ' ' : '') + (loopsOn && loopNodes[n.id] ? '↻ ' : '') + n.kind + (n.tech && n.tech.length ? ' · ' + n.tech[0] : '');
       g.appendChild(s('text', { class: 'sub', x: 18, y: 44 }, trunc(sub, 30)));
       g.addEventListener('click', function (ev) { ev.stopPropagation(); selectNode(n.id, false); });
       g.addEventListener('keydown', function (ev) {
@@ -938,6 +946,19 @@
   }
   $('palette-btn').addEventListener('click', function () { applyPalette(palette === 'cb' ? 'default' : 'cb'); });
   applyPalette(palette, true);
+
+  // ---------- circular dependencies toggle ----------
+  function applyLoops(on, initial) {
+    loopsOn = hasLoops && on;
+    var b = $('loops-btn');
+    b.hidden = !hasLoops;
+    b.setAttribute('aria-pressed', loopsOn ? 'true' : 'false');
+    b.setAttribute('aria-label', 'Circular dependencies: ' + (loopsOn ? 'highlighted' : 'not highlighted') + '. Click to ' + (loopsOn ? 'hide' : 'highlight') + ' them.');
+    b.textContent = '↻ Loops' + (loopsOn ? ': on' : '');
+    if (!initial) { store('loops', loopsOn ? '1' : '0'); render(); applyState(); runSearch(); }
+  }
+  $('loops-btn').addEventListener('click', function () { applyLoops(!loopsOn); });
+  applyLoops(loopsOn, true);
 
   // ---------- keyboard shortcuts overlay ----------
   // The single source of truth for what the global key handler below actually does.
