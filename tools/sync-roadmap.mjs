@@ -19,8 +19,10 @@ const size = (i) => (has(i, 'good first issue') ? '🟢 good first issue' : has(
 
 // ---- README: replace everything from the first tier heading up to "The full plan" ----
 let readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
-const a = readme.indexOf('**🟢 Good first issues**'), b = readme.indexOf('The full plan, grouped into milestones');
-if (a < 0 || b < 0) throw new Error('README help-wanted markers not found');
+// Start right after the stable "Start a discussion" link line, so running this twice gives the same result.
+const link = readme.indexOf('[**Start a discussion');
+const a = link < 0 ? -1 : readme.indexOf('\n\n', link) + 2, b = readme.indexOf('The full plan, grouped into milestones');
+if (a < 2 || b < 0 || b < a) throw new Error('README help-wanted markers not found');
 const tier = (title, list) => (list.length ? `**${title}**\n\n${list.map(bullet).join('\n')}\n\n` : '');
 const gfi = open.filter((i) => has(i, 'good first issue')), amb = open.filter((i) => has(i, 'ambitious')), mid = open.filter((i) => !gfi.includes(i) && !amb.includes(i));
 const body = open.length
@@ -34,9 +36,10 @@ fs.writeFileSync(path.join(root, 'README.md'), readme);
 // ---- ROADMAP: one table per milestone that still has open issues ----
 let road = fs.readFileSync(path.join(root, 'ROADMAP.md'), 'utf8');
 const ms = gh('api', `repos/${REPO}/milestones?state=all&per_page=100`);
-const first = road.indexOf('## [v');
+const rule = road.indexOf('The one rule for everything below');
+const first = rule < 0 ? -1 : road.indexOf('\n\n', rule) + 2; // right after the stable rule paragraph, so a second run gives the same result
 const tail = road.indexOf('## Have a different idea?');
-if (first < 0 || tail < 0) throw new Error('ROADMAP markers not found');
+if (first < 2 || tail < 0 || tail < first) throw new Error('ROADMAP markers not found');
 const sections = [];
 for (const m of ms.sort((x, y) => x.number - y.number)) {
   const list = open.filter((i) => i.milestone && i.milestone.number === m.number);

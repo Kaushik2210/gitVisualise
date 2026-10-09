@@ -338,22 +338,14 @@ start without asking. Comment "I'll take this" and a maintainer will help you ge
 [**All help wanted →**](https://github.com/Kaushik2210/gitVisualise/labels/help%20wanted) &nbsp;·&nbsp;
 [**Start a discussion →**](https://github.com/Kaushik2210/gitVisualise/discussions)
 
-**🟢 Good first issues (an afternoon each)**
-
-- [#69](https://github.com/Kaushik2210/gitVisualise/issues/69) Viewer: highlight circular dependencies on the diagram
-
-**🟡 Intermediate**
-
-- [#70](https://github.com/Kaushik2210/gitVisualise/issues/70) Cycles: treat require() inside functions as lazy
-- [#71](https://github.com/Kaushik2210/gitVisualise/issues/71) Tour of modules nothing imports ("possibly unused")
-- [#72](https://github.com/Kaushik2210/gitVisualise/issues/72) Language support: Elixir import graph
+_Every scoped issue is done. Open one to propose the next._
 
 The full plan, grouped into milestones, is in [ROADMAP.md](ROADMAP.md).
 
 <details>
-<summary><b>✅ Already shipped from this list</b> (52 issues closed)</summary>
+<summary><b>✅ Already shipped from this list</b> (56 issues closed)</summary>
 
-Closed so far: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #20, #21, #22, #23, #24, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40, #42, #43, #44, #45, #46, #47, #48, #49, #50, #51, #52, #53, #54, #55, #56, #57
+Closed so far: #1, #2, #3, #4, #5, #6, #7, #8, #9, #10, #11, #12, #13, #14, #15, #16, #20, #21, #22, #23, #24, #26, #27, #28, #29, #30, #31, #32, #33, #34, #35, #36, #37, #38, #39, #40, #42, #43, #44, #45, #46, #47, #48, #49, #50, #51, #52, #53, #54, #55, #56, #57, #69, #70, #71, #72
 
 </details>
 

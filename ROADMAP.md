@@ -7,16 +7,7 @@ exact files, grouped into milestones. Comment "I'll take this" on any of them an
 
 The one rule for everything below: **nothing is guessed.** A new node, edge or view needs a source reference the validator can check.
 
-## [v1.4: A sharper graph](https://github.com/Kaushik2210/gitVisualise/milestone/4)
-
-Cycles, dead-module hints and more languages: making the import graph say more, without guessing.
-
-| Issue | Size |
-|---|---|
-| [#69](https://github.com/Kaushik2210/gitVisualise/issues/69) Viewer: highlight circular dependencies on the diagram | 🟢 good first issue |
-| [#70](https://github.com/Kaushik2210/gitVisualise/issues/70) Cycles: treat require() inside functions as lazy | 🟡 intermediate |
-| [#71](https://github.com/Kaushik2210/gitVisualise/issues/71) Tour of modules nothing imports ("possibly unused") | 🟡 intermediate |
-| [#72](https://github.com/Kaushik2210/gitVisualise/issues/72) Language support: Elixir import graph | 🟡 intermediate |
+_Everything planned has shipped. Open an issue to propose the next thing._
 
 ## Have a different idea?
 
