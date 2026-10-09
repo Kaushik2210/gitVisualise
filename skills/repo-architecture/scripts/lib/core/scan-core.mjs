@@ -166,6 +166,46 @@ const isCommentLine = (text, idx) => {
   return /^\s*(\/\/|\*|\/\*|#)/.test(text.slice(start, idx + 1));
 };
 
+/**
+ * Character ranges of JavaScript/TypeScript function bodies, so a `require()` inside one (run on call, not at load) can be told
+ * from one at module level. Strings, template literals and comments are skipped (regex literals are not specially handled, so a quote inside one can throw the scan off for the rest of that file, which only ever makes more imports count as load-time); a `{` opens a function body
+ * when it follows `)` or `=>` and the parenthesis was not an `if`/`for`/`while`/`switch`/`catch`/`with` head. Anything it cannot
+ * classify counts as not-a-function, so the worst case is a loop that is still reported.
+ */
+export function jsFunctionRanges(text) {
+  const ranges = [], braces = [], parens = [];
+  let lastParen = null; // { word, end } of the most recent `( ... )`
+  const BLOCK_HEAD = /^(?:if|for|while|switch|catch|with)$/;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], d = text[i + 1];
+    if (c === '/' && d === '/') { i = text.indexOf('\n', i); if (i < 0) break; continue; }
+    if (c === '/' && d === '*') { i = text.indexOf('*/', i + 2); if (i < 0) break; i++; continue; }
+    if (c === '"' || c === "'" || c === '`') {
+      for (i++; i < text.length && text[i] !== c; i++) { if (text[i] === '\\') i++; else if (c !== '`' && text[i] === '\n') break; }
+      continue;
+    }
+    if (c === '(') {
+      const word = /([A-Za-z_$][\w$]*)\s*$/.exec(text.slice(Math.max(0, i - 40), i));
+      parens.push({ word: word ? word[1] : '' });
+    } else if (c === ')') {
+      const p = parens.pop();
+      lastParen = p ? { word: p.word, end: i + 1 } : null;
+    } else if (c === '{') {
+      const before = text.slice(lastParen ? lastParen.end : Math.max(0, i - 40), i);
+      let fn = false;
+      if (/=>\s*$/.test(text.slice(Math.max(0, i - 40), i))) fn = true;
+      else if (lastParen && lastParen.end <= i && /^[\s:\w<>\[\],.|&?'"]*$/.test(before) && !BLOCK_HEAD.test(lastParen.word)) fn = true;
+      braces.push({ fn, start: i });
+      lastParen = null;
+    } else if (c === '}') {
+      const b = braces.pop();
+      if (b && b.fn) ranges.push([b.start, i]);
+    } else if (c === ';') lastParen = null;
+  }
+  for (const b of braces) if (b.fn) ranges.push([b.start, text.length]); // an unclosed body (truncated file)
+  return ranges;
+}
+
 function jsImports(text, ext) {
   const out = [];
   const seen = new Set();
@@ -185,7 +225,12 @@ function jsImports(text, ext) {
     add(m[3], m.index + (m[0].match(/^\s/) ? 1 : 0), names, m[1] ? 'type' : undefined);
   }
   const re2 = /\brequire\(\s*['"]([^'"]+)['"]\s*\)/g;
-  while ((m = re2.exec(text))) add(m[1], m.index);
+  let fnRanges = null; // computed only if the file has a require() at all
+  while ((m = re2.exec(text))) {
+    fnRanges = fnRanges || jsFunctionRanges(text);
+    const at = m.index;
+    add(m[1], at, [], fnRanges.some(([s, e]) => at > s && at < e) ? 'lazy' : undefined); // require() inside a function runs on call
+  }
   const re3 = /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
   while ((m = re3.exec(text))) add(m[1], m.index, [], 'lazy'); // import(): loaded on demand, after startup
   if (ext === 'html') {

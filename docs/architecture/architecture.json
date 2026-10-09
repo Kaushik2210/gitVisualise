@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-09T15:14:25.439Z",
+    "generatedAt": "2026-10-09T15:31:13.624Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -3601,6 +3601,120 @@
               "lines": [
                 14,
                 34
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "orphans",
+      "title": "Possibly unused",
+      "description": "Components that no other component imports. A hint to check, not proof that the code is dead.",
+      "origin": "auto",
+      "steps": [
+        {
+          "id": "o1",
+          "title": "19 components nothing imports",
+          "nodes": [
+            "viewer-js",
+            "motion-js",
+            "index-html",
+            "lang-rust-mjs",
+            "extension-js",
+            "narrate-ai-mjs",
+            "pr-comment-mjs",
+            "index-template-html",
+            "cache-mjs",
+            "oauth-mjs",
+            "make-icon-mjs",
+            "sync-roadmap-mjs"
+          ],
+          "edges": [],
+          "origin": "auto",
+          "narration": "viewer.js, motion.js, index.html, lang-rust.mjs, extension.js and 14 more are not imported by any other component. That is a hint, not a verdict: code can be loaded dynamically, run from a script or the command line, or exported as public API without being imported inside the repository. Check how each is used before treating it as dead.",
+          "sources": [
+            {
+              "path": "skills/repo-architecture/viewer/viewer.js",
+              "lines": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "o2",
+          "title": "viewer.js: nothing imports it",
+          "nodes": [
+            "viewer-js"
+          ],
+          "edges": [],
+          "origin": "auto",
+          "narration": "viewer.js (1066 lines) has no incoming import from another component in this repository. Generic architecture viewer.",
+          "sources": [
+            {
+              "path": "skills/repo-architecture/viewer/viewer.js",
+              "lines": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "o3",
+          "title": "motion.js: nothing imports it",
+          "nodes": [
+            "motion-js"
+          ],
+          "edges": [],
+          "origin": "auto",
+          "narration": "motion.js (551 lines) has no incoming import from another component in this repository. JavaScript file, 551 lines.",
+          "sources": [
+            {
+              "path": "site/motion.js",
+              "lines": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "o4",
+          "title": "index.html: nothing imports it",
+          "nodes": [
+            "index-html"
+          ],
+          "edges": [],
+          "origin": "auto",
+          "narration": "index.html (289 lines, ui) has no incoming import from another component in this repository. landing.",
+          "sources": [
+            {
+              "path": "site/index.html",
+              "lines": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        {
+          "id": "o5",
+          "title": "lang-rust.mjs: nothing imports it",
+          "nodes": [
+            "lang-rust-mjs"
+          ],
+          "edges": [],
+          "origin": "auto",
+          "narration": "lang-rust.mjs (181 lines, service) has no incoming import from another component in this repository. JavaScript file, 181 lines.",
+          "sources": [
+            {
+              "path": "skills/repo-architecture/scripts/lib/core/lang-rust.mjs",
+              "lines": [
+                1,
+                1
               ]
             }
           ]

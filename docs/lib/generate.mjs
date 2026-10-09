@@ -455,7 +455,7 @@ export function generate(scan, opts = {}) {
       const plural = loops.length === 1 ? '' : 's';
       const steps = [{
         id: 'c1', title: `${cycleGroups.length} circular dependenc${cycleGroups.length === 1 ? 'y' : 'ies'}`, nodes: [...new Set(loops.flatMap((x) => x.g.nodes))].slice(0, 12), edges: [], origin: 'auto',
-        narration: `${cycleGroups.length === 1 ? 'One group of components imports' : cycleGroups.length + ' groups of components import'} each other in a loop, directly or through a chain. Loops make initialisation order fragile and stop the pieces being changed or tested independently. The next step${plural} show${loops.length === 1 ? 's' : ''} one real loop from each of the largest group${plural}.`,
+        narration: `${cycleGroups.length === 1 ? 'One group of components imports' : cycleGroups.length + ' groups of components import'} each other in a loop, directly or through a chain. Loops make initialisation order fragile and stop the pieces being changed or tested independently. The next step${plural} show${loops.length === 1 ? 's' : ''} one real loop from each of the largest group${plural}.${loops.some((x) => x.g.nodes.some((id) => (nodeById.get(id)._files || []).length > 1)) ? ' Some of these components are folders, and a loop between folders can still be a straight line between individual files, so read the cited import to see the exact files.' : ''}`,
         sources: [liveSiteOf.get(loops[0].loop[0].id)],
       }];
       for (const { g, loop } of loops) {
@@ -476,6 +476,34 @@ export function generate(scan, opts = {}) {
         });
       }
       flows.push({ id: 'cycles', title: 'Circular dependencies', description: 'Components that import each other in a loop, with one real loop shown for each group. Imports used only for types, or loaded lazily, are not counted.', origin: 'auto', steps });
+    }
+  }
+
+  // Possibly unused: components nothing imports. A hint only (dynamic loading, scripts and public API files are legitimately unreferenced),
+  // so it needs a graph dense enough to mean something and never names entry points, tests, config or type declarations.
+  {
+    const importEdges = edges.filter((e) => e.kind === 'imports').length;
+    const SKIP_KIND = new Set(['entry', 'test', 'config', 'infra', 'entity', 'external']);
+    // type declarations and the build/task scripts every ecosystem runs by name, never by import
+    const isDecl = (p) => /\.d\.[cm]?ts$/.test(p) || /(^|\/)(setup|conftest|manage|noxfile|fabfile|tasks|gulpfile|Gruntfile|webpack\.config|rollup\.config|vite\.config|jest\.config|babel\.config|eslint\.config)\.[a-z]+$/.test(p);
+    const real = nodes.filter((n) => !n.external && !SKIP_KIND.has(n.kind));
+    const cand = real.filter((n) => inDeg.get(n.id) === 0 && n.id !== (startNode && startNode.id) && (n._files || []).length && !n._files.some((p) => entryPaths.has(p) || isDecl(p)));
+    if (importEdges >= 3 && cand.length && cand.length <= Math.max(1, Math.floor(real.length * 0.4))) {
+      const lineCount = (n) => n._files.reduce((t, p) => t + ((byPath.get(p) || {}).lines || 0), 0);
+      const ranked = cand.map((n) => ({ n, lines: lineCount(n) })).sort((a, b) => b.lines - a.lines || a.n.label.localeCompare(b.n.label));
+      const steps = [{
+        id: 'o1', title: `${cand.length} component${cand.length === 1 ? '' : 's'} nothing imports`, nodes: ranked.map((x) => x.n.id).slice(0, 12), edges: [], origin: 'auto',
+        narration: `${list(ranked.map((x) => x.n.label), 5)} ${cand.length === 1 ? 'is' : 'are'} not imported by any other component. That is a hint, not a verdict: code can be loaded dynamically, run from a script or the command line, or exported as public API without being imported inside the repository. Check how each is used before treating it as dead.`,
+        sources: [{ path: ranked[0].n._files[0], lines: [1, 1] }],
+      }];
+      for (const { n, lines } of ranked.slice(0, 4)) {
+        steps.push({
+          id: `o${steps.length + 1}`, title: `${n.label}: nothing imports it`, nodes: [n.id], edges: [], origin: 'auto',
+          narration: `${n.label} (${lines} line${lines === 1 ? '' : 's'}${n.kind === 'module' ? '' : `, ${n.kind}`}) has no incoming import from another component in this repository. ${sentence(n.summary)}`,
+          sources: [{ path: n._files[0], lines: [1, 1] }],
+        });
+      }
+      flows.push({ id: 'orphans', title: 'Possibly unused', description: 'Components that no other component imports. A hint to check, not proof that the code is dead.', origin: 'auto', steps });
     }
   }
 

@@ -172,3 +172,85 @@ test('cycles: a multi-line def signature does not end the function context', () 
   });
   assert.equal(flow, undefined);
 });
+
+import { jsFunctionRanges } from '../skills/repo-architecture/scripts/lib/core/scan-core.mjs';
+
+const inFn = (src, needle) => { const at = src.indexOf(needle); return jsFunctionRanges(src).some(([s, e]) => at > s && at < e); };
+
+test('js: a position is inside a function body for function, arrow, method and async forms, not for blocks', () => {
+  assert.ok(inFn("function f() { require('x'); }", "require"));
+  assert.ok(inFn("const f = () => { require('x'); };", "require"));
+  assert.ok(inFn("const f = async (a, b) => {\n  const x = require('x');\n};", "require"));
+  assert.ok(inFn("class A { run() { require('x'); } }", "require"));
+  assert.ok(inFn("const o = { go: function () { require('x'); } };", "require"));
+  assert.ok(inFn("function f(): Promise<void> { require('x'); }", "require"), 'a TypeScript return type');
+  assert.ok(!inFn("require('x');", "require"), 'module level');
+  assert.ok(!inFn("if (x) { require('x'); }", "require"), 'an if block');
+  assert.ok(!inFn("try { require('x'); } catch (e) {}", "require"), 'a try block');
+  assert.ok(!inFn("for (const a of b) { require('x'); }", "require"), 'a for block');
+  assert.ok(!inFn("switch (a) { case 1: require('x'); }", "require"), 'a switch block');
+  assert.ok(!inFn("class A { static x = require('x'); }", "require"), 'a class body is not a function');
+});
+
+test('js: braces and quotes inside strings, templates and comments do not confuse the scan', () => {
+  const src = "const s = '}{'; // } {\n/* function g() { */ const t = `}${'{'}`;\nfunction f() { return \"}\"; }\nrequire('late');\n";
+  assert.ok(!inFn(src, "require('late')"), 'the stray braces in strings and comments are ignored');
+});
+
+test('cycles: a CommonJS loop broken by a require() inside a function is not reported; one at module level is', () => {
+  const files = (b) => ({ 'package.json': '{"name":"d","main":"src/index.js"}', 'src/index.js': "const a = require('./a');\nconsole.log(a);\n", 'src/a.js': "const b = require('./b');\nmodule.exports = { b };\n", 'src/b.js': b });
+  assert.equal(cyclesOf(files("module.exports = { get a() { return require('./a'); } };\n")).flow, undefined, 'getter');
+  assert.equal(cyclesOf(files("module.exports = function run() { const a = require('./a'); return a; };\n")).flow, undefined, 'function');
+  assert.ok(cyclesOf(files("const a = require('./a');\nmodule.exports = { a };\n")).flow, 'module level');
+  assert.ok(cyclesOf(files("if (process.env.X) { module.exports = require('./a'); }\n")).flow, 'a top-level if still runs on load');
+});
+
+test('cycles: when the components are folders the overview says a folder loop may not be a file loop', () => {
+  const root = repo({
+    'package.json': '{"name":"d","main":"cli/main.js"}',
+    'cli/main.js': "require('./helper');\nrequire('./extra');\nrequire('../nodejs/worker');\nrequire('../nodejs/other');\nrequire('../core/x');\nrequire('../shared/y');\n",
+    'cli/helper.js': "require('../nodejs/esm');\n",
+    'cli/extra.js': "module.exports = 3;\n",
+    'nodejs/worker.js': "require('../cli/helper');\n",
+    'nodejs/esm.js': "module.exports = 1;\n",
+    'nodejs/other.js': "module.exports = 2;\n",
+    'core/x.js': "module.exports = 4;\n",
+    'shared/y.js': "module.exports = 5;\n",
+  });
+  const arch = generate(scanRepo(root), { maxNodes: 4 });
+  const flow = arch.flows.find((f) => f.id === 'cycles');
+  assert.ok(flow, arch.nodes.map((n) => n.label) + ' / ' + arch.flows.map((f) => f.id));
+  assert.match(flow.steps[0].narration, /components are folders/);
+});
+
+// ---- "Possibly unused" ----
+const orphansOf = (files, opts) => { const root = repo(files); const arch = generate(scanRepo(root), opts); return { arch, root, flow: arch.flows.find((f) => f.id === 'orphans') }; };
+const app = (extra = {}) => ({
+  'package.json': '{"name":"d","main":"src/index.js"}',
+  'src/index.js': "import './a.js';\nimport './b.js';\nimport './c.js';\n",
+  'src/a.js': "import './b.js';\nexport const a = 1;\n",
+  'src/b.js': "import './c.js';\nexport const b = 1;\n",
+  'src/c.js': 'export const c = 1;\n',
+  ...extra,
+});
+
+test('orphans: a component nothing imports is listed with a hint, not a verdict, and validates', () => {
+  const { flow, arch, root } = orphansOf(app({ 'src/forgotten.js': "export const f = () => 'x';\n".repeat(5) }));
+  assert.ok(flow, arch.flows.map((f) => f.id));
+  assert.match(flow.steps[0].title, /^1 component nothing imports$/);
+  assert.match(flow.steps[0].narration, /forgotten\.js/);
+  assert.match(flow.steps[0].narration, /hint, not a verdict/);
+  assert.deepEqual(flow.steps[1].sources, [{ path: 'src/forgotten.js', lines: [1, 1] }]);
+  assert.deepEqual(validate(arch, root).errors, []);
+});
+
+test('orphans: entry points, tests, type declarations, build scripts and imported files are never named', () => {
+  const { flow } = orphansOf(app({ 'src/types.d.ts': 'export type T = number;\n', 'setup.py': 'from setuptools import setup\nsetup()\n', 'vite.config.js': 'export default {};\n','src/a.test.js': "import './a.js';\ntest('x', () => {});\n" }));
+  assert.equal(flow, undefined, 'nothing is unreferenced apart from the entry, a declaration file and a test');
+});
+
+test('orphans: a graph with too few imports says nothing, and so does one where most files are unreferenced', () => {
+  assert.equal(orphansOf({ 'package.json': '{"name":"d","main":"a.js"}', 'a.js': 'x\n', 'b.js': 'y\n', 'c.js': 'z\n' }).flow, undefined, 'no import structure');
+  const many = {}; for (let i = 0; i < 8; i++) many[`src/f${i}.js`] = `export const v${i} = ${i};\n`;
+  assert.equal(orphansOf({ ...app(), ...many }).flow, undefined, 'eight unreferenced files out of twelve is not a signal');
+});
