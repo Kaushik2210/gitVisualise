@@ -226,6 +226,7 @@ already exists, and `--dry-run` shows exactly what it would write first.
 
 ```bash
 gitvisualise init /path/to/your/repo   # tour + .github/workflows/architecture.yml (if missing) + README badge
+gitvisualise cycles .                     # list circular dependencies; add --fail-on-cycles to fail a CI job, --json for tools
 ```
 
 ```

@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-09T15:40:03.271Z",
+    "generatedAt": "2026-10-11T04:44:28.900Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -1393,8 +1393,8 @@
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
           "lines": [
-            17,
-            17
+            18,
+            18
           ]
         }
       ]
@@ -2066,8 +2066,8 @@
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
           "lines": [
-            16,
-            16
+            17,
+            17
           ]
         }
       ]
@@ -2606,8 +2606,8 @@
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
           "lines": [
-            18,
-            18
+            19,
+            19
           ]
         }
       ]
@@ -2624,8 +2624,8 @@
         {
           "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
           "lines": [
-            19,
-            19
+            20,
+            20
           ]
         }
       ]
@@ -2914,6 +2914,24 @@
           "lines": [
             34,
             34
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-gitvisualise-mjs--cycles-core-mjs",
+      "from": "gitvisualise-mjs",
+      "to": "cycles-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "cycleReport",
+      "summary": "1 import (cycleReport).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/gitvisualise.mjs",
+          "lines": [
+            16,
+            16
           ]
         }
       ]

@@ -13,6 +13,7 @@ import { validate } from './lib/validate.mjs';
 import { build } from './lib/build.mjs';
 import { diffArchitectures } from './lib/core/diff-core.mjs';
 import { EXPORT_FORMATS } from './lib/core/export-core.mjs';
+import { cycleReport } from './lib/core/cycles-core.mjs';
 import { classifyChange, debounce } from './lib/watch.mjs';
 import { parseTarget, ensureClone } from './lib/github.mjs';
 import { parseRepoInput } from './lib/web/github-loader.mjs';
@@ -36,6 +37,7 @@ Commands
   serve      Serve the output folder locally (default http://localhost:4173)
   diff       Compare two architecture.json files (older, newer): marks components and relationships added / removed / changed
   watch      generate + build once, then again whenever a source file changes (add --serve to preview it)
+  cycles     List circular dependencies (components that import each other); --fail-on-cycles exits 1 if there are any
   export     Write an architecture.json as Mermaid or PlantUML text (--format mermaid|plantuml [--out file])
   install-skill   Copy this skill to ~/.claude/skills (or ./.claude/skills with --project)
 
@@ -56,6 +58,8 @@ Options
   --serve            watch: also serve the output folder
   --debounce <ms>    watch: wait this long after the last change before rebuilding (default 400)
   --dry-run          init: print what would happen without writing anything
+  --fail-on-cycles   cycles: exit with status 1 when a circular dependency exists (for CI)
+  --json             cycles: print the loops as JSON
 `;
 
 function resolveContext(positional, flags) {
@@ -191,6 +195,23 @@ function doInit(ctx, flags) {
 
   if (dryRun) console.log(`\nNext: run without --dry-run, then commit, push, and (if you added the Action) enable Settings → Pages → Source: GitHub Actions.`);
   else console.log(`\nNext: commit ${toPosix(path.relative(ctx.root, ctx.outDir))}${fs.existsSync(wfPath) ? ' and .github/workflows/architecture.yml' : ''}, push, and enable GitHub Pages if you added the Action.`);
+}
+
+// Circular dependencies, straight from a fresh scan: nothing is written, so it is safe to run in CI on a checkout.
+function doCycles(ctx, flags) {
+  const scan = scanRepo(ctx.root, { ignore: ctx.ignore, repoUrl: ctx.repoUrl, name: ctx.name, subPath: ctx.subPath });
+  const loops = cycleReport(generate(scan, { maxNodes: flags['max-nodes'], include: flags.include }));
+  if (flags.json) console.log(JSON.stringify(loops, null, 2));
+  else if (!loops.length) console.log('No circular dependencies found (type-only and lazy imports are not counted).');
+  else {
+    console.log(`${loops.length} circular dependenc${loops.length === 1 ? 'y' : 'ies'} (type-only and lazy imports are not counted):
+`);
+    loops.forEach((l, i) => console.log(`${i + 1}. ${l.title}
+   ${l.loop}${l.evidence ? `
+   closes at ${l.evidence.path}:${l.evidence.line}` : ''}
+`));
+  }
+  if (loops.length && flags['fail-on-cycles']) process.exitCode = 1;
 }
 
 function doExport(positional, flags) {
@@ -343,6 +364,7 @@ try {
     else if (cmd === 'build') doBuild(ctx, flags);
     else if (cmd === 'all') { doGenerate(ctx, flags); doBuild(ctx, flags); }
     else if (cmd === 'init') doInit(ctx, flags);
+    else if (cmd === 'cycles') doCycles(ctx, flags);
     else if (cmd === 'serve') serve(ctx.outDir, Number(flags.port) || 4173);
     else if (cmd === 'watch') doWatch(ctx, flags);
     else { console.log(`Unknown command "${cmd}"\n`); console.log(HELP); process.exitCode = 1; }
