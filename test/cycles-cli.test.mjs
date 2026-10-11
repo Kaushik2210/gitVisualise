@@ -40,7 +40,7 @@ test('cycles command: --json is machine-readable and the run writes nothing into
   const r = run('cycles', root, '--json');
   const loops = JSON.parse(r.stdout);
   assert.equal(loops.length, 1);
-  assert.deepEqual(Object.keys(loops[0]).sort(), ['components', 'evidence', 'loop', 'title']);
+  assert.deepEqual(Object.keys(loops[0]).sort(), ['components', 'evidence', 'key', 'loop', 'title']);
   assert.ok(loops[0].evidence.path.startsWith('src/') && loops[0].evidence.line === 1);
   assert.deepEqual(fs.readdirSync(root).sort(), before, 'no .gitvisualise, no docs');
 });
