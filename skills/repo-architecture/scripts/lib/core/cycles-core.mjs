@@ -73,7 +73,8 @@ function loopIn(members, edges) {
 
 /**
  * The loops a generated architecture reports, read back from its "cycles" flow so the CLI, the PR comment and the viewer all say the
- * same thing: [{ title, loop: 'a → b → a', components: [label], evidence: { path, line } }], largest group first. [] when there is no such flow.
+ * same thing: [{ title, key, loop: 'a → b → a', components: [label], evidence: { path, line } }], largest group first. `key` is the
+ * sorted component ids, which identifies a loop group across two revisions. [] when there is no such flow.
  */
 export function cycleReport(arch) {
   const flow = (arch.flows || []).find((f) => f.id === 'cycles');
@@ -83,9 +84,17 @@ export function cycleReport(arch) {
     const src = (st.sources || [])[0];
     return {
       title: st.title,
+      key: (st.nodes || []).slice().sort().join('|'),
       loop: String(st.narration || '').split('. Each arrow')[0],
       components: (st.nodes || []).map((id) => label.get(id) || id),
       evidence: src ? { path: src.path, line: src.lines ? src.lines[0] : null } : null,
     };
   });
+}
+
+/** Which loops a change introduced and which it resolved, by the set of components in each loop group. */
+export function compareCycles(baseArch, headArch) {
+  const base = cycleReport(baseArch || {}), head = cycleReport(headArch || {});
+  const baseKeys = new Set(base.map((l) => l.key)), headKeys = new Set(head.map((l) => l.key));
+  return { introduced: head.filter((l) => !baseKeys.has(l.key)), resolved: base.filter((l) => !headKeys.has(l.key)) };
 }

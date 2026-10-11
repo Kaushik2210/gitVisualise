@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-11T04:47:19.848Z",
+    "generatedAt": "2026-10-11T04:50:02.217Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -1019,7 +1019,7 @@
       "label": "pr-comment.mjs",
       "kind": "module",
       "origin": "auto",
-      "summary": "JavaScript file, 111 lines. Defines MARKER, buildComment, NO_CHANGES_BODY, postComment and 1 more.",
+      "summary": "JavaScript file, 122 lines. Defines MARKER, buildComment, NO_CHANGES_BODY, postComment and 1 more.",
       "tech": [
         "JavaScript"
       ],
@@ -1027,8 +1027,8 @@
         {
           "path": "skills/repo-architecture/scripts/pr-comment.mjs",
           "lines": [
-            13,
-            33
+            14,
+            34
           ]
         }
       ]
@@ -2987,6 +2987,24 @@
           "lines": [
             35,
             35
+          ]
+        }
+      ]
+    },
+    {
+      "id": "e-pr-comment-mjs--cycles-core-mjs",
+      "from": "pr-comment-mjs",
+      "to": "cycles-core-mjs",
+      "kind": "imports",
+      "origin": "auto",
+      "label": "compareCycles",
+      "summary": "1 import (compareCycles).",
+      "sources": [
+        {
+          "path": "skills/repo-architecture/scripts/pr-comment.mjs",
+          "lines": [
+            12,
+            12
           ]
         }
       ]
