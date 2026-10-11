@@ -17,7 +17,7 @@ PRODUCT (use only these facts, invent nothing):
   click-through map of how the repo works."
 - Problem: onboarding onto a codebase means reading a hundred files to answer
   "what talks to what, and where do I start?" Hand-drawn diagrams go stale.
-- How it works: scans the repo (import graphs for 13 languages), builds components
+- How it works: scans the repo (import graphs for 14 languages), builds components
   and relationships, generates narrated step-by-step tours. Every box and arrow
   links to a real file and line; a validator rejects anything it cannot point to.
 - Runs entirely in the browser: no sign-up, no server, no API keys. Zero dependencies. MIT.
@@ -71,7 +71,7 @@ ruthless, and honest: say what is weak, then fix it.
 PROJECT: gitvisualise (github.com/Kaushik2210/gitVisualise), site
 kaushik2210.github.io/gitVisualise. Turns any GitHub repo into an animated,
 narrated architecture tour; every box/arrow links to real file+line; runs in the
-browser; 13 languages; zero dependencies; MIT. Also: CLI, GitHub Action, Claude
+browser; 14 languages; zero dependencies; MIT. Also: CLI, GitHub Action, Claude
 Code skill, VS Code extension. Open issues labelled good-first-issue exist.
 
 I will paste: (1) README.md, (2) the repo's About/topics, (3) CONTRIBUTING.md,

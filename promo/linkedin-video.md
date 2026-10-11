@@ -11,7 +11,7 @@
 | 6-15 s | Tour stepping through steps with zoom-to-step | **Every box and arrow links to a real file and line.** |
 | 15-20 s | Click a component, source link opens | **Nothing is invented. A validator rejects what it cannot point to.** |
 | 20-24 s | Diff view (green / red / amber) | **Compare two versions: what was added, removed, changed.** |
-| 24-30 s | Hero + URL | **Free. Open source. Runs in your browser. 13 languages, zero dependencies.** `kaushik2210.github.io/gitVisualise` |
+| 24-30 s | Hero + URL | **Free. Open source. Runs in your browser. 14 languages, zero dependencies.** `kaushik2210.github.io/gitVisualise` |
 
 Voice-over (optional, ~75 words): "Onboarding onto a new codebase means reading a hundred files to answer one question: what talks to what? gitvisualise answers it. Paste any GitHub link and get an animated, narrated tour. Every box and arrow points at real code, and a validator rejects anything it can't prove. You can even compare two versions of a repo. It's free, open source, and runs entirely in your browser."
 
@@ -24,7 +24,7 @@ Voice-over (optional, ~75 words): "Onboarding onto a new codebase means reading 
 > What makes it different from yet another diagram generator:
 > - Every box and arrow links to a real file and line. A validator rejects anything it can't point to, so nothing is made up.
 > - It runs 100% in your browser. No sign-up, no server, no API keys.
-> - 13 languages, zero dependencies, MIT licensed.
+> - 14 languages, zero dependencies, MIT licensed.
 > - Compare two versions (`owner/repo@v5...v11`) to see what was added, removed, or changed.
 > - Add it to your own repo with one command: `gitvisualise init` (tour + GitHub Action + README badge)
 >
