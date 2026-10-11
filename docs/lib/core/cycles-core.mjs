@@ -70,3 +70,22 @@ function loopIn(members, edges) {
   }
   return [];
 }
+
+/**
+ * The loops a generated architecture reports, read back from its "cycles" flow so the CLI, the PR comment and the viewer all say the
+ * same thing: [{ title, loop: 'a → b → a', components: [label], evidence: { path, line } }], largest group first. [] when there is no such flow.
+ */
+export function cycleReport(arch) {
+  const flow = (arch.flows || []).find((f) => f.id === 'cycles');
+  if (!flow) return [];
+  const label = new Map((arch.nodes || []).map((n) => [n.id, n.label]));
+  return flow.steps.slice(1).map((st) => {
+    const src = (st.sources || [])[0];
+    return {
+      title: st.title,
+      loop: String(st.narration || '').split('. Each arrow')[0],
+      components: (st.nodes || []).map((id) => label.get(id) || id),
+      evidence: src ? { path: src.path, line: src.lines ? src.lines[0] : null } : null,
+    };
+  });
+}
