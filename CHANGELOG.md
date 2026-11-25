@@ -6,6 +6,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- **Faster circular-dependency analysis on large graphs.** Collects the edges for all circular groups in one pass and preserves their reporting order and representative paths.
+
 ### Added
 - **Circular dependencies in diagram exports.** Mermaid and PlantUML label the imports shown in the circular-dependency tour. Mermaid also preserves added, removed and changed edge colors in comparisons.
 - **Pull request comment: new and resolved circular dependencies.** The architecture-diff comment now opens with a warning when a pull request closes a loop, naming the loop and the import that closes it (up to three, then a count), and notes when it resolves one. A loop that already existed and is unchanged is not repeated, and a pull request whose only news is a loop still gets a comment. Loop names pass through the same escaping as every other name in the comment.

@@ -41,13 +41,25 @@ export function findCycles(ids, edges) {
     }
   }
 
-  return groups
-    .map((members) => {
-      const set = new Set(members);
-      const inside = edges.filter((e) => set.has(e.from) && set.has(e.to) && e.from !== e.to);
-      return { nodes: members.slice().sort((a, b) => ids.indexOf(a) - ids.indexOf(b)), edges: inside.map((e) => e.id), path: loopIn(members, inside) };
-    })
-    .sort((a, b) => b.nodes.length - a.nodes.length || ids.indexOf(a.nodes[0]) - ids.indexOf(b.nodes[0]));
+  const groupOf = new Map();
+  const components = groups.map((members) => {
+    const group = { nodes: [], edges: [] };
+    for (const id of members) groupOf.set(id, group);
+    return group;
+  });
+  const order = new Map();
+  for (const id of ids) {
+    if (order.has(id)) continue;
+    order.set(id, order.size);
+    groupOf.get(id)?.nodes.push(id);
+  }
+  for (const edge of edges) {
+    const group = groupOf.get(edge.from);
+    if (group && group === groupOf.get(edge.to) && edge.from !== edge.to) group.edges.push(edge);
+  }
+  return components
+    .sort((a, b) => b.nodes.length - a.nodes.length || order.get(a.nodes[0]) - order.get(b.nodes[0]))
+    .map(({ nodes, edges: inside }) => ({ nodes, edges: inside.map((e) => e.id), path: loopIn(nodes, inside) }));
 }
 
 /** The shortest loop through the group's first member (BFS), as edge ids; deterministic given the edge order. */
@@ -57,13 +69,13 @@ function loopIn(members, edges) {
   for (const e of edges) (out.get(e.from) || out.set(e.from, []).get(e.from)).push(e);
   const prev = new Map([[start, null]]);
   const queue = [start];
-  while (queue.length) {
-    const v = queue.shift();
+  for (let i = 0; i < queue.length; i++) {
+    const v = queue[i];
     for (const e of out.get(v) || []) {
       if (e.to === start) {
         const path = [e.id];
-        for (let at = v; prev.get(at); at = prev.get(at).from) path.unshift(prev.get(at).id);
-        return path;
+        for (let at = v; prev.get(at); at = prev.get(at).from) path.push(prev.get(at).id);
+        return path.reverse();
       }
       if (!prev.has(e.to)) { prev.set(e.to, e); queue.push(e.to); }
     }
