@@ -9,6 +9,17 @@ const KIND_STYLE = {
   external: ['#f3f4f6', '#9ca3af'], test: ['#f1f5f9', '#94a3b8'], entity: ['#fae8ff', '#c026d3'], infra: ['#cffafe', '#0891b2'],
 };
 const DIFF_STYLE = { added: ['#dcfce7', '#16a34a'], removed: ['#fee2e2', '#dc2626'], changed: ['#fef3c7', '#d97706'] };
+const CYCLE_COLOR = '#7c3aed';
+
+function cycleEdgeIds(arch) {
+  return new Set((arch.flows || []).filter((flow) => flow.id === 'cycles')
+    .flatMap((flow) => flow.steps.flatMap((step) => step.edges || [])));
+}
+
+function edgeLabel(edge, cycleEdges, escape) {
+  const label = escape(edge.label, 30);
+  return cycleEdges.has(edge.id) ? (label ? `Cycle: ${label}` : 'Cycle') : label;
+}
 
 const oneLine = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
 
@@ -36,6 +47,7 @@ const classOf = (n) => (n.diff && n.diff !== 'same' ? `d_${n.diff}` : `k_${Strin
 export function toMermaid(arch, opts = {}) {
   const dir = opts.direction === 'TB' ? 'TB' : 'LR';
   const ids = idMap(arch);
+  const cycleEdges = cycleEdgeIds(arch);
   const lines = [`flowchart ${dir}`];
   const decl = (n) => `${ids.get(n.id)}["${mermaidText(n.label, 40)}<br/>${mermaidText(n.kind || 'module', 20)}"]:::${classOf(n)}`;
 
@@ -52,17 +64,18 @@ export function toMermaid(arch, opts = {}) {
     arch.nodes.forEach((n) => lines.push(`  ${decl(n)}`));
   }
 
-  arch.edges.forEach((e) => {
+  const emitted = arch.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
+  emitted.forEach((e) => {
     const a = ids.get(e.from), b = ids.get(e.to);
-    if (!a || !b) return;
-    const label = e.label ? `|"${mermaidText(e.label, 30)}"|` : '';
+    const text = edgeLabel(e, cycleEdges, mermaidText);
+    const label = text ? `|"${text}"|` : '';
     const dotted = e.kind === 'http' || e.diff === 'removed';
     lines.push(`  ${a} ${dotted ? '-.->' : '-->'}${label} ${b}`);
   });
   // linkStyle indexes follow the order edges were emitted (skipping any with unknown endpoints)
-  const emitted = arch.edges.filter((e) => ids.get(e.from) && ids.get(e.to));
   emitted.forEach((e, i) => {
-    const c = e.diff === 'added' ? '#16a34a' : e.diff === 'removed' ? '#dc2626' : e.diff === 'changed' ? '#d97706' : null;
+    const diffColor = e.diff === 'added' || e.diff === 'removed' || e.diff === 'changed' ? DIFF_STYLE[e.diff][1] : null;
+    const c = diffColor || (cycleEdges.has(e.id) ? CYCLE_COLOR : null);
     if (c) lines.push(`  linkStyle ${i} stroke:${c},stroke-width:2px`);
   });
 
@@ -80,6 +93,7 @@ export function toMermaid(arch, opts = {}) {
 
 export function toPlantUml(arch, opts = {}) {
   const ids = idMap(arch);
+  const cycleEdges = cycleEdgeIds(arch);
   const lines = ['@startuml', opts.direction === 'TB' ? 'top to bottom direction' : 'left to right direction', 'skinparam shadowing false', 'skinparam rectangle {', '  RoundCorner 12', '}'];
   const decl = (n, pad) => {
     const style = n.diff && n.diff !== 'same' ? DIFF_STYLE[n.diff] : KIND_STYLE[n.kind] || KIND_STYLE.module;
@@ -100,8 +114,10 @@ export function toPlantUml(arch, opts = {}) {
   for (const e of arch.edges) {
     const a = ids.get(e.from), b = ids.get(e.to);
     if (!a || !b) continue;
-    const arrow = e.kind === 'http' || e.diff === 'removed' ? '..>' : '-->';
-    lines.push(`${a} ${arrow} ${b}${e.label ? ` : ${plantText(e.label, 30)}` : ''}`);
+    const line = e.kind === 'http' || e.diff === 'removed' ? '.' : '-';
+    const style = cycleEdges.has(e.id) ? `[${CYCLE_COLOR}]` : '';
+    const label = edgeLabel(e, cycleEdges, plantText);
+    lines.push(`${a} ${line}${style}${line}> ${b}${label ? ` : ${label}` : ''}`);
   }
   lines.push('@enduml');
   return lines.join('\n') + '\n';

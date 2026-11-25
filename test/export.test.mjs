@@ -70,6 +70,29 @@ test('plantuml: valid skeleton with escaped labels, packages for groups and dott
   assert.match(out, /@enduml\n$/);
 });
 
+test('diagram exports label circular imports while preserving Mermaid comparison colors', () => {
+  const circular = {
+    ...arch,
+    edges: [
+      arch.edges[2],
+      { ...arch.edges[0], diff: 'changed' },
+      { id: 'back', from: 'b', to: 'a', kind: 'imports' },
+      arch.edges[1],
+    ],
+    flows: [{ id: 'cycles', steps: [{ edges: [] }, { edges: ['e1', 'back'] }] }],
+  };
+  const mermaid = toMermaid(circular);
+  assert.ok(mermaid.includes('n0 -->|"Cycle: uses |pipe|"| n1'));
+  assert.ok(mermaid.includes('n1 -->|"Cycle"| n0'));
+  assert.ok(mermaid.includes('linkStyle 0 stroke:#d97706'));
+  assert.ok(mermaid.includes('linkStyle 1 stroke:#7c3aed'));
+  assert.ok(mermaid.includes('n2 -.->|"GET /x"| n0'));
+  const plant = toPlantUml(circular);
+  assert.ok(plant.includes('n0 -[#7c3aed]-> n1 : Cycle: uses |pipe|'));
+  assert.ok(plant.includes('n1 -[#7c3aed]-> n0 : Cycle'));
+  assert.ok(plant.includes('n2 ..> n0 : GET /x'));
+});
+
 test('badge: links to the tour for a repo, ref, folder or comparison, safely encoded', () => {
   const md = (s) => badgeMarkdown(parseRepoInput(s));
   assert.equal(md('tj/commander.js'), '[![Architecture tour](https://img.shields.io/badge/architecture-tour-8db3ff?logo=github&logoColor=white)](https://kaushik2210.github.io/gitVisualise/#/tj/commander.js)');

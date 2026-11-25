@@ -6,7 +6,7 @@
     "repoUrl": "https://github.com/Kaushik2210/gitVisualise",
     "branch": null,
     "commit": null,
-    "generatedAt": "2026-10-11T04:50:02.217Z",
+    "generatedAt": "2026-11-25T03:15:04.964Z",
     "generatedBy": "claude",
     "languages": [
       "JavaScript",
@@ -784,8 +784,8 @@
         {
           "path": "skills/repo-architecture/scripts/lib/core/export-core.mjs",
           "lines": [
-            16,
-            36
+            27,
+            47
           ]
         }
       ]
