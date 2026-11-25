@@ -2,6 +2,7 @@
 // entries as facebook/react (7,245), and a `longtask` observer must not see a task over 100 ms between pressing "Go" and the results
 // view. The CPU is throttled (3x by default, GV_CPU_THROTTLE) so a laptop-class machine stands in for a slow one. GV_DOCS points at another build of the website
 // (to compare with an older one); GV_LONGTASK_BUDGET overrides the 100 ms limit. Run with `npm run e2e`.
+// The npm script runs this test separately so other browser tests do not compete for CPU during the measurement.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
