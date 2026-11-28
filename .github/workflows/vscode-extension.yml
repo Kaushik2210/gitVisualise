@@ -44,7 +44,7 @@ jobs:
         run: |
           node scripts/bundle-skill.mjs
           npx --yes @vscode/vsce package --out "gitvisualise-${{ steps.meta.outputs.version }}.vsix"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gitvisualise-vsix
           path: vscode-extension/*.vsix
